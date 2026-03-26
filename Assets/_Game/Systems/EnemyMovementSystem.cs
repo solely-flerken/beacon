@@ -1,0 +1,116 @@
+﻿using _Game.Components;
+using _Game.Shared;
+using Unity.Burst;
+using Unity.Collections;
+using Unity.Entities;
+using Unity.Mathematics;
+using Unity.Transforms;
+
+namespace _Game.Systems
+{
+    /// <summary>
+    /// Moves all enemy entities each frame.
+    /// Reads from EnemySimShared (positions) and SpatialGridShared (neighbors)
+    /// </summary>
+    [UpdateInGroup(typeof(SimulationSystemGroup))]
+    [UpdateAfter(typeof(SpatialGridSystem))]
+    public partial struct EnemyMovementSystem : ISystem
+    {
+        private EntityQuery _enemyQuery;
+
+        public void OnCreate(ref SystemState state)
+        {
+            state.RequireForUpdate<EnemyTag>();
+
+            _enemyQuery = state.GetEntityQuery(typeof(EnemyTag));
+        }
+
+        public void OnUpdate(ref SystemState state)
+        {
+            if (!EnemyDataShared.IsValid || !SpatialGridShared.IsValid || !FlowFieldShared.IsValid) return;
+
+            // If we just spawned enemies, the shared arrays (Positions) might not have been 
+            // resized by the EnemyDataSystem yet. We skip one frame to let data catch up.
+            int enemyCount = _enemyQuery.CalculateEntityCount();
+            if (enemyCount == 0 || EnemyDataShared.Positions.Length < enemyCount) return;
+
+            new MoveEnemyJob
+            {
+                Positions = EnemyDataShared.Positions,
+                FlowFieldDirections = FlowFieldShared.Directions,
+                FlowFieldCellSize = FlowFieldShared.CellSize,
+                FlowFieldGridWidth = FlowFieldShared.GridWidth,
+                FlowFieldGridHeight = FlowFieldShared.GridHeight,
+                SpatialGrid = SpatialGridShared.CellMap,
+                SpatialGridCellSize = SpatialGridShared.CellSize,
+                SeparationRadius = 1.0f,
+                SeparationStrength = 6.0f,
+                DeltaTime = SystemAPI.Time.DeltaTime,
+            }.ScheduleParallel();
+        }
+    }
+
+    [BurstCompile]
+    partial struct MoveEnemyJob : IJobEntity
+    {
+        [ReadOnly] public NativeArray<float2> Positions;
+
+        [ReadOnly] public NativeArray<float2> FlowFieldDirections;
+        [ReadOnly] public float FlowFieldCellSize;
+        [ReadOnly] public int FlowFieldGridWidth;
+        [ReadOnly] public int FlowFieldGridHeight;
+
+        [ReadOnly] public NativeParallelMultiHashMap<int2, int> SpatialGrid;
+        [ReadOnly] public float SpatialGridCellSize;
+        [ReadOnly] public float SeparationRadius;
+        [ReadOnly] public float SeparationStrength;
+
+        [ReadOnly] public float DeltaTime;
+
+        private void Execute([EntityIndexInQuery] int index, ref LocalTransform transform, in EnemySpeed speed)
+        {
+            float2 pos = Positions[index];
+            float2 moveVec = FlowSteering(pos, speed.Value) + SeparationSteering(pos, index);
+            transform.Position = new float3(pos + moveVec * DeltaTime, 0f);
+        }
+
+        private float2 FlowSteering(float2 pos, float speed)
+        {
+            float2 dir = FlowFieldUtil.Sample(FlowFieldDirections, pos, FlowFieldCellSize, FlowFieldGridWidth, FlowFieldGridHeight);
+            return math.lengthsq(dir) > 0.001f ? dir * speed : float2.zero;
+        }
+
+        private static readonly int2[] NeighbourCells =
+        {
+            new(-1, -1), new(0, -1), new(1, -1),
+            new(-1,  0), new(0,  0), new(1,  0),
+            new(-1,  1), new(0,  1), new(1,  1),
+        };
+
+        private float2 SeparationSteering(float2 pos, int index)
+        {
+            float2 separation = float2.zero;
+            float radiusSq = SeparationRadius * SeparationRadius;
+            int2 cell = new((int)math.floor(pos.x / SpatialGridCellSize), (int)math.floor(pos.y / SpatialGridCellSize));
+
+            foreach (int2 offset in NeighbourCells)
+            {
+                if (!SpatialGrid.TryGetFirstValue(cell + offset, out int neighbourIdx, out NativeParallelMultiHashMapIterator<int2> it)) continue;
+                do
+                {
+                    if (neighbourIdx == index) continue;
+
+                    float2 diff = pos - Positions[neighbourIdx];
+                    float distSq = math.lengthsq(diff);
+
+                    if (distSq < 0.0001f || distSq >= radiusSq) continue;
+
+                    float dist = math.sqrt(distSq);
+                    separation += (diff / dist) * (1f - dist / SeparationRadius);
+                } while (SpatialGrid.TryGetNextValue(out neighbourIdx, ref it));
+            }
+
+            return separation * SeparationStrength;
+        }
+    }
+}

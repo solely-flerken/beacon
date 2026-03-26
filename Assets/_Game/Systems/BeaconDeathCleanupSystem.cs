@@ -1,0 +1,49 @@
+﻿using _Game.Components;
+using _Game.Core;
+using Unity.Entities;
+using UnityEngine;
+
+namespace _Game.Systems
+{
+    [UpdateInGroup(typeof(PresentationSystemGroup))]
+    public partial struct BeaconDeathCleanupSystem : ISystem
+    {
+        public void OnUpdate(ref SystemState state)
+        {
+            EntityCommandBuffer ecb = new(state.WorldUpdateAllocator);
+            bool signalFound = false;
+
+            foreach ((BeaconDeathTag _, Entity entity) in SystemAPI.Query<BeaconDeathTag>().WithEntityAccess())
+            {
+                signalFound = true;
+                ecb.DestroyEntity(entity);
+            }
+
+            if (!signalFound) return;
+
+            Debug.Log("[Beacon] Death logic triggered. Cleaning up...");
+
+            // Destroy all enemies
+            foreach ((EnemyTag _, Entity entity) in SystemAPI.Query<EnemyTag>().WithEntityAccess())
+            {
+                ecb.DestroyEntity(entity);
+            }
+
+            // Destroy all projectiles
+            foreach ((ProjectileTag _, Entity entity) in SystemAPI.Query<ProjectileTag>().WithEntityAccess())
+            {
+                ecb.DestroyEntity(entity);
+            }
+
+            // Trigger Managed Events
+            EventBus.FireBeaconDestroyed();
+
+            if (GameStateMachine.Instance != null)
+            {
+                GameStateMachine.Instance.TransitionTo(GameState.RunEnd);
+            }
+
+            ecb.Playback(state.EntityManager);
+        }
+    }
+}
