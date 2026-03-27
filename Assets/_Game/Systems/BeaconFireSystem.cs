@@ -37,6 +37,7 @@ namespace _Game.Systems
 
                 if (!FindNearestEnemy(beaconPos, enemyPositions, enemyCount, weapon.ValueRO.TargetRange, out float2 targetPos)) continue;
                 
+                // TODO: Own authoring field 'MinShootDistance' or remove completely
                 float minDist = stats.ValueRO.ArrivalRadius + 0.5f;
                 if (math.distancesq(beaconPos, targetPos) < minDist * minDist) continue;
 
