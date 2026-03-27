@@ -61,7 +61,8 @@ namespace _Game.Systems
             while (_hitQueue.TryDequeue(out HitRecord hit))
             {
                 if (!em.Exists(hit.EnemyEntity)) continue;
-
+                if (!em.HasComponent<EnemyHealth>(hit.EnemyEntity)) continue;
+                
                 EnemyHealth health = em.GetComponentData<EnemyHealth>(hit.EnemyEntity);
                 health.Current -= hit.Damage;
 
