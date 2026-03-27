@@ -49,6 +49,15 @@ namespace _Game.Systems
 
                         Entity enemy = entities[idx];
                         totalDamage += state.EntityManager.GetComponentData<ContactDamage>(enemy).Value;
+
+                        // TODO: Refactor - can possibly code enemies as projectiles themselves and make beacon able to be damaged by them
+                        float3 pos = state.EntityManager.GetComponentData<LocalTransform>(enemy).Position;
+                        EnemyReward reward = state.EntityManager.GetComponentData<EnemyReward>(enemy);
+                        DeathEvent deathEvent = new() { Position = pos, Exp = reward.ExpValue };
+
+                        if (DotsBridge.DeathQueue.IsCreated) DotsBridge.DeathQueue.Enqueue(deathEvent);
+                        if (DotsBridge.ExpOrbQueue.IsCreated) DotsBridge.ExpOrbQueue.Enqueue(deathEvent);
+                        
                         ecb.DestroyEntity(enemy);
                     } while (grid.TryGetNextValue(out idx, ref it));
                 }

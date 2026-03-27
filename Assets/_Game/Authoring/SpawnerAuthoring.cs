@@ -8,6 +8,7 @@ namespace _Game.Authoring
         public GameObject enemyPrefab;
         public GameObject projectilePrefab;
         public GameObject flarePrefab;
+        public GameObject expOrbPrefab;
 
         private class Baker : Baker<SpawnerAuthoring>
         {
@@ -16,6 +17,7 @@ namespace _Game.Authoring
                 DependsOn(authoring.enemyPrefab);
                 DependsOn(authoring.projectilePrefab);
                 DependsOn(authoring.flarePrefab);
+                DependsOn(authoring.expOrbPrefab);
 
                 Entity entity = GetEntity(TransformUsageFlags.None);
                 
@@ -24,6 +26,7 @@ namespace _Game.Authoring
                     Enemy = GetEntity(authoring.enemyPrefab, TransformUsageFlags.Dynamic),
                     Projectile = GetEntity(authoring.projectilePrefab, TransformUsageFlags.Dynamic),
                     Flare = GetEntity(authoring.flarePrefab, TransformUsageFlags.Dynamic),
+                    ExpOrb =  GetEntity(authoring.expOrbPrefab, TransformUsageFlags.Dynamic),
                 });
             }
         }
@@ -34,5 +37,6 @@ namespace _Game.Authoring
         public Entity Enemy;
         public Entity Projectile;
         public Entity Flare;
+        public Entity ExpOrb;
     }
 }

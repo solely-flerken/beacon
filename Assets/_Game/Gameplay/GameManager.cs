@@ -32,6 +32,7 @@ namespace _Game.Gameplay
                 _entityManager.DestroyEntity(_entityManager.Instantiate(prefabs.Enemy));
                 _entityManager.DestroyEntity(_entityManager.Instantiate(prefabs.Projectile));
                 _entityManager.DestroyEntity(_entityManager.Instantiate(prefabs.Flare));
+                _entityManager.DestroyEntity(_entityManager.Instantiate(prefabs.ExpOrb));
             }
             
             if (GameStateMachine.Instance != null)

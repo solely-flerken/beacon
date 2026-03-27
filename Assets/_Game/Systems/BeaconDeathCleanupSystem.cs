@@ -34,6 +34,12 @@ namespace _Game.Systems
             {
                 ecb.DestroyEntity(entity);
             }
+            
+            // Destroy all exp orbs
+            foreach ((ExpOrbTag _, Entity entity) in SystemAPI.Query<ExpOrbTag>().WithEntityAccess())
+            {
+                ecb.DestroyEntity(entity);
+            }
 
             // Trigger Managed Events
             EventBus.FireBeaconDestroyed();

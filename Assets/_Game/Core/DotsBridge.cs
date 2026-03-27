@@ -20,7 +20,12 @@ namespace _Game.Core
         /// Written by ProjectileSystem on enemy death.
         /// </summary>
         public static NativeQueue<DeathEvent> DeathQueue;
-
+ 
+        /// <summary>
+        /// Written by ProjectileSystem on enemy death. Drained by ExpOrbSpawnSystem.
+        /// </summary>
+        public static NativeQueue<DeathEvent> ExpOrbQueue;
+        
         /// <summary>
         /// Written by ProjectileSystem on enemy hit (damage but not death).
         /// </summary>
@@ -31,7 +36,8 @@ namespace _Game.Core
 
         private void Awake()
         {
-            DeathQueue = new NativeQueue<DeathEvent>(Allocator.Persistent);
+            DeathQueue  = new NativeQueue<DeathEvent>(Allocator.Persistent);
+            ExpOrbQueue = new NativeQueue<DeathEvent>(Allocator.Persistent);
             HitQueue = new NativeQueue<HitEvent>(Allocator.Persistent);
             _deathBatch = new NativeArray<DeathEvent>(deathBufferSize, Allocator.Persistent);
             _hitBatch = new NativeArray<HitEvent>(hitBufferSize, Allocator.Persistent);
@@ -42,7 +48,16 @@ namespace _Game.Core
             DrainQueue(DeathQueue, _deathBatch, EventBus.FireEnemiesDiedBatch);
             DrainQueue(HitQueue, _hitBatch, EventBus.FireEnemiesHitBatch);
         }
-
+        
+        private void OnDestroy()
+        {
+            if (DeathQueue.IsCreated)  DeathQueue.Dispose();
+            if (ExpOrbQueue.IsCreated) ExpOrbQueue.Dispose();
+            if (HitQueue.IsCreated) HitQueue.Dispose();
+            if (_deathBatch.IsCreated) _deathBatch.Dispose();
+            if (_hitBatch.IsCreated) _hitBatch.Dispose();
+        }
+        
         private static void DrainQueue<T>(NativeQueue<T> queue, NativeArray<T> batch, Action<NativeArray<T>, int> fireEvent) where T : unmanaged
         {
             int count = 0;
@@ -57,14 +72,6 @@ namespace _Game.Core
             }
             
             if (count > 0) fireEvent(batch, count);
-        }
-
-        private void OnDestroy()
-        {
-            if (DeathQueue.IsCreated) DeathQueue.Dispose();
-            if (HitQueue.IsCreated) HitQueue.Dispose();
-            if (_deathBatch.IsCreated) _deathBatch.Dispose();
-            if (_hitBatch.IsCreated) _hitBatch.Dispose();
         }
     }
 }

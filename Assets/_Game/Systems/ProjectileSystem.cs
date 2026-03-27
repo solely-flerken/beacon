@@ -40,7 +40,7 @@ namespace _Game.Systems
             state.Dependency.Complete();
 
             // Collision detection
-            _hitQueue.Clear();
+            if (_hitQueue.IsCreated) _hitQueue.Clear();
 
             if (!EnemyDataShared.IsValid || !SpatialGridShared.IsValid) return;
             
@@ -54,7 +54,7 @@ namespace _Game.Systems
                 HitQueue = _hitQueue.AsParallelWriter(),
             }.ScheduleParallel();
             state.Dependency.Complete();
-
+            
             // Process hits
             EntityManager em = state.EntityManager;
 
@@ -70,10 +70,10 @@ namespace _Game.Systems
                     float3 pos = em.GetComponentData<LocalTransform>(hit.EnemyEntity).Position;
                     EnemyReward reward = em.GetComponentData<EnemyReward>(hit.EnemyEntity);
 
-                    if (DotsBridge.DeathQueue.IsCreated)
-                    {
-                        DotsBridge.DeathQueue.Enqueue(new DeathEvent { Position = pos, Exp = reward.ExpValue });
-                    }
+                    DeathEvent deathEvent = new() { Position = pos, Exp = reward.ExpValue };
+
+                    if (DotsBridge.DeathQueue.IsCreated) DotsBridge.DeathQueue.Enqueue(deathEvent);
+                    if (DotsBridge.ExpOrbQueue.IsCreated) DotsBridge.ExpOrbQueue.Enqueue(deathEvent);
 
                     em.DestroyEntity(hit.EnemyEntity);
                 }
