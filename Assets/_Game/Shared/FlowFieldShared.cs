@@ -14,6 +14,12 @@ namespace _Game.Shared
         public static NativeArray<float2> Directions;
         public static NativeArray<bool> Blocked;
 
+        /// <summary>
+        /// Per-cell nearest attractor world position.
+        /// When Directions[i] is zero, move directly toward AttractorOwner[i].
+        /// </summary>
+        public static NativeArray<float2> AttractorOwner;
+        
         public static bool IsValid => Directions.IsCreated && Directions.Length > 0;
     }
 }

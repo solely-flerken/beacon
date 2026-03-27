@@ -41,6 +41,7 @@ namespace _Game.Systems
                 FlowFieldCellSize = FlowFieldShared.CellSize,
                 FlowFieldGridWidth = FlowFieldShared.GridWidth,
                 FlowFieldGridHeight = FlowFieldShared.GridHeight,
+                AttractorOwner = FlowFieldShared.AttractorOwner,
                 SpatialGrid = SpatialGridShared.CellMap,
                 SpatialGridCellSize = SpatialGridShared.CellSize,
                 SeparationRadius = 1.0f,
@@ -51,14 +52,15 @@ namespace _Game.Systems
     }
 
     [BurstCompile]
-    partial struct MoveEnemyJob : IJobEntity
+    internal partial struct MoveEnemyJob : IJobEntity
     {
         [ReadOnly] public NativeArray<float2> Positions;
-
+        
         [ReadOnly] public NativeArray<float2> FlowFieldDirections;
         [ReadOnly] public float FlowFieldCellSize;
         [ReadOnly] public int FlowFieldGridWidth;
         [ReadOnly] public int FlowFieldGridHeight;
+        [ReadOnly] public NativeArray<float2> AttractorOwner;
 
         [ReadOnly] public NativeParallelMultiHashMap<int2, int> SpatialGrid;
         [ReadOnly] public float SpatialGridCellSize;
@@ -77,7 +79,17 @@ namespace _Game.Systems
         private float2 FlowSteering(float2 pos, float speed)
         {
             float2 dir = FlowFieldUtil.Sample(FlowFieldDirections, pos, FlowFieldCellSize, FlowFieldGridWidth, FlowFieldGridHeight);
-            return math.lengthsq(dir) > 0.001f ? dir * speed : float2.zero;
+
+            if (math.lengthsq(dir) > 0.001f) return dir * speed;
+
+            // no direction, since already in the cell - look up the owning attractor for this cell
+            int2 cell = FlowFieldUtil.WorldToCell(pos, FlowFieldCellSize, FlowFieldGridWidth, FlowFieldGridHeight);
+            int idx = FlowFieldUtil.GetIndex(cell, FlowFieldGridWidth);
+            
+            float2 ownerPos = AttractorOwner[idx];
+            float2 toOwner = ownerPos - pos;
+            float dist = math.lengthsq(toOwner);
+            return dist > 0.001f ? math.normalize(toOwner) * speed : float2.zero;
         }
 
         private static readonly int2[] NeighbourCells =

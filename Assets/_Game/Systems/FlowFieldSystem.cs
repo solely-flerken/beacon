@@ -14,6 +14,7 @@ namespace _Game.Systems
     public partial struct FlowFieldSystem : ISystem
     {
         private NativeArray<float2> _directions;
+        private NativeArray<float2> _attractorOwner;
         private NativeArray<float> _distances;
         private NativeArray<bool> _blocked;
         private NativeQueue<int2> _bfsQueue;
@@ -32,6 +33,7 @@ namespace _Game.Systems
 
             int totalCellCount = _gridWidth * _gridHeight;
             _directions = new NativeArray<float2>(totalCellCount, Allocator.Persistent);
+            _attractorOwner = new NativeArray<float2>(totalCellCount, Allocator.Persistent);
             _distances = new NativeArray<float>(totalCellCount, Allocator.Persistent);
             _blocked = new NativeArray<bool>(totalCellCount, Allocator.Persistent);
             _bfsQueue = new NativeQueue<int2>(Allocator.Persistent);
@@ -40,6 +42,7 @@ namespace _Game.Systems
             FlowFieldShared.GridWidth = _gridWidth;
             FlowFieldShared.GridHeight = _gridHeight;
             FlowFieldShared.Directions = _directions;
+            FlowFieldShared.AttractorOwner = _attractorOwner;
             FlowFieldShared.Blocked = _blocked;
 
             Debug.Log($"[FlowFieldSystem] Initialized {_gridWidth}x{_gridHeight} grid");
@@ -48,6 +51,7 @@ namespace _Game.Systems
         public void OnDestroy(ref SystemState state)
         {
             if (_directions.IsCreated) _directions.Dispose();
+            if (_attractorOwner.IsCreated)  _attractorOwner.Dispose();
             if (_distances.IsCreated) _distances.Dispose();
             if (_blocked.IsCreated) _blocked.Dispose();
             if (_bfsQueue.IsCreated) _bfsQueue.Dispose();
@@ -73,10 +77,12 @@ namespace _Game.Systems
 
             for (int i = 0; i < attractors.Length; i++)
             {
-                int2 cell = FlowFieldUtil.WorldToCell(transforms[i].Position.xy, ArenaConfig.FlowFieldCellSize, _gridWidth, _gridHeight);
+                int2 cell = FlowFieldUtil.WorldToCell(transforms[i].Position.xy, ArenaConfig.FlowFieldCellSize,
+                    _gridWidth, _gridHeight);
                 cell = math.clamp(cell, int2.zero, new int2(_gridWidth - 1, _gridHeight - 1));
                 int idx = cell.y * _gridWidth + cell.x;
                 _distances[idx] = 0;
+                _attractorOwner[idx] = transforms[i].Position.xy;
                 _bfsQueue.Enqueue(cell);
             }
 
@@ -86,6 +92,7 @@ namespace _Game.Systems
                 Distances = _distances,
                 Blocked = _blocked,
                 Directions = _directions,
+                AttractorOwner = _attractorOwner,
                 GridWidth = _gridWidth,
                 GridHeight = _gridHeight,
                 Attractors = attractors,
