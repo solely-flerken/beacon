@@ -61,8 +61,20 @@ namespace _Game.Gameplay
             {
                 SpawnFlare();
             }
+
+            if (Keyboard.current.eKey.wasPressedThisFrame)
+            {
+                TriggerWaveEnd();
+            }
         }
     
+        private void TriggerWaveEnd()
+        {
+            Entity e = _entityManager.CreateEntity();
+            _entityManager.AddComponent<WaveEndTag>(e);
+            Debug.Log("[GameManager] Wave ended.");
+        }
+        
         private void SpawnFlare()
         {
             using EntityQuery prefabQuery = _entityManager.CreateEntityQuery(typeof(PrefabRefs));

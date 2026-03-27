@@ -4,6 +4,11 @@ namespace _Game.Components
 {
     public struct ExpOrbTag : IComponentData { }
 
+    /// <summary>
+    /// Added when an orb's Value >= MaxValue. Never removed since a saturated orb flies to the beacon and is destroyed.
+    /// </summary>
+    public struct SaturatedTag : IComponentData { }
+    
     public enum ExpOrbState : byte
     {
         Idle,

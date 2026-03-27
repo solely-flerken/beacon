@@ -21,8 +21,6 @@ namespace _Game.Authoring
             public float mergeSpeed = 0.3f;
 
             [Header("Movement")] 
-            public float baseSpeed = 3f;
-            public float maxSpeed = 12f;
             public float collectBaseSpeed = 5f;
             public float collectMaxSpeed = 20f;
 
@@ -42,8 +40,6 @@ namespace _Game.Authoring
                         ScaleLerpSpeed = a.scaleLerpSpeed,
                         MergeRadius = a.mergeRadius,
                         MergeSpeed = a.mergeSpeed,
-                        BaseSpeed = a.baseSpeed,
-                        MaxSpeed = a.maxSpeed,
                         CollectBaseSpeed = a.collectBaseSpeed,
                         CollectMaxSpeed = a.collectMaxSpeed,
                         BeaconArrivalRadius = a.beaconArrivalRadius,

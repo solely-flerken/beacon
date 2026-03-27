@@ -43,6 +43,11 @@ namespace _Game.Systems
 
                 bool saturated = death.Exp >= config.MaxOrbValue;
 
+                if (saturated)
+                {
+                    ecb.AddComponent<SaturatedTag>(orb);
+                }
+                
                 ecb.SetComponent(orb, new ExpOrbData
                 {
                     Value = death.Exp,

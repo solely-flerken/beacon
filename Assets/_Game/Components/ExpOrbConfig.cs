@@ -17,8 +17,6 @@ namespace _Game.Components
         public float MergeSpeed;
         
         // Movement
-        public float BaseSpeed;
-        public float MaxSpeed;
         public float CollectBaseSpeed;
         public float CollectMaxSpeed;
         
