@@ -185,6 +185,7 @@ GameObject:
   - component: {fileID: 238055988}
   - component: {fileID: 238055992}
   - component: {fileID: 238055993}
+  - component: {fileID: 238055994}
   m_Layer: 0
   m_Name: _Core
   m_TagString: Untagged
@@ -257,6 +258,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c918da8d153f468faf31350d6ef893f3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::_Game.Editor.FlowFieldDebugger
+--- !u!114 &238055994
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 238055985}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ad9814615c2d4ce9802c2110ba42f1ae, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::_Game.Gameplay.ExpManager
+  xpPerLevel: 50
 --- !u!1 &438619592
 GameObject:
   m_ObjectHideFlags: 0

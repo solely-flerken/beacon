@@ -1,8 +1,8 @@
 ﻿using _Game.Components;
+using _Game.Core;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
-using UnityEngine;
 
 namespace _Game.Systems
 {
@@ -32,8 +32,7 @@ namespace _Game.Systems
 
                 if (dist < cfg.BeaconArrivalRadius)
                 {
-                    // TODO: Feed dataRW.ValueRO.Value into the Exp/leveling system here.
-                    Debug.Log($"[BeaconCollectExpSystem] Granted {dataRW.ValueRO.Value} exp.");
+                    EventBus.FireExpCollected(dataRW.ValueRO.Value);
                     ecb.DestroyEntity(entity);
                     continue;
                 }

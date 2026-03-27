@@ -103,8 +103,20 @@ namespace _Game.Gameplay
         {
             int enemyCount = _enemyCountQuery.CalculateEntityCount();
             int projectileCount = _projectileCountQuery.CalculateEntityCount();
-            GUI.Box(new Rect(10, 10, 150, 25), $"    Enemies: {enemyCount}");
+            GUI.Box(new Rect(10, 10, 150, 25), $"Enemies: {enemyCount}");
             GUI.Box(new Rect(10, 40, 150, 25), $"Projectiles: {projectileCount}");
+            
+            if (ExpManager.Instance == null) return;
+
+            int level = ExpManager.Instance.CurrentLevel;
+            float progress = ExpManager.Instance.LevelProgress;
+            float totalExp = ExpManager.Instance.TotalExp;
+
+            GUI.Box(new Rect(10, 70, 150, 25), $"Level: {level} - Exp: {(int)totalExp}");
+
+            // Progress bar
+            GUI.Box(new Rect(10, 100, 150, 16), "");
+            if(progress > 0) GUI.Box(new Rect(10, 100, 150 * progress, 16), "");
         }
     }
 }
