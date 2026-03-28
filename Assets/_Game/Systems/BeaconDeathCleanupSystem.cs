@@ -47,13 +47,7 @@ namespace _Game.Systems
                 ecb.DestroyEntity(entity);
             }
 
-            // Trigger Managed Events
             EventBus.FireBeaconDestroyed();
-
-            if (GameStateMachine.Instance != null)
-            {
-                GameStateMachine.Instance.TransitionTo(GameState.RunEnd);
-            }
 
             ecb.Playback(state.EntityManager);
         }
