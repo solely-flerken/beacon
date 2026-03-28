@@ -48,6 +48,7 @@ namespace _Game.Systems
                         if (math.distancesq(positions[idx], beaconPos) > radiusSq) continue;
 
                         Entity enemy = entities[idx];
+                        if (!state.EntityManager.HasComponent<ContactDamage>(enemy)) continue;
                         totalDamage += state.EntityManager.GetComponentData<ContactDamage>(enemy).Value;
 
                         // TODO: Refactor - can possibly code enemies as projectiles themselves and make beacon able to be damaged by them
