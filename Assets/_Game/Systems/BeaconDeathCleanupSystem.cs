@@ -35,6 +35,12 @@ namespace _Game.Systems
                 ecb.DestroyEntity(entity);
             }
             
+            // Destroy all flares
+            foreach ((FlareTag _, Entity entity) in SystemAPI.Query<FlareTag>().WithEntityAccess())
+            {
+                ecb.DestroyEntity(entity);
+            }
+            
             // Destroy all exp orbs
             foreach ((ExpOrbTag _, Entity entity) in SystemAPI.Query<ExpOrbTag>().WithEntityAccess())
             {
