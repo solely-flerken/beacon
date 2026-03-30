@@ -7,14 +7,8 @@ namespace _Game.Authoring
 {
     public class ProjectileAuthoring : MonoBehaviour
     {
-        [Header("Stats")] 
-        public float speed = 30f;
-        
-        public float damage = 10f;
-        public int pierce = 0;
-
         public float lifetime = 4f;
-        
+
         private class Baker : Baker<ProjectileAuthoring>
         {
             public override void Bake(ProjectileAuthoring authoring)
@@ -22,12 +16,12 @@ namespace _Game.Authoring
                 Entity entity = GetEntity(TransformUsageFlags.Dynamic);
 
                 AddComponent<ProjectileTag>(entity);
-                
+
+                // Containers (Values will be set by the Weapon when spawned)
                 AddComponent(entity, new ProjectileVelocity { Value = float2.zero });
-                AddComponent(entity, new ProjectileSpeed { Value = authoring.speed });
-                AddComponent(entity, new ProjectileDamage { Value = authoring.damage });
-                AddComponent(entity, new ProjectilePierce { Remaining = authoring.pierce });
-                
+                AddComponent(entity, new ProjectileDamage { Value = 0f });
+                AddComponent(entity, new ProjectilePierce { Remaining = 0 });
+
                 AddComponent(entity, new Lifetime { Remaining = authoring.lifetime });
             }
         }

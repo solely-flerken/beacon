@@ -16,14 +16,6 @@ namespace _Game.Components
     {
         public float2 Value;
     }
-    
-    /// <summary>
-    /// Baked scalar speed. Read-only at runtime.
-    /// </summary>
-    public struct ProjectileSpeed : IComponentData
-    {
-        public float Value;
-    }
 
     /// <summary>
     /// Damage dealt on hit.

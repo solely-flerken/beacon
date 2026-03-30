@@ -144,9 +144,7 @@ namespace _Game.Gameplay
                 stats.IsAlive = true;
                 _entityManager.SetComponentData(beacon, stats);
 
-                BeaconWeapon weapon = _entityManager.GetComponentData<BeaconWeapon>(beacon);
-                weapon.Timer = 0f;
-                _entityManager.SetComponentData(beacon, weapon);
+                // TODO: Reset weapon timers, modifiers, etc.
                 
                 EventBus.FireBeaconHit(stats.MaxHp, stats.MaxHp);
             }

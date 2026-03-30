@@ -1,0 +1,37 @@
+﻿using _Game.Components;
+using Unity.Entities;
+using UnityEngine;
+
+namespace _Game.Authoring
+{
+    [RequireComponent(typeof(WeaponBaseAuthoring))]
+    public class WeaponProjectileAuthoring : MonoBehaviour
+    {
+        public GameObject projectilePrefab;
+
+        [Header("Projectile Stats")]
+        public float speed = 20f;
+        public int pierce = 0;
+
+        private class Baker : Baker<WeaponProjectileAuthoring>
+        {
+            public override void Bake(WeaponProjectileAuthoring authoring)
+            {
+                Entity entity = GetEntity(TransformUsageFlags.Dynamic);
+
+                AddComponent(entity, new ProjectileStats
+                {
+                    BaseSpeed = authoring.speed,
+                    BasePierce = authoring.pierce,
+                    Speed = authoring.speed,
+                    Pierce = authoring.pierce
+                });
+
+                AddComponent(entity, new ShootProjectile
+                {
+                    ProjectilePrefab = GetEntity(authoring.projectilePrefab, TransformUsageFlags.Dynamic),
+                });
+            }
+        }
+    }
+}

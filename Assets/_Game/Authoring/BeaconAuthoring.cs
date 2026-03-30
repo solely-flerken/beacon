@@ -24,13 +24,6 @@ namespace _Game.Authoring
                     IsAlive = true
                 });
 
-                AddComponent(entity, new BeaconWeapon
-                {
-                    FireRate = config.fireRate,
-                    TargetRange = config.targetRange,
-                    Timer = 0f
-                });
-
                 AddComponent(entity, new NavigationAttractor { Range = 9999f });
             }
         }

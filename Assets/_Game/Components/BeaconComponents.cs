@@ -11,11 +11,4 @@ namespace _Game.Components
         public float ArrivalRadius;
         public bool IsAlive;
     }
-
-    public struct BeaconWeapon : IComponentData
-    {
-        public float FireRate;
-        public float TargetRange;
-        public float Timer;
-    }
 }
