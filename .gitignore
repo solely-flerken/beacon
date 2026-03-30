@@ -104,7 +104,3 @@ InitTestScene*.unity*
 # Scene Dependency Cache
 /Assets/SceneDependencyCache/
 /Assets/SceneDependencyCache.meta
-
-# Entities (DOTS)
-EntitiesClientSettings.asset
-EntitiesClientSettings.asset.meta
