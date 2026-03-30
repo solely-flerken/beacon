@@ -2,6 +2,7 @@
 using _Game.Authoring;
 using _Game.Components;
 using _Game.Core;
+using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
@@ -75,6 +76,8 @@ namespace _Game.Gameplay
                         TriggerWaveEnd();
                     if (Keyboard.current.pKey.wasPressedThisFrame)
                         GameStateMachine.Instance.TransitionTo(GameState.Paused);
+                    if (Keyboard.current.mKey.wasPressedThisFrame)
+                        ApplyTestModifier();
                     break;
 
                 case GameState.WaveEnd:
@@ -132,6 +135,40 @@ namespace _Game.Gameplay
             _simGroup.Enabled = enable;
         }
 
+        private void ApplyTestModifier()
+        {
+            using EntityQuery beaconQuery = _entityManager.CreateEntityQuery(typeof(BeaconStats), typeof(GlobalStatModifier));
+
+            if (beaconQuery.IsEmpty) return;
+           
+            Entity beacon = beaconQuery.GetSingletonEntity();
+            DynamicBuffer<GlobalStatModifier> globalBuffer = _entityManager.GetBuffer<GlobalStatModifier>(beacon);
+
+            globalBuffer.Add(new GlobalStatModifier
+            {
+                Stat = StatType.FireRate,
+                Type = ModifierType.Multiplicative,
+                Value = 2f
+            });
+
+            Debug.Log("[GameManager] Applied Global 2x Fire Rate Modifier to Beacon.");
+            
+            // Mark all weapons as "Dirty"
+            EntityQueryDesc weaponQueryDesc = new()
+            {
+                All = new[] { ComponentType.ReadOnly<StatUpdateRequired>() },
+                Options = EntityQueryOptions.IgnoreComponentEnabledState
+            };
+
+            using EntityQuery weaponQuery = _entityManager.CreateEntityQuery(weaponQueryDesc);
+            using NativeArray<Entity> weapons = weaponQuery.ToEntityArray(Allocator.Temp);
+
+            foreach (Entity weapon in weapons)
+            {
+                _entityManager.SetComponentEnabled<StatUpdateRequired>(weapon, true);
+            }
+        }
+        
         private void RestartRun()
         {
             using EntityQuery beaconQuery = _entityManager.CreateEntityQuery(typeof(BeaconStats));
@@ -200,10 +237,10 @@ namespace _Game.Gameplay
             string hint = GameStateMachine.Instance?.CurrentState switch
             {
                 GameState.MainMenu => "Any key to start",
-                GameState.WaveRunning => "Enemies (space), End wave ('E'), Flare ('F'), Pause ('P')",
-                GameState.WaveEnd => "Start next wave (space)",
-                GameState.RunEnd => "Restart ('R')",
-                GameState.Paused => "Unpause ('P')",
+                GameState.WaveRunning => "Enemies(spc), End wave(E), Flare(F), Pause(P), Add FireRate(M)",
+                GameState.WaveEnd => "Start next wave(spc)",
+                GameState.RunEnd => "Restart(R)",
+                GameState.Paused => "Unpause(P)",
                 _ => ""
             };
             GUI.Box(new Rect(10, Screen.height - 35, 400, 25), hint);

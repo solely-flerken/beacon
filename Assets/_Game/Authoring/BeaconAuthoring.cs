@@ -23,8 +23,10 @@ namespace _Game.Authoring
                     ArrivalRadius = config.arrivalRadius,
                     IsAlive = true
                 });
-
+                
                 AddComponent(entity, new NavigationAttractor { Range = 9999f });
+                
+                AddBuffer<GlobalStatModifier>(entity);
             }
         }
     }
