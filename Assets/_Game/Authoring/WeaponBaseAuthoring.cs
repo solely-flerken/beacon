@@ -36,7 +36,7 @@ namespace _Game.Authoring
 
                 AddBuffer<StatModifier>(entity);
 
-                AddComponent<StatUpdateRequired>(entity);
+                AddComponent<WeaponStatUpdateRequired>(entity);
 
                 AddComponent<ReadyToFire>(entity);
                 SetComponentEnabled<ReadyToFire>(entity, false);

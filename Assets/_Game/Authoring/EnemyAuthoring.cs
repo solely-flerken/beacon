@@ -24,11 +24,16 @@ namespace _Game.Authoring
                 AddComponent<EnemyTag>(entity);
                 AddComponent<TargetableTag>(entity);
                 
-                AddComponent(entity, new EnemySpeed { Value = authoring.speed });
-                AddComponent(entity, new EnemyHealth { Current = authoring.maxHealth, Max = authoring.maxHealth });
-                AddComponent(entity, new ContactDamage { Value = authoring.contactDamage });
+                AddComponent(entity, new EnemySpeed { BaseValue = authoring.speed, Value = authoring.speed });
+                AddComponent(entity, new EnemyHealth { BaseMax = authoring.maxHealth, Max = authoring.maxHealth, Current = authoring.maxHealth });
+                AddComponent(entity, new ContactDamage { BaseValue = authoring.contactDamage, Value = authoring.contactDamage });
+               
                 AddComponent(entity, new EnemyReward { ExpValue = authoring.exp });
                 AddComponent(entity, new EnemySpeedVariation { Value = authoring.speedVariation });
+                
+                AddBuffer<StatModifier>(entity);
+                
+                AddComponent<EnemyStatUpdateRequired>(entity);
             }
         }
     }

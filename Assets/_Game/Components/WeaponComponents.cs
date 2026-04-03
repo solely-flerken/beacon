@@ -42,4 +42,9 @@ namespace _Game.Components
     {
         public Entity ProjectilePrefab;
     }
+    
+    /// <summary>
+    /// Dirty flag. Enable this to force WeaponStatUpdateSystem to recalculate.
+    /// </summary>
+    public struct WeaponStatUpdateRequired : IComponentData, IEnableableComponent { }
 }

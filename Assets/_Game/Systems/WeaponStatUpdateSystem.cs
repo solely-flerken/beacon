@@ -23,7 +23,7 @@ namespace _Game.Systems
             _globalModsLookup.Update(ref state);
 
             foreach ((RefRW<WeaponStats> stats, DynamicBuffer<StatModifier> localMods, Entity entity) in 
-                     SystemAPI.Query<RefRW<WeaponStats>, DynamicBuffer<StatModifier>>().WithAll<StatUpdateRequired>().WithEntityAccess())
+                     SystemAPI.Query<RefRW<WeaponStats>, DynamicBuffer<StatModifier>>().WithAll<WeaponStatUpdateRequired>().WithEntityAccess())
             {
                 if (_beaconQuery.IsEmpty) return;
            
@@ -44,7 +44,7 @@ namespace _Game.Systems
                 }
 
                 // Disable dirty flag
-                SystemAPI.SetComponentEnabled<StatUpdateRequired>(entity, false);
+                SystemAPI.SetComponentEnabled<WeaponStatUpdateRequired>(entity, false);
             }
         }
     }

@@ -78,6 +78,10 @@ namespace _Game.Gameplay
                         GameStateMachine.Instance.TransitionTo(GameState.Paused);
                     if (Keyboard.current.mKey.wasPressedThisFrame)
                         ApplyTestModifier();
+                    if (Keyboard.current.bKey.wasPressedThisFrame)
+                        ApplyTestBeaconModifier();
+                    if (Keyboard.current.nKey.wasPressedThisFrame)
+                        ApplyTestEnemyModifier();
                     break;
 
                 case GameState.WaveEnd:
@@ -156,7 +160,7 @@ namespace _Game.Gameplay
             // Mark all weapons as "Dirty"
             EntityQueryDesc weaponQueryDesc = new()
             {
-                All = new[] { ComponentType.ReadOnly<StatUpdateRequired>() },
+                All = new[] { ComponentType.ReadOnly<WeaponStatUpdateRequired>() },
                 Options = EntityQueryOptions.IgnoreComponentEnabledState
             };
 
@@ -165,10 +169,63 @@ namespace _Game.Gameplay
 
             foreach (Entity weapon in weapons)
             {
-                _entityManager.SetComponentEnabled<StatUpdateRequired>(weapon, true);
+                _entityManager.SetComponentEnabled<WeaponStatUpdateRequired>(weapon, true);
             }
         }
         
+        private void ApplyTestBeaconModifier()
+        {
+            using EntityQuery beaconQuery = _entityManager.CreateEntityQuery(typeof(BeaconStats), typeof(StatModifier));
+
+            if (beaconQuery.IsEmpty) return;
+
+            Entity beacon = beaconQuery.GetSingletonEntity();
+            DynamicBuffer<StatModifier> localBuffer = _entityManager.GetBuffer<StatModifier>(beacon);
+
+            localBuffer.Add(new StatModifier
+            {
+                Stat = StatType.MaxHp,
+                Type = ModifierType.Multiplicative,
+                Value = 1.5f
+            });
+
+            _entityManager.SetComponentEnabled<BeaconStatUpdateRequired>(beacon, true);
+
+            Debug.Log("[GameManager] Applied Beacon +50% MaxHp modifier.");
+        }
+
+        private void ApplyTestEnemyModifier()
+        {
+            EntityQueryDesc enemyQueryDesc = new()
+            {
+                All = new[]
+                {
+                    ComponentType.ReadOnly<EnemyTag>(),
+                    ComponentType.ReadOnly<StatModifier>(),
+                    ComponentType.ReadOnly<EnemyStatUpdateRequired>()
+                },
+                Options = EntityQueryOptions.IgnoreComponentEnabledState
+            };
+
+            using EntityQuery enemyQuery = _entityManager.CreateEntityQuery(enemyQueryDesc);
+            using NativeArray<Entity> enemies = enemyQuery.ToEntityArray(Allocator.Temp);
+
+            foreach (Entity enemy in enemies)
+            {
+                DynamicBuffer<StatModifier> localBuffer = _entityManager.GetBuffer<StatModifier>(enemy);
+                localBuffer.Add(new StatModifier
+                {
+                    Stat = StatType.EnemySpeed,
+                    Type = ModifierType.Multiplicative,
+                    Value = 2f
+                });
+
+                _entityManager.SetComponentEnabled<EnemyStatUpdateRequired>(enemy, true);
+            }
+
+            Debug.Log($"[GameManager] Applied Enemy 2x Speed modifier to {enemies.Length} enemies.");
+        }
+
         private void RestartRun()
         {
             using EntityQuery beaconQuery = _entityManager.CreateEntityQuery(typeof(BeaconStats));
@@ -237,7 +294,7 @@ namespace _Game.Gameplay
             string hint = GameStateMachine.Instance?.CurrentState switch
             {
                 GameState.MainMenu => "Any key to start",
-                GameState.WaveRunning => "Enemies(spc), End wave(E), Flare(F), Pause(P), Add FireRate(M)",
+                GameState.WaveRunning => "Enemies(spc), End wave(E), Flare(F), Pause(P), Weapon Mod(M), Beacon Mod(B), Enemy Mod(N)",
                 GameState.WaveEnd => "Start next wave(spc)",
                 GameState.RunEnd => "Restart(R)",
                 GameState.Paused => "Unpause(P)",

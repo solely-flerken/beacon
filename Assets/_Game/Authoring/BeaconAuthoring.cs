@@ -18,15 +18,21 @@ namespace _Game.Authoring
 
                 AddComponent(entity, new BeaconStats
                 {
-                    CurrentHp = config.maxHp,
+                    BaseMaxHp = config.maxHp,
+                    BaseArrivalRadius = config.arrivalRadius,
                     MaxHp = config.maxHp,
                     ArrivalRadius = config.arrivalRadius,
+                    
+                    CurrentHp = config.maxHp,
                     IsAlive = true
                 });
-                
+
                 AddComponent(entity, new NavigationAttractor { Range = 9999f });
-                
+
+                AddBuffer<StatModifier>(entity);
                 AddBuffer<GlobalStatModifier>(entity);
+                
+                AddComponent<BeaconStatUpdateRequired>(entity);
             }
         }
     }

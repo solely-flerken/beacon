@@ -9,6 +9,7 @@ namespace _Game.Components
     /// </summary>
     public struct EnemySpeed : IComponentData
     {
+        public float BaseValue;
         public float Value;
     }
 
@@ -18,6 +19,7 @@ namespace _Game.Components
     /// </summary>
     public struct ContactDamage : IComponentData
     {
+        public float BaseValue;
         public float Value;
     }
 
@@ -26,9 +28,15 @@ namespace _Game.Components
     /// </summary>
     public struct EnemyHealth : IComponentData
     {
-        public float Current;
+        public float BaseMax;
         public float Max;
+        public float Current;
     }
+
+    /// <summary>
+    /// Dirty flag. Enable to force EnemyStatUpdateSystem to recalculate.
+    /// </summary>
+    public struct EnemyStatUpdateRequired : IComponentData, IEnableableComponent { }
 
     /// <summary>
     /// Reward data.

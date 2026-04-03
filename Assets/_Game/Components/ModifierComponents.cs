@@ -4,11 +4,19 @@ namespace _Game.Components
 {
     public enum StatType : byte
     {
+        // Weapon
         Damage,
         FireRate,
         TargetRange,
         ProjectileSpeed,
         Pierce,
+        // Beacon
+        MaxHp,
+        ArrivalRadius,
+        // Enemy
+        EnemySpeed,
+        EnemyContactDamage,
+        EnemyMaxHealth,
     }
 
     public enum ModifierType : byte
@@ -16,12 +24,6 @@ namespace _Game.Components
         Additive,
         Multiplicative,
     }
-    
-    /// <summary>
-    /// Dirty flag.
-    /// Enable this to force WeaponStatUpdateSystem to recalculate.
-    /// </summary>
-    public struct StatUpdateRequired : IComponentData, IEnableableComponent { }
     
     public struct StatModifier : IBufferElementData
     {
