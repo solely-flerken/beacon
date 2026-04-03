@@ -1,4 +1,5 @@
-﻿using _Game.Components;
+using System;
+using _Game.Components;
 using Unity.Entities;
 using UnityEngine;
 
@@ -15,6 +16,9 @@ namespace _Game.Authoring
         
         public float exp = 1f;
 
+        [Header("Type")]
+        public EnemyType typeId;
+
         private class Baker : Baker<EnemyAuthoring>
         {
             public override void Bake(EnemyAuthoring authoring)
@@ -30,10 +34,20 @@ namespace _Game.Authoring
                
                 AddComponent(entity, new EnemyReward { ExpValue = authoring.exp });
                 AddComponent(entity, new EnemySpeedVariation { Value = authoring.speedVariation });
-                
-                AddBuffer<StatModifier>(entity);
-                
+
+                AddComponent<EnemyTypeRef>(entity);
+
                 AddComponent<EnemyStatUpdateRequired>(entity);
+
+                // Per-type enemy tag
+                switch (authoring.typeId)
+                {
+                    case EnemyType.Basic:
+                        AddComponent<BasicEnemyTag>(entity);
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
             }
         }
     }

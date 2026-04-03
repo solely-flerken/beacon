@@ -119,6 +119,52 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!1 &11991936
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 11991937}
+  - component: {fileID: 11991938}
+  m_Layer: 0
+  m_Name: EnemyTypeCatalog
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &11991937
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 11991936}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &11991938
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 11991936}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1d55e8fde5b909c418c5fc4acbf35d0a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::_Game.Authoring.EnemyTypeCatalogAuthoring
+  prefabs:
+  - {fileID: 3278083793145703428, guid: 95872f07fe42d504c91f0a8968cff6e0, type: 3}
 --- !u!1 &451592194
 GameObject:
   m_ObjectHideFlags: 0
@@ -271,7 +317,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 255f55a13ed5423cba604ca6b8d14fa0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::_Game.Authoring.SpawnerAuthoring
-  enemyPrefab: {fileID: 3278083793145703428, guid: 95872f07fe42d504c91f0a8968cff6e0, type: 3}
   projectilePrefab: {fileID: 1204610400704658499, guid: d40c439e6ed49864a8c689991cf6929f, type: 3}
   flarePrefab: {fileID: 6291189526652073928, guid: 980ae5667d3e9c34b85ade13aa7311e1, type: 3}
   expOrbPrefab: {fileID: 4836019042531272895, guid: a9b27f4f2c47ef148875e7e3eb3b2bd0, type: 3}
@@ -350,3 +395,4 @@ SceneRoots:
   - {fileID: 1524630796}
   - {fileID: 451592196}
   - {fileID: 1610158308}
+  - {fileID: 11991937}

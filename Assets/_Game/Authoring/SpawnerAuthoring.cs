@@ -5,7 +5,6 @@ namespace _Game.Authoring
 {
     public class SpawnerAuthoring : MonoBehaviour
     {
-        public GameObject enemyPrefab;
         public GameObject projectilePrefab;
         public GameObject flarePrefab;
         public GameObject expOrbPrefab;
@@ -14,7 +13,6 @@ namespace _Game.Authoring
         {
             public override void Bake(SpawnerAuthoring authoring)
             {
-                DependsOn(authoring.enemyPrefab);
                 DependsOn(authoring.projectilePrefab);
                 DependsOn(authoring.flarePrefab);
                 DependsOn(authoring.expOrbPrefab);
@@ -23,10 +21,9 @@ namespace _Game.Authoring
                 
                 AddComponent(entity, new PrefabRefs
                 {
-                    Enemy = GetEntity(authoring.enemyPrefab, TransformUsageFlags.Dynamic),
                     Projectile = GetEntity(authoring.projectilePrefab, TransformUsageFlags.Dynamic),
                     Flare = GetEntity(authoring.flarePrefab, TransformUsageFlags.Dynamic),
-                    ExpOrb =  GetEntity(authoring.expOrbPrefab, TransformUsageFlags.Dynamic),
+                    ExpOrb = GetEntity(authoring.expOrbPrefab, TransformUsageFlags.Dynamic),
                 });
             }
         }
@@ -34,7 +31,6 @@ namespace _Game.Authoring
 
     public struct PrefabRefs : IComponentData
     {
-        public Entity Enemy;
         public Entity Projectile;
         public Entity Flare;
         public Entity ExpOrb;

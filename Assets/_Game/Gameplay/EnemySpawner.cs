@@ -1,4 +1,4 @@
-﻿using _Game.Authoring;
+using _Game.Components;
 using _Game.Config;
 using Unity.Burst;
 using Unity.Collections;
@@ -6,23 +6,42 @@ using Unity.Entities;
 using Unity.Jobs;
 using Unity.Mathematics;
 using Unity.Transforms;
+using UnityEngine;
+using Random = Unity.Mathematics.Random;
 
 namespace _Game.Gameplay
 {
     public static class EnemySpawner
     {
-        public static void SpawnWave(EntityManager em, int count)
+        public static void SpawnWave(EntityManager em, EnemyType type, int count)
         {
-            using EntityQuery prefabQuery = em.CreateEntityQuery(typeof(PrefabRefs));
-            if (prefabQuery.IsEmpty)
+            using EntityQuery catalogQuery = em.CreateEntityQuery(typeof(EnemyTypeCatalogEntry));
+            if (catalogQuery.IsEmpty)
             {
-                UnityEngine.Debug.LogError("[EnemySpawner] PrefabRefs not found. Add SpawnerAuthoring to your SubScene.");
+                Debug.LogError("[EnemySpawner] EnemyTypeCatalogEntry not found. Add EnemyTypeCatalogAuthoring to your SubScene.");
                 return;
             }
 
-            PrefabRefs prefabs = prefabQuery.GetSingleton<PrefabRefs>();
+            DynamicBuffer<EnemyTypeCatalogEntry> catalog = em.GetBuffer<EnemyTypeCatalogEntry>(catalogQuery.GetSingletonEntity());
+
+            Entity prefab = Entity.Null;
+            Entity typeEntity = Entity.Null;
+            for (int i = 0; i < catalog.Length; i++)
+            {
+                if (catalog[i].TypeId != type) continue;
+                prefab = catalog[i].Prefab;
+                typeEntity = catalog[i].TypeEntity;
+                break;
+            }
+
+            if (prefab == Entity.Null)
+            {
+                Debug.LogError($"[EnemySpawner] No catalog entry found for EnemyType.{type}.");
+                return;
+            }
+
             NativeArray<Entity> entities = new(count, Allocator.TempJob);
-            em.Instantiate(prefabs.Enemy, entities);
+            em.Instantiate(prefab, entities);
 
             NativeArray<float2> positions = new(count, Allocator.TempJob);
             uint seed = (uint)UnityEngine.Random.Range(1, int.MaxValue);
@@ -39,12 +58,13 @@ namespace _Game.Gameplay
                 LocalTransform transform = em.GetComponentData<LocalTransform>(entities[i]);
                 transform.Position = new float3(positions[i].x, positions[i].y, 0f);
                 em.SetComponentData(entities[i], transform);
+                em.SetComponentData(entities[i], new EnemyTypeRef { Value = typeEntity });
             }
 
             entities.Dispose();
             positions.Dispose();
 
-            UnityEngine.Debug.Log($"[EnemySpawner] Spawned {count} enemies.");
+            Debug.Log($"[EnemySpawner] Spawned {count} {type} enemies.");
         }
     }
 

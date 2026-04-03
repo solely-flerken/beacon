@@ -1,4 +1,5 @@
-﻿using Unity.Entities;
+﻿using System;
+using Unity.Entities;
 
 namespace _Game.Components
 {
@@ -49,5 +50,48 @@ namespace _Game.Components
     public struct EnemySpeedVariation : IComponentData
     {
         public float Value;
+    }
+
+    public enum EnemyType : byte
+    {
+        Basic,
+    }
+
+    /// <summary>
+    /// Marks the shared type entity that holds StatModifier buffers for an enemy type.
+    /// </summary>
+    public struct EnemyTypeTag : IComponentData { }
+
+    /// <summary>
+    /// Points each enemy instance to its shared type entity.
+    /// </summary>
+    public struct EnemyTypeRef : IComponentData
+    {
+        public Entity Value;
+    }
+
+    public struct BasicEnemyTag : IComponentData { }
+
+    /// <summary>
+    /// Buffer on the catalog entity mapping type IDs to prefab and type entities.
+    /// </summary>
+    public struct EnemyTypeCatalogEntry : IBufferElementData
+    {
+        public EnemyType TypeId;
+        public Entity Prefab;
+        public Entity TypeEntity;
+    }
+
+    /// <summary>
+    /// Maps EnemyType enum values to their corresponding per-type tag ComponentType.
+    /// Use for archetype-level ECS filtering instead of per-entity EnemyTypeRef comparison.
+    /// </summary>
+    public static class EnemyTypeTagMap
+    {
+        public static ComponentType Get(EnemyType type) => type switch
+        {
+            EnemyType.Basic => ComponentType.ReadOnly<BasicEnemyTag>(),
+            _ => throw new ArgumentOutOfRangeException(nameof(type), type, null)
+        };
     }
 }

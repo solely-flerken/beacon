@@ -35,10 +35,23 @@ namespace _Game.Gameplay
             if (!prefabQuery.IsEmpty)
             {
                 PrefabRefs prefabs = prefabQuery.GetSingleton<PrefabRefs>();
-                _entityManager.DestroyEntity(_entityManager.Instantiate(prefabs.Enemy));
                 _entityManager.DestroyEntity(_entityManager.Instantiate(prefabs.Projectile));
                 _entityManager.DestroyEntity(_entityManager.Instantiate(prefabs.Flare));
                 _entityManager.DestroyEntity(_entityManager.Instantiate(prefabs.ExpOrb));
+            }
+
+            // Warm up enemy archetypes from catalog
+            using EntityQuery catalogQuery = _entityManager.CreateEntityQuery(typeof(EnemyTypeCatalogEntry));
+            if (!catalogQuery.IsEmpty)
+            {
+                DynamicBuffer<EnemyTypeCatalogEntry> catalogBuffer = _entityManager.GetBuffer<EnemyTypeCatalogEntry>(catalogQuery.GetSingletonEntity());
+
+                using NativeArray<EnemyTypeCatalogEntry> catalogData = catalogBuffer.ToNativeArray(Allocator.Temp);
+                for (int i = 0; i < catalogData.Length; i++)
+                {
+                    Entity instance = _entityManager.Instantiate(catalogData[i].Prefab);
+                    _entityManager.DestroyEntity(instance);
+                }
             }
 
             SetSimulation(false);
@@ -69,7 +82,7 @@ namespace _Game.Gameplay
 
                 case GameState.WaveRunning:
                     if (Keyboard.current.spaceKey.wasPressedThisFrame)
-                        EnemySpawner.SpawnWave(_entityManager, 200);
+                        EnemySpawner.SpawnWave(_entityManager, EnemyType.Basic, 200);
                     if (Keyboard.current.fKey.wasPressedThisFrame)
                         SpawnFlare();
                     if (Keyboard.current.eKey.wasPressedThisFrame)
@@ -81,7 +94,7 @@ namespace _Game.Gameplay
                     if (Keyboard.current.bKey.wasPressedThisFrame)
                         ApplyTestBeaconModifier();
                     if (Keyboard.current.nKey.wasPressedThisFrame)
-                        ApplyTestEnemyModifier();
+                        ApplyTestEnemyModifier(EnemyType.Basic);
                     break;
 
                 case GameState.WaveEnd:
@@ -194,36 +207,53 @@ namespace _Game.Gameplay
             Debug.Log("[GameManager] Applied Beacon +50% MaxHp modifier.");
         }
 
-        private void ApplyTestEnemyModifier()
+        private void ApplyTestEnemyModifier(EnemyType type)
         {
+            // Find the type entity from the catalog
+            using EntityQuery catalogQuery = _entityManager.CreateEntityQuery(typeof(EnemyTypeCatalogEntry));
+            if (catalogQuery.IsEmpty) return;
+
+            DynamicBuffer<EnemyTypeCatalogEntry> catalog = _entityManager.GetBuffer<EnemyTypeCatalogEntry>(catalogQuery.GetSingletonEntity());
+
+            Entity typeEntity = Entity.Null;
+            for (int i = 0; i < catalog.Length; i++)
+            {
+                if (catalog[i].TypeId != type) continue;
+                typeEntity = catalog[i].TypeEntity;
+                break;
+            }
+
+            if (typeEntity == Entity.Null)
+            {
+                Debug.LogWarning($"[GameManager] No catalog entry found for EnemyType.{type}.");
+                return;
+            }
+
+            _entityManager.GetBuffer<StatModifier>(typeEntity).Add(new StatModifier
+            {
+                Stat = StatType.EnemySpeed,
+                Type = ModifierType.Multiplicative,
+                Value = 2f
+            });
+
+            // Mark only enemies of this type dirty
             EntityQueryDesc enemyQueryDesc = new()
             {
                 All = new[]
                 {
                     ComponentType.ReadOnly<EnemyTag>(),
-                    ComponentType.ReadOnly<StatModifier>(),
-                    ComponentType.ReadOnly<EnemyStatUpdateRequired>()
+                    ComponentType.ReadOnly<EnemyStatUpdateRequired>(),
+                    EnemyTypeTagMap.Get(type)
                 },
                 Options = EntityQueryOptions.IgnoreComponentEnabledState
             };
 
             using EntityQuery enemyQuery = _entityManager.CreateEntityQuery(enemyQueryDesc);
-            using NativeArray<Entity> enemies = enemyQuery.ToEntityArray(Allocator.Temp);
+            
+            int markedCount = enemyQuery.CalculateEntityCount();
+            _entityManager.SetComponentEnabled<EnemyStatUpdateRequired>(enemyQuery, true);
 
-            foreach (Entity enemy in enemies)
-            {
-                DynamicBuffer<StatModifier> localBuffer = _entityManager.GetBuffer<StatModifier>(enemy);
-                localBuffer.Add(new StatModifier
-                {
-                    Stat = StatType.EnemySpeed,
-                    Type = ModifierType.Multiplicative,
-                    Value = 2f
-                });
-
-                _entityManager.SetComponentEnabled<EnemyStatUpdateRequired>(enemy, true);
-            }
-
-            Debug.Log($"[GameManager] Applied Enemy 2x Speed modifier to {enemies.Length} enemies.");
+            Debug.Log($"[GameManager] Applied 2x Speed modifier to EnemyType.{type}. Marked {markedCount} enemies dirty.");
         }
 
         private void RestartRun()
