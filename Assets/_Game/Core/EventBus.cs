@@ -67,6 +67,7 @@ namespace _Game.Core
             OnWaveStarted = null;
             OnWaveCleared = null;
             OnBossWaveStarted = null;
+            OnExpCollected = null;
             OnExpChanged = null;
             OnLevelUp = null;
             OnBeaconHit = null;
