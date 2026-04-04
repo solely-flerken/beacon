@@ -40,7 +40,7 @@ namespace _Game.Systems
                     RefRW<ProjectileStats> baseProj = SystemAPI.GetComponentRW<ProjectileStats>(entity);
 
                     baseProj.ValueRW.Speed = StatResolver.Resolve(baseProj.ValueRO.BaseSpeed, localMods, globalMods, StatType.ProjectileSpeed);
-                    baseProj.ValueRW.Pierce = (int)StatResolver.Resolve(baseProj.ValueRO.Pierce, localMods, globalMods, StatType.Pierce);
+                    baseProj.ValueRW.Pierce = (int)StatResolver.Resolve(baseProj.ValueRO.BasePierce, localMods, globalMods, StatType.Pierce);
                 }
 
                 // Disable dirty flag
