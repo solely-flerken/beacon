@@ -1,0 +1,37 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <Style src="card-draft.uss" />
+    <ui:VisualElement name="draft-overlay" class="draft-overlay">
+        <ui:VisualElement name="draft-container" class="draft-container">
+
+            <ui:VisualElement class="draft-header">
+                <ui:Label class="level-up-label" text="LEVEL UP" />
+                <ui:Label class="choose-label"   text="Choose your upgrade" />
+            </ui:VisualElement>
+
+            <ui:VisualElement name="cards-row" class="tiles-list">
+
+                <ui:VisualElement name="card-0" class="card-tile">
+                    <ui:VisualElement class="tile-content">
+                        <ui:Label name="card-title-0"       class="tile-title" text="" />
+                        <ui:Label name="card-description-0" class="tile-desc"  text="" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+
+                <ui:VisualElement name="card-1" class="card-tile">
+                    <ui:VisualElement class="tile-content">
+                        <ui:Label name="card-title-1"       class="tile-title" text="" />
+                        <ui:Label name="card-description-1" class="tile-desc"  text="" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+
+                <ui:VisualElement name="card-2" class="card-tile">
+                    <ui:VisualElement class="tile-content">
+                        <ui:Label name="card-title-2"       class="tile-title" text="" />
+                        <ui:Label name="card-description-2" class="tile-desc"  text="" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

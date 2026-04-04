@@ -1,0 +1,87 @@
+/* ── Overlay ──────────────────────────────────────────────────── */
+.draft-overlay {
+    position: absolute;
+    left: 0; top: 0; right: 0; bottom: 0;
+    background-color: rgba(4, 7, 18, 0.92);
+    align-items: center;
+    justify-content: center;
+}
+
+/* ── Container ────────────────────────────────────────────────── */
+.draft-container {
+    width: 520px;
+    align-items: stretch;
+}
+
+/* ── Header ───────────────────────────────────────────────────── */
+.draft-header {
+    align-items: flex-start;
+    margin-bottom: 18px;
+    padding-left: 4px;
+}
+
+.level-up-label {
+    font-size: 36px;
+    -unity-font-style: bold;
+    color: rgb(240, 180, 36);
+    -unity-text-align: upper-left;
+    margin-bottom: 0;
+}
+
+.choose-label {
+    font-size: 13px;
+    color: rgba(155, 190, 220, 0.5);
+    -unity-text-align: upper-left;
+}
+
+/* ── Tile list ────────────────────────────────────────────────── */
+.tiles-list {
+    flex-direction: column;
+}
+
+/* ── Individual tile ──────────────────────────────────────────── */
+.card-tile {
+    flex-direction: row;
+    align-items: center;
+    background-color: rgb(11, 16, 30);
+    border-radius: 8px;
+    padding: 18px 16px 18px 20px;
+    margin-bottom: 8px;
+
+    border-left-width: 3px;
+    border-left-color: rgb(232, 168, 32);
+    border-top-width: 0;
+    border-right-width: 0;
+    border-bottom-width: 0;
+
+    transition-property: background-color, border-left-color;
+    transition-duration: 0.12s;
+    transition-timing-function: ease-out;
+}
+
+.card-tile:hover {
+    background-color: rgb(16, 23, 44);
+    border-left-color: rgb(255, 204, 68);
+}
+
+/* ── Text block ───────────────────────────────────────────────── */
+.tile-content {
+    flex-grow: 1;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.tile-title {
+    font-size: 15px;
+    color: rgb(224, 238, 255);
+    -unity-font-style: bold;
+    margin-bottom: 3px;
+    white-space: normal;
+}
+
+.tile-desc {
+    font-size: 12px;
+    color: rgba(148, 178, 210, 0.68);
+    white-space: normal;
+}
+
