@@ -63,7 +63,7 @@ namespace _Game.Cards
             cardId: 101,
             title: "Reinforced Armor",
             description: "Beacon gains +50% max HP.",
-            effects: new[] { BeaconFx(StatType.MaxHp, ModifierType.Multiplicative, 1.5f) }
+            effects: new[] { BeaconFx(StatType.MaxHp, ModifierType.Multiplicative, 50f) }
         );
 
         // Weapon cards
@@ -71,14 +71,14 @@ namespace _Game.Cards
             cardId: 201,
             title: "Rapid Fire",
             description: "All weapons fire twice as fast.",
-            effects: new[] { WeaponFx(StatType.FireRate, ModifierType.Multiplicative, 2f) }
+            effects: new[] { WeaponFx(StatType.FireRate, ModifierType.Multiplicative, 100f) }
         );
 
         public static readonly CardData OverchargedBarrels = new(
             cardId: 202,
             title: "Overcharged Barrels",
             description: "All weapons deal 50% more damage. Requires Rapid Fire.",
-            effects: new[] { WeaponFx(StatType.Damage, ModifierType.Multiplicative, 1.5f) },
+            effects: new[] { WeaponFx(StatType.Damage, ModifierType.Multiplicative, 50f) },
             constraints: new[] { HasCard(101) }
         );
 
@@ -86,7 +86,7 @@ namespace _Game.Cards
             cardId: 203,
             title: "Deep Magazine",
             description: "Unlock after drafting 3 cards. All weapons gain +50% range.",
-            effects: new[] { WeaponFx(StatType.TargetRange, ModifierType.Multiplicative, 1.5f) },
+            effects: new[] { WeaponFx(StatType.TargetRange, ModifierType.Multiplicative, 50f) },
             constraints: new[] { MinCards(3) }
         );
 
@@ -103,7 +103,7 @@ namespace _Game.Cards
             cardId: 301,
             title: "Tar Traps",
             description: "Basic enemies move 30% slower.",
-            effects: new[] { EnemyFx(EnemyType.Basic, StatType.EnemySpeed, ModifierType.Multiplicative, 0.7f) }
+            effects: new[] { EnemyFx(EnemyType.Basic, StatType.EnemySpeed, ModifierType.Multiplicative, -30f) }
         );
 
         #endregion

@@ -6,11 +6,10 @@ namespace _Game.Util
 {
     public static class StatResolver
     {
-        // TODO: Check multiplicative calculation
         public static float Resolve(float baseValue, DynamicBuffer<StatModifier> localMods, StatType statType)
         {
             float additive = 0f;
-            float multiplicative = 1f;
+            float multiplicativeBonus = 0f;
 
             if (localMods.IsCreated)
             {
@@ -24,7 +23,7 @@ namespace _Game.Util
                             additive += localMods[i].Value;
                             break;
                         case ModifierType.Multiplicative:
-                            multiplicative *= localMods[i].Value;
+                            multiplicativeBonus += localMods[i].Value / 100f;
                             break;
                         default:
                             throw new ArgumentOutOfRangeException();
@@ -32,13 +31,13 @@ namespace _Game.Util
                 }
             }
 
-            return (baseValue + additive) * multiplicative;
+            return (baseValue + additive) * (1f + multiplicativeBonus);
         }
 
         public static float Resolve(float baseValue, DynamicBuffer<StatModifier> localMods, DynamicBuffer<GlobalStatModifier> globalMods, StatType statType)
         {
             float additive = 0f;
-            float multiplicative = 1f;
+            float multiplicativeBonus = 0f;
 
             // Apply Local Modifiers
             if (localMods.IsCreated)
@@ -53,7 +52,7 @@ namespace _Game.Util
                             additive += localMods[i].Value;
                             break;
                         case ModifierType.Multiplicative:
-                            multiplicative *= localMods[i].Value;
+                            multiplicativeBonus += localMods[i].Value / 100f;
                             break;
                         default:
                             throw new ArgumentOutOfRangeException();
@@ -74,7 +73,7 @@ namespace _Game.Util
                             additive += globalMods[i].Value;
                             break;
                         case ModifierType.Multiplicative:
-                            multiplicative *= globalMods[i].Value;
+                            multiplicativeBonus += globalMods[i].Value / 100f;
                             break;
                         default:
                             throw new ArgumentOutOfRangeException();
@@ -82,7 +81,7 @@ namespace _Game.Util
                 }
             }
 
-            return (baseValue + additive) * multiplicative;
+            return (baseValue + additive) * (1f + multiplicativeBonus);
         }
     }
 }
