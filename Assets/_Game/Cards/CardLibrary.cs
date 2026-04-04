@@ -1,0 +1,149 @@
+using System.Collections.Generic;
+using _Game.Cards.Constraints;
+using _Game.Components;
+using UnityEngine;
+
+namespace _Game.Cards
+{
+    /// <summary>
+    /// Central registry of all cards in the game.
+    /// </summary>
+    public static class CardLibrary
+    {
+        #region Effect factories
+
+        private static CardEffect BeaconFx(StatType stat, ModifierType mod, float value) => new()
+        {
+            TargetType = CardTargetType.Beacon,
+            Stat = stat,
+            ModifierType = mod,
+            Value = value
+        };
+
+        private static CardEffect WeaponFx(StatType stat, ModifierType mod, float value) => new()
+        {
+            TargetType = CardTargetType.GlobalWeapons,
+            Stat = stat,
+            ModifierType = mod,
+            Value = value
+        };
+
+        private static CardEffect EnemyFx(EnemyType type, StatType stat, ModifierType mod, float value) => new()
+        {
+            TargetType = CardTargetType.EnemiesOfType,
+            EnemyType = type,
+            Stat = stat,
+            ModifierType = mod,
+            Value = value
+        };
+
+        #endregion
+
+        #region Constraint factories
+
+        private static ICardConstraint HasCard(int cardId) => new HasDraftedCardConstraint { RequiredCardId = cardId };
+        private static ICardConstraint MinCards(int count) => new MinDraftedCardsConstraint { MinCount = count };
+        private static ICardConstraint MinHealth(float percent) => new BeaconHealthPercentConstraint { MinHealthPercent = percent };
+
+        #endregion
+
+        #region Card definitions
+
+        // Beacon cards
+        public static readonly CardData ReinforcedArmour = new(
+            cardId: 101,
+            title: "Reinforced Armor",
+            description: "Beacon gains +50% max HP.",
+            effects: new[] { BeaconFx(StatType.MaxHp, ModifierType.Multiplicative, 1.5f) }
+        );
+
+        // Weapon cards
+        public static readonly CardData RapidFire = new(
+            cardId: 201,
+            title: "Rapid Fire",
+            description: "All weapons fire twice as fast.",
+            effects: new[] { WeaponFx(StatType.FireRate, ModifierType.Multiplicative, 2f) }
+        );
+
+        public static readonly CardData OverchargedBarrels = new(
+            cardId: 202,
+            title: "Overcharged Barrels",
+            description: "All weapons deal 50% more damage. Requires Rapid Fire.",
+            effects: new[] { WeaponFx(StatType.Damage, ModifierType.Multiplicative, 1.5f) },
+            constraints: new[] { HasCard(101) }
+        );
+
+        public static readonly CardData DeepMagazine = new(
+            cardId: 203,
+            title: "Deep Magazine",
+            description: "Unlock after drafting 3 cards. All weapons gain +50% range.",
+            effects: new[] { WeaponFx(StatType.TargetRange, ModifierType.Multiplicative, 1.5f) },
+            constraints: new[] { MinCards(3) }
+        );
+
+        // Enemy-debuff cards
+        public static readonly CardData SlowBasicEnemies = new(
+            cardId: 301,
+            title: "Tar Traps",
+            description: "Basic enemies move 30% slower.",
+            effects: new[] { EnemyFx(EnemyType.Basic, StatType.EnemySpeed, ModifierType.Multiplicative, 0.7f) }
+        );
+
+        #endregion
+
+        private static readonly CardData[] All =
+        {
+            ReinforcedArmour,
+            RapidFire,
+            OverchargedBarrels,
+            DeepMagazine,
+            SlowBasicEnemies,
+        };
+
+        #region Utility functions
+
+        public static CardData[] SelectCards(CardDraftContext ctx, int count)
+        {
+            List<CardData> eligible = new();
+            foreach (CardData card in All)
+            {
+                if (AreConstraintsMet(ctx, card))
+                {
+                    eligible.Add(card);
+                }
+            }
+
+            Shuffle(eligible);
+
+            int take = Mathf.Min(count, eligible.Count);
+            CardData[] result = new CardData[take];
+            for (int i = 0; i < take; i++)
+            {
+                result[i] = eligible[i];
+            }
+            
+            return result;
+        }
+
+        private static bool AreConstraintsMet(CardDraftContext ctx, CardData card)
+        {
+            foreach (ICardConstraint constraint in card.Constraints)
+            {
+                if (!constraint.IsMet(ctx)) return false;
+            }
+            
+            return true;
+        }
+
+        private static void Shuffle<T>(List<T> list)
+        {
+            for (int i = list.Count - 1; i > 0; i--)
+            {
+                int j = Random.Range(0, i + 1);
+                (list[i], list[j]) = (list[j], list[i]);
+            }
+        }
+
+        #endregion
+    }
+}

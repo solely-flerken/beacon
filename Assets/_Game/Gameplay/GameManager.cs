@@ -1,5 +1,6 @@
 ﻿using System;
 using _Game.Authoring;
+using _Game.Cards;
 using _Game.Components;
 using _Game.Core;
 using Unity.Collections;
@@ -154,106 +155,23 @@ namespace _Game.Gameplay
 
         private void ApplyTestModifier()
         {
-            using EntityQuery beaconQuery = _entityManager.CreateEntityQuery(typeof(BeaconStats), typeof(GlobalStatModifier));
-
-            if (beaconQuery.IsEmpty) return;
-           
-            Entity beacon = beaconQuery.GetSingletonEntity();
-            DynamicBuffer<GlobalStatModifier> globalBuffer = _entityManager.GetBuffer<GlobalStatModifier>(beacon);
-
-            globalBuffer.Add(new GlobalStatModifier
-            {
-                Stat = StatType.FireRate,
-                Type = ModifierType.Multiplicative,
-                Value = 2f
-            });
-
+            CardData cardData = CardLibrary.RapidFire;
+            CardModifierApplier.ApplyCard(cardData, _entityManager);
             Debug.Log("[GameManager] Applied Global 2x Fire Rate Modifier to Beacon.");
-            
-            // Mark all weapons as "Dirty"
-            EntityQueryDesc weaponQueryDesc = new()
-            {
-                All = new[] { ComponentType.ReadOnly<WeaponStatUpdateRequired>() },
-                Options = EntityQueryOptions.IgnoreComponentEnabledState
-            };
-
-            using EntityQuery weaponQuery = _entityManager.CreateEntityQuery(weaponQueryDesc);
-            using NativeArray<Entity> weapons = weaponQuery.ToEntityArray(Allocator.Temp);
-
-            foreach (Entity weapon in weapons)
-            {
-                _entityManager.SetComponentEnabled<WeaponStatUpdateRequired>(weapon, true);
-            }
         }
         
         private void ApplyTestBeaconModifier()
         {
-            using EntityQuery beaconQuery = _entityManager.CreateEntityQuery(typeof(BeaconStats), typeof(StatModifier));
-
-            if (beaconQuery.IsEmpty) return;
-
-            Entity beacon = beaconQuery.GetSingletonEntity();
-            DynamicBuffer<StatModifier> localBuffer = _entityManager.GetBuffer<StatModifier>(beacon);
-
-            localBuffer.Add(new StatModifier
-            {
-                Stat = StatType.MaxHp,
-                Type = ModifierType.Multiplicative,
-                Value = 1.5f
-            });
-
-            _entityManager.SetComponentEnabled<BeaconStatUpdateRequired>(beacon, true);
-
+            CardData cardData = CardLibrary.ReinforcedArmour;
+            CardModifierApplier.ApplyCard(cardData, _entityManager);
             Debug.Log("[GameManager] Applied Beacon +50% MaxHp modifier.");
         }
 
         private void ApplyTestEnemyModifier(EnemyType type)
         {
-            // Find the type entity from the catalog
-            using EntityQuery catalogQuery = _entityManager.CreateEntityQuery(typeof(EnemyTypeCatalogEntry));
-            if (catalogQuery.IsEmpty) return;
-
-            DynamicBuffer<EnemyTypeCatalogEntry> catalog = _entityManager.GetBuffer<EnemyTypeCatalogEntry>(catalogQuery.GetSingletonEntity());
-
-            Entity typeEntity = Entity.Null;
-            for (int i = 0; i < catalog.Length; i++)
-            {
-                if (catalog[i].TypeId != type) continue;
-                typeEntity = catalog[i].TypeEntity;
-                break;
-            }
-
-            if (typeEntity == Entity.Null)
-            {
-                Debug.LogWarning($"[GameManager] No catalog entry found for EnemyType.{type}.");
-                return;
-            }
-
-            _entityManager.GetBuffer<StatModifier>(typeEntity).Add(new StatModifier
-            {
-                Stat = StatType.EnemySpeed,
-                Type = ModifierType.Multiplicative,
-                Value = 2f
-            });
-
-            // Mark only enemies of this type dirty
-            EntityQueryDesc enemyQueryDesc = new()
-            {
-                All = new[]
-                {
-                    ComponentType.ReadOnly<EnemyTag>(),
-                    ComponentType.ReadOnly<EnemyStatUpdateRequired>(),
-                    EnemyTypeTagMap.Get(type)
-                },
-                Options = EntityQueryOptions.IgnoreComponentEnabledState
-            };
-
-            using EntityQuery enemyQuery = _entityManager.CreateEntityQuery(enemyQueryDesc);
-            
-            int markedCount = enemyQuery.CalculateEntityCount();
-            _entityManager.SetComponentEnabled<EnemyStatUpdateRequired>(enemyQuery, true);
-
-            Debug.Log($"[GameManager] Applied 2x Speed modifier to EnemyType.{type}. Marked {markedCount} enemies dirty.");
+            CardData cardData = CardLibrary.SlowBasicEnemies;
+            CardModifierApplier.ApplyCard(cardData, _entityManager);
+            Debug.Log($"[GameManager] Applied 0.5x Speed modifier to EnemyType.{type}.");
         }
 
         private void RestartRun()
@@ -273,6 +191,7 @@ namespace _Game.Gameplay
                 EventBus.FireBeaconHit(stats.MaxHp, stats.MaxHp);
             }
             
+            CardDraftManager.Instance.ResetHistory();
             GameStateMachine.Instance.TransitionTo(GameState.None);
         }
         
@@ -328,6 +247,7 @@ namespace _Game.Gameplay
                 GameState.WaveEnd => "Start next wave(spc)",
                 GameState.RunEnd => "Restart(R)",
                 GameState.Paused => "Unpause(P)",
+                GameState.CardDraft => "Choose a card...",
                 _ => ""
             };
             GUI.Box(new Rect(10, Screen.height - 35, 400, 25), hint);

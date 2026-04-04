@@ -20,6 +20,7 @@ namespace _Game.Core
         public static GameStateMachine Instance { get; private set; }
 
         public GameState CurrentState { get; private set; } = GameState.None;
+        public GameState PreviousState { get; private set; } = GameState.None;
 
         /// <summary>
         /// Simulation runs in these states.
@@ -33,7 +34,7 @@ namespace _Game.Core
             { GameState.WaveRunning, new[] { GameState.WaveEnd, GameState.RunEnd, GameState.CardDraft, GameState.Paused } },
             { GameState.Paused, new[] { GameState.WaveRunning } },
             { GameState.WaveEnd, new[] { GameState.WaveRunning, GameState.CardDraft, GameState.RunEnd } }, // TODO: WaveEnd -> RunEnd: Needed? Yes: Player might quit in this state | No: No enemies exist here = No death possible 
-            { GameState.CardDraft, new[] { GameState.WaveRunning } },
+            { GameState.CardDraft, new[] { GameState.WaveRunning, GameState.WaveEnd } },
             { GameState.RunEnd, new[] { GameState.None } },
         };
 
@@ -59,14 +60,19 @@ namespace _Game.Core
                 return false;
             }
 
-            GameState previous = CurrentState;
+            PreviousState = CurrentState;
             CurrentState = next;
 
-            Debug.Log($"[GameStateMachine] {previous} -> {CurrentState}");
-            EventBus.FireGameStateChanged(previous, CurrentState);
+            Debug.Log($"[GameStateMachine] {PreviousState} -> {CurrentState}");
+            EventBus.FireGameStateChanged(PreviousState, CurrentState);
             return true;
         }
-
+        
+        public bool TransitionToPrevious()
+        {
+            return TransitionTo(PreviousState);
+        }
+        
         /// <summary>
         /// Force a state without validation.
         /// </summary>
