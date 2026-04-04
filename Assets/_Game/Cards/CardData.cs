@@ -7,6 +7,7 @@ namespace _Game.Cards
     {
         Beacon,
         GlobalWeapons,
+        WeaponsOfType,
         EnemiesOfType,
     }
 
@@ -14,6 +15,7 @@ namespace _Game.Cards
     {
         public CardTargetType TargetType;
         public EnemyType EnemyType; // only relevant when TargetType == EnemiesOfType
+        public WeaponType WeaponType; // only relevant when TargetType == WeaponsOfType
         public StatType Stat;
         public ModifierType ModifierType;
         public float Value;

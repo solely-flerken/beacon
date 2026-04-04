@@ -9,6 +9,16 @@ namespace _Game.Components
     /// </summary>
     public struct ReadyToFire : IComponentData, IEnableableComponent { }
     
+    public enum WeaponType : byte
+    {
+        Basic,
+    }
+
+    public struct WeaponTypeRef : IComponentData
+    {
+        public WeaponType WeaponType;
+    }
+    
     public struct WeaponState : IComponentData
     {
         public float Timer;

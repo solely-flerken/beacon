@@ -1,4 +1,5 @@
 using _Game.Components;
+using Unity.Collections;
 using Unity.Entities;
 using UnityEngine;
 
@@ -21,6 +22,9 @@ namespace _Game.Cards
                         break;
                     case CardTargetType.GlobalWeapons:
                         ApplyGlobalWeaponModifier(effect, em);
+                        break;
+                    case CardTargetType.WeaponsOfType:
+                        ApplyWeaponTypeModifier(effect, em);
                         break;
                     case CardTargetType.EnemiesOfType:
                         ApplyEnemyModifier(effect, em);
@@ -74,6 +78,32 @@ namespace _Game.Cards
             em.SetComponentEnabled<WeaponStatUpdateRequired>(weaponQuery, true);
         }
 
+        private static void ApplyWeaponTypeModifier(CardEffect effect, EntityManager em)
+        {
+            using EntityQuery query = em.CreateEntityQuery(typeof(WeaponTag), typeof(WeaponTypeRef), typeof(StatModifier));
+            using NativeArray<Entity> weapons = query.ToEntityArray(Allocator.Temp);
+
+            bool found = false;
+            foreach (Entity weapon in weapons)
+            {
+                if (em.GetComponentData<WeaponTypeRef>(weapon).WeaponType != effect.WeaponType) continue;
+
+                em.GetBuffer<StatModifier>(weapon).Add(new StatModifier
+                {
+                    Stat = effect.Stat,
+                    Type = effect.ModifierType,
+                    Value = effect.Value
+                });
+                em.SetComponentEnabled<WeaponStatUpdateRequired>(weapon, true);
+                found = true;
+            }
+
+            if (!found)
+            {
+                Debug.LogWarning($"[CardModifierApplier] No weapons of type {effect.WeaponType} found.");
+            }
+        }
+        
         private static void ApplyEnemyModifier(CardEffect effect, EntityManager em)
         {
             using EntityQuery catalogQuery = em.CreateEntityQuery(typeof(EnemyTypeCatalogEntry));

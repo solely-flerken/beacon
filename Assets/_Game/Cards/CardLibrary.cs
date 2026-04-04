@@ -28,6 +28,15 @@ namespace _Game.Cards
             Value = value
         };
 
+        private static CardEffect WeaponTypeFx(WeaponType type, StatType stat, ModifierType mod, float value) => new()
+        {
+            TargetType = CardTargetType.WeaponsOfType,
+            WeaponType = type,
+            Stat = stat,
+            ModifierType = mod,
+            Value = value
+        };
+
         private static CardEffect EnemyFx(EnemyType type, StatType stat, ModifierType mod, float value) => new()
         {
             TargetType = CardTargetType.EnemiesOfType,
@@ -81,6 +90,14 @@ namespace _Game.Cards
             constraints: new[] { MinCards(3) }
         );
 
+        // Per-type weapon cards
+        public static readonly CardData ArmorPiercing = new(
+            cardId: 251,
+            title: "Armor Piercing",
+            description: "Basic weapons pierce one additional target.",
+            effects: new[] { WeaponTypeFx(WeaponType.Basic, StatType.Pierce, ModifierType.Additive, 1f) }
+        );
+
         // Enemy-debuff cards
         public static readonly CardData SlowBasicEnemies = new(
             cardId: 301,
@@ -97,6 +114,7 @@ namespace _Game.Cards
             RapidFire,
             OverchargedBarrels,
             DeepMagazine,
+            ArmorPiercing,
             SlowBasicEnemies,
         };
 
