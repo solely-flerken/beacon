@@ -25,7 +25,6 @@ namespace _Game.Core
         // Wave
         public static event Action<int> OnWaveStarted;
         public static event Action<int> OnWaveCleared;
-        public static event Action<int> OnBossWaveStarted;
 
         // Progression
         public static event Action<float> OnExpCollected;
@@ -51,7 +50,6 @@ namespace _Game.Core
 
         public static void FireWaveStarted(int wave) => OnWaveStarted?.Invoke(wave);
         public static void FireWaveCleared(int wave) => OnWaveCleared?.Invoke(wave);
-        public static void FireBossWave(int wave) => OnBossWaveStarted?.Invoke(wave);
 
         public static void FireExpCollected(float amount) => OnExpCollected?.Invoke(amount);
         public static void FireExpChanged(int level, float current, float max) => OnExpChanged?.Invoke(level, current, max);
@@ -71,7 +69,6 @@ namespace _Game.Core
             OnEnemiesHitBatch = null;
             OnWaveStarted = null;
             OnWaveCleared = null;
-            OnBossWaveStarted = null;
             OnExpCollected = null;
             OnExpChanged = null;
             OnLevelUp = null;
