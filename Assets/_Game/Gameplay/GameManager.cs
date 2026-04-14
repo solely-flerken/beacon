@@ -3,6 +3,7 @@ using _Game.Authoring;
 using _Game.Cards;
 using _Game.Components;
 using _Game.Core;
+using _Game.Gameplay.Waves;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;

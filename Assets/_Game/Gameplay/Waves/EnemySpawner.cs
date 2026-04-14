@@ -9,7 +9,7 @@ using Unity.Transforms;
 using UnityEngine;
 using Random = Unity.Mathematics.Random;
 
-namespace _Game.Gameplay
+namespace _Game.Gameplay.Waves
 {
     public static class EnemySpawner
     {
