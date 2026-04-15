@@ -55,6 +55,8 @@ namespace _Game.Components
     public enum EnemyType : byte
     {
         Basic,
+        Fast,
+        Tank,
     }
 
     /// <summary>
@@ -71,7 +73,9 @@ namespace _Game.Components
     }
 
     public struct BasicEnemyTag : IComponentData { }
-
+    public struct FastEnemyTag : IComponentData { }
+    public struct TankEnemyTag : IComponentData { }
+    
     /// <summary>
     /// Buffer on the catalog entity mapping type IDs to prefab and type entities.
     /// </summary>

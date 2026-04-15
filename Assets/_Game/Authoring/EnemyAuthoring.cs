@@ -45,6 +45,12 @@ namespace _Game.Authoring
                     case EnemyType.Basic:
                         AddComponent<BasicEnemyTag>(entity);
                         break;
+                    case EnemyType.Fast:
+                        AddComponent<FastEnemyTag>(entity);
+                        break;
+                    case EnemyType.Tank:
+                        AddComponent<TankEnemyTag>(entity);
+                        break;
                     default:
                         throw new ArgumentOutOfRangeException();
                 }
