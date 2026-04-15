@@ -83,12 +83,8 @@ namespace _Game.Gameplay
                     break;
 
                 case GameState.WaveRunning:
-                    if (Keyboard.current.spaceKey.wasPressedThisFrame)
-                        EnemySpawner.SpawnWave(_entityManager, EnemyType.Basic, 200);
                     if (Keyboard.current.fKey.wasPressedThisFrame)
                         SpawnFlare();
-                    if (Keyboard.current.eKey.wasPressedThisFrame)
-                        TriggerWaveEnd();
                     if (Keyboard.current.pKey.wasPressedThisFrame)
                         GameStateMachine.Instance.TransitionTo(GameState.Paused);
                     if (Keyboard.current.mKey.wasPressedThisFrame)
@@ -127,15 +123,6 @@ namespace _Game.Gameplay
         {
             GameStateMachine.Instance.TransitionTo(GameState.WaveRunning);
             SetSimulation(true);
-        }
-
-        private void TriggerWaveEnd()
-        {
-            GameStateMachine.Instance.TransitionTo(GameState.WaveEnd);
-            
-            Entity e = _entityManager.CreateEntity();
-            _entityManager.AddComponent<WaveEndTag>(e);
-            Debug.Log("[GameManager] Wave ended.");
         }
 
         private void OnGameStateChanged(GameState from, GameState to)
@@ -193,6 +180,7 @@ namespace _Game.Gameplay
             }
             
             CardDraftManager.Instance.ResetHistory();
+            WaveManager.Instance.ResetWaves();
             GameStateMachine.Instance.TransitionTo(GameState.None);
         }
         
@@ -224,27 +212,29 @@ namespace _Game.Gameplay
         {
             int enemyCount = _enemyCountQuery.CalculateEntityCount();
             int projectileCount = _projectileCountQuery.CalculateEntityCount();
+            int waveNumber = WaveManager.Instance.CurrentWave;
             GUI.Box(new Rect(10, 10, 150, 25), $"Enemies: {enemyCount}");
             GUI.Box(new Rect(10, 40, 150, 25), $"Projectiles: {projectileCount}");
-
+            GUI.Box(new Rect(10, 70, 150, 25), $"Wave {waveNumber}");
+            
             if (ExpManager.Instance != null)
             {
                 int level = ExpManager.Instance.CurrentLevel;
                 float progress = ExpManager.Instance.LevelProgress;
                 float totalExp = ExpManager.Instance.TotalExp;
 
-                GUI.Box(new Rect(10, 70, 150, 25), $"Level: {level} - Exp: {(int)totalExp}");
+                GUI.Box(new Rect(10, 100, 150, 25), $"Level: {level} - Exp: {(int)totalExp}");
 
                 // Progress bar
-                GUI.Box(new Rect(10, 100, 150, 16), "");
-                if (progress > 0) GUI.Box(new Rect(10, 100, 150 * progress, 16), "");
+                GUI.Box(new Rect(10, 130, 150, 16), "");
+                if (progress > 0) GUI.Box(new Rect(10, 130, 150 * progress, 16), "");
             }
 
             // Controls hint
             string hint = GameStateMachine.Instance?.CurrentState switch
             {
                 GameState.MainMenu => "Any key to start",
-                GameState.WaveRunning => "Enemies(spc), End wave(E), Flare(F), Pause(P), Weapon Mod(M), Beacon Mod(B), Enemy Mod(N)",
+                GameState.WaveRunning => "Flare(F), Pause(P), Weapon Mod(M), Beacon Mod(B), Enemy Mod(N)",
                 GameState.WaveEnd => "Start next wave(spc)",
                 GameState.RunEnd => "Restart(R)",
                 GameState.Paused => "Unpause(P)",
