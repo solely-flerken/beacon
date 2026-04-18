@@ -13,7 +13,7 @@ namespace _Game.Gameplay.Waves
 {
     public static class EnemySpawner
     {
-        public static void SpawnWave(EntityManager em, EnemyType type, int count)
+        public static void SpawnWave(EntityManager em, SpawnGroup group)
         {
             using EntityQuery catalogQuery = em.CreateEntityQuery(typeof(EnemyTypeCatalogEntry));
             if (catalogQuery.IsEmpty)
@@ -28,7 +28,7 @@ namespace _Game.Gameplay.Waves
             Entity typeEntity = Entity.Null;
             for (int i = 0; i < catalog.Length; i++)
             {
-                if (catalog[i].TypeId != type) continue;
+                if (catalog[i].TypeId != group.Type) continue;
                 prefab = catalog[i].Prefab;
                 typeEntity = catalog[i].TypeEntity;
                 break;
@@ -36,10 +36,11 @@ namespace _Game.Gameplay.Waves
 
             if (prefab == Entity.Null)
             {
-                Debug.LogError($"[EnemySpawner] No catalog entry found for EnemyType.{type}.");
+                Debug.LogError($"[EnemySpawner] No catalog entry found for EnemyType.{group.Type}.");
                 return;
             }
 
+            int count = group.Count;
             NativeArray<Entity> entities = new(count, Allocator.TempJob);
             em.Instantiate(prefab, entities);
 
@@ -53,18 +54,42 @@ namespace _Game.Gameplay.Waves
                 Seed = seed,
             }.Schedule(count, 64).Complete();
 
+            // Check for elite spawns
+            StatModifier[] eliteMods = EliteLibrary.Get(group.Type);
+            bool canBeElite = group.EliteChance > 0f && eliteMods.Length > 0;
+
+            Random eliteRng = default;
+            if (canBeElite)
+            {
+                eliteRng = new Random(seed);
+            }
+
+            int eliteCount = 0;
             for (int i = 0; i < count; i++)
             {
                 LocalTransform transform = em.GetComponentData<LocalTransform>(entities[i]);
                 transform.Position = new float3(positions[i].x, positions[i].y, 0f);
                 em.SetComponentData(entities[i], transform);
                 em.SetComponentData(entities[i], new EnemyTypeRef { Value = typeEntity });
+
+                bool shouldBeElite = eliteRng.NextFloat() < group.EliteChance;
+                if (canBeElite && shouldBeElite)
+                {
+                    DynamicBuffer<StatModifier> modBuffer = em.GetBuffer<StatModifier>(entities[i]);
+                    foreach (StatModifier mod in eliteMods)
+                    {
+                        modBuffer.Add(mod);
+                    }
+
+                    em.SetComponentEnabled<EnemyStatUpdateRequired>(entities[i], true);
+                    eliteCount++;
+                }
             }
 
             entities.Dispose();
             positions.Dispose();
 
-            Debug.Log($"[EnemySpawner] Spawned {count} {type} enemies.");
+            Debug.Log($"[EnemySpawner] Spawned {count} {group.Type} ({eliteCount} elite).");
         }
     }
 

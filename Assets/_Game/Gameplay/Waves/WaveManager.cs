@@ -78,7 +78,7 @@ namespace _Game.Gameplay.Waves
         {
             foreach (SpawnGroup group in definition.SpawnGroups)
             {
-                EnemySpawner.SpawnWave(_entityManager, group.Type, group.Count);
+                EnemySpawner.SpawnWave(_entityManager, group);
             }
         }
 

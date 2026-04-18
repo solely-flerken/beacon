@@ -24,7 +24,12 @@ namespace _Game.Components
         Additive,
         Multiplicative,
     }
-    
+
+    /// <summary>
+    /// Modifier for the beacon, weapons or enemies.
+    ///
+    /// <param name="Value">Percentage as whole number (0-100)</param>
+    /// </summary>
     public struct StatModifier : IBufferElementData
     {
         public StatType Stat;

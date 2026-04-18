@@ -36,15 +36,20 @@ namespace _Game.Systems
                 ref EnemyHealth health, 
                 ref ContactDamage contactDamage,
                 EnabledRefRW<EnemyStatUpdateRequired> updateRequired,
+                in DynamicBuffer<StatModifier> entityMods,
                 in EnemyTypeRef typeRef)
             {
                 // Get the buffer for this specific enemy type
-                DynamicBuffer<StatModifier> mods = ModLookup[typeRef.Value];
+                DynamicBuffer<StatModifier> typeMods = ModLookup[typeRef.Value];
 
                 // Resolve stats
-                speed.Value = StatResolver.Resolve(speed.BaseValue, mods, StatType.EnemySpeed);
-                health.Max = StatResolver.Resolve(health.BaseMax, mods, StatType.EnemyMaxHealth);
-                contactDamage.Value = StatResolver.Resolve(contactDamage.BaseValue, mods, StatType.EnemyContactDamage);
+                speed.Value = StatResolver.Resolve(speed.BaseValue, typeMods, StatType.EnemySpeed);
+                health.Max = StatResolver.Resolve(health.BaseMax, typeMods, StatType.EnemyMaxHealth);
+                contactDamage.Value = StatResolver.Resolve(contactDamage.BaseValue, typeMods, StatType.EnemyContactDamage);
+                
+                speed.Value = StatResolver.Resolve(speed.Value, entityMods, StatType.EnemySpeed);
+                health.Max = StatResolver.Resolve(health.Max, entityMods, StatType.EnemyMaxHealth);
+                contactDamage.Value = StatResolver.Resolve(contactDamage.Value, entityMods, StatType.EnemyContactDamage);
 
                 updateRequired.ValueRW = false;
             }

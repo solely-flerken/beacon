@@ -14,9 +14,9 @@ namespace _Game.Gameplay.Waves
                 WaveNumber = waveNumber,
                 SpawnGroups = new List<SpawnGroup>
                 {
-                    new() { Type = EnemyType.Basic, Count = basicCount / 2 },
-                    new() { Type = EnemyType.Tank, Count = basicCount / 4 },
-                    new() { Type = EnemyType.Fast, Count = basicCount / 4},
+                    new() { Type = EnemyType.Basic, Count = basicCount / 2, EliteChance = 0.1f },
+                    new() { Type = EnemyType.Tank, Count = basicCount / 4, EliteChance = 0.1f },
+                    new() { Type = EnemyType.Fast, Count = basicCount / 4, EliteChance = 0.1f },
                 }
             };
         }

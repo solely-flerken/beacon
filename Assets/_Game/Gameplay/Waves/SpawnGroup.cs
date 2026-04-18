@@ -6,5 +6,6 @@ namespace _Game.Gameplay.Waves
     {
         public EnemyType Type;
         public int Count;
+        public float EliteChance;
     }
 }

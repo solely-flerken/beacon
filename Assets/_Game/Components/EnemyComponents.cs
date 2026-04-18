@@ -95,6 +95,8 @@ namespace _Game.Components
         public static ComponentType Get(EnemyType type) => type switch
         {
             EnemyType.Basic => ComponentType.ReadOnly<BasicEnemyTag>(),
+            EnemyType.Fast  => ComponentType.ReadOnly<FastEnemyTag>(),
+            EnemyType.Tank  => ComponentType.ReadOnly<TankEnemyTag>(),
             _ => throw new ArgumentOutOfRangeException(nameof(type), type, null)
         };
     }
