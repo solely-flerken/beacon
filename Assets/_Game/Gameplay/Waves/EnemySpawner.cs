@@ -81,6 +81,7 @@ namespace _Game.Gameplay.Waves
                         modBuffer.Add(mod);
                     }
 
+                    em.SetComponentData(entities[i], new EnemyTierComponent { Value = EnemyTier.Elite });
                     em.SetComponentEnabled<EnemyStatUpdateRequired>(entities[i], true);
                     eliteCount++;
                 }

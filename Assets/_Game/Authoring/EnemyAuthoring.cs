@@ -35,6 +35,8 @@ namespace _Game.Authoring
                 AddComponent(entity, new EnemyReward { ExpValue = authoring.exp });
                 AddComponent(entity, new EnemySpeedVariation { Value = authoring.speedVariation });
 
+                AddComponent(entity, new EnemyTierComponent { Value = EnemyTier.Normal });
+                
                 AddComponent<EnemyTypeRef>(entity);
                 
                 // Individual enemy modifiers. Used for elites.

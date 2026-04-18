@@ -52,6 +52,13 @@ namespace _Game.Components
         public float Value;
     }
 
+    public enum EnemyTier : byte { Normal, Elite, Boss }
+    
+    public struct EnemyTierComponent : IComponentData
+    {
+        public EnemyTier Value;
+    }
+    
     public enum EnemyType : byte
     {
         Basic,
