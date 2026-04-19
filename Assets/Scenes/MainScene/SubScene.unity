@@ -260,7 +260,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::_Game.Authoring.WeaponProjectileAuthoring
   projectilePrefab: {fileID: 1204610400704658499, guid: d40c439e6ed49864a8c689991cf6929f, type: 3}
-  speed: 20
+  speed: 30
   pierce: 0
 --- !u!114 &1234442997
 MonoBehaviour:

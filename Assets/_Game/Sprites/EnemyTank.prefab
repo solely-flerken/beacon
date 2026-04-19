@@ -113,5 +113,5 @@ MonoBehaviour:
   - tier: 1
     stat: 9
     operation: 1
-    value: 100
+    value: 200
   typeId: 2

@@ -114,4 +114,8 @@ MonoBehaviour:
     stat: 9
     operation: 1
     value: 100
+  - tier: 1
+    stat: 7
+    operation: 1
+    value: 100
   typeId: 1
