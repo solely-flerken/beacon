@@ -54,16 +54,7 @@ namespace _Game.Gameplay.Waves
                 Seed = seed,
             }.Schedule(count, 64).Complete();
 
-            // Check for elite spawns
-            StatModifier[] eliteMods = EliteLibrary.Get(group.Type);
-            bool canBeElite = group.EliteChance > 0f && eliteMods.Length > 0;
-
-            Random eliteRng = default;
-            if (canBeElite)
-            {
-                eliteRng = new Random(seed);
-            }
-
+            Random rng = new(seed);
             int eliteCount = 0;
             for (int i = 0; i < count; i++)
             {
@@ -72,19 +63,10 @@ namespace _Game.Gameplay.Waves
                 em.SetComponentData(entities[i], transform);
                 em.SetComponentData(entities[i], new EnemyTypeRef { Value = typeEntity });
 
-                bool shouldBeElite = eliteRng.NextFloat() < group.EliteChance;
-                if (canBeElite && shouldBeElite)
-                {
-                    DynamicBuffer<StatModifier> modBuffer = em.GetBuffer<StatModifier>(entities[i]);
-                    foreach (StatModifier mod in eliteMods)
-                    {
-                        modBuffer.Add(mod);
-                    }
-
-                    em.SetComponentData(entities[i], new EnemyTierComponent { Value = EnemyTier.Elite });
-                    em.SetComponentEnabled<EnemyStatUpdateRequired>(entities[i], true);
-                    eliteCount++;
-                }
+                bool isElite = rng.NextFloat() < group.EliteChance;
+                EnemyTier tier = isElite ? EnemyTier.Elite : EnemyTier.Normal;
+                em.SetComponentData(entities[i], new EnemyTierComponent { Value = tier });
+                if (isElite) eliteCount++;
             }
 
             entities.Dispose();

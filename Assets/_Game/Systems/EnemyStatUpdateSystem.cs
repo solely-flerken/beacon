@@ -10,46 +10,94 @@ namespace _Game.Systems
     [BurstCompile]
     public partial struct EnemyStatUpdateSystem : ISystem
     {
-        private BufferLookup<StatModifier> _modLookup;
+        private ComponentLookup<EnemyTypeBlobRef> _blobModLookup;
+        private BufferLookup<StatModifier> _typeModLookup;
 
         [BurstCompile]
         public void OnCreate(ref SystemState state)
         {
-            _modLookup = state.GetBufferLookup<StatModifier>(isReadOnly: true);
+            _blobModLookup = state.GetComponentLookup<EnemyTypeBlobRef>(isReadOnly: true);
+            _typeModLookup = state.GetBufferLookup<StatModifier>(isReadOnly: true);
+            
+            state.RequireForUpdate<EndSimulationEntityCommandBufferSystem.Singleton>();
         }
 
         [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
-            _modLookup.Update(ref state);
+            _blobModLookup.Update(ref state);
+            _typeModLookup.Update(ref state);
 
-            new UpdateStatsJob { ModLookup = _modLookup }.ScheduleParallel();
+            EndSimulationEntityCommandBufferSystem.Singleton ecbSingleton = SystemAPI.GetSingleton<EndSimulationEntityCommandBufferSystem.Singleton>();
+            EntityCommandBuffer.ParallelWriter ecb = ecbSingleton.CreateCommandBuffer(state.WorldUnmanaged).AsParallelWriter();
+
+            new SpawnInitJob
+            {
+                BlobLookup = _blobModLookup,
+                TypeModLookup = _typeModLookup,
+                Ecb = ecb
+            }.ScheduleParallel();
+
+            new UpdateStatsJob
+            {
+                BlobLookup = _blobModLookup,
+                TypeModLookup = _typeModLookup,
+            }.ScheduleParallel();
         }
-        
+
         [BurstCompile]
-        public partial struct UpdateStatsJob : IJobEntity
+        [WithAll(typeof(Uninitialized))]
+        public partial struct SpawnInitJob : IJobEntity
         {
-            [ReadOnly] public BufferLookup<StatModifier> ModLookup;
+            [ReadOnly] public ComponentLookup<EnemyTypeBlobRef> BlobLookup;
+            [ReadOnly] public BufferLookup<StatModifier> TypeModLookup;
+            public EntityCommandBuffer.ParallelWriter Ecb;
 
             private void Execute(
-                ref EnemySpeed speed, 
-                ref EnemyHealth health, 
+                Entity entity,
+                [ChunkIndexInQuery] int chunkIndex,
+                ref EnemySpeed speed,
+                ref EnemyHealth health,
+                ref ContactDamage contactDamage,
+                in EnemyTierComponent tier,
+                in EnemyTypeRef typeRef,
+                in DynamicBuffer<StatModifier> entityMods)
+            {
+                ref BlobArray<TieredStatModifier> blob = ref BlobLookup[typeRef.Value].Value.Value.ConfigModifiers;
+                DynamicBuffer<StatModifier> typeMods = TypeModLookup[typeRef.Value];
+
+                speed.Value = StatResolver.ResolveEnemy(speed.BaseValue, ref blob, typeMods, entityMods, StatType.EnemySpeed, tier.Value);
+                health.Max = StatResolver.ResolveEnemy(health.BaseMax, ref blob, typeMods, entityMods, StatType.EnemyMaxHealth, tier.Value);
+                contactDamage.Value = StatResolver.ResolveEnemy(contactDamage.BaseValue, ref blob, typeMods, entityMods, StatType.EnemyContactDamage, tier.Value);
+
+                health.Current = health.Max;
+
+                Ecb.RemoveComponent<Uninitialized>(chunkIndex, entity);
+            }
+        }
+
+        [BurstCompile]
+        [WithNone(typeof(Uninitialized))]
+        public partial struct UpdateStatsJob : IJobEntity
+        {
+            [ReadOnly] public ComponentLookup<EnemyTypeBlobRef> BlobLookup;
+            [ReadOnly] public BufferLookup<StatModifier> TypeModLookup;
+
+            private void Execute(
+                ref EnemySpeed speed,
+                ref EnemyHealth health,
                 ref ContactDamage contactDamage,
                 EnabledRefRW<EnemyStatUpdateRequired> updateRequired,
-                in DynamicBuffer<StatModifier> entityMods,
-                in EnemyTypeRef typeRef)
+                in EnemyTierComponent tier,
+                in EnemyTypeRef typeRef,
+                in DynamicBuffer<StatModifier> entityMods)
             {
-                // Get the buffer for this specific enemy type
-                DynamicBuffer<StatModifier> typeMods = ModLookup[typeRef.Value];
+                ref BlobArray<TieredStatModifier> blob = ref BlobLookup[typeRef.Value].Value.Value.ConfigModifiers;
+                DynamicBuffer<StatModifier> typeMods = TypeModLookup[typeRef.Value];
 
-                // Resolve stats
-                speed.Value = StatResolver.Resolve(speed.BaseValue, typeMods, StatType.EnemySpeed);
-                health.Max = StatResolver.Resolve(health.BaseMax, typeMods, StatType.EnemyMaxHealth);
-                contactDamage.Value = StatResolver.Resolve(contactDamage.BaseValue, typeMods, StatType.EnemyContactDamage);
-                
-                speed.Value = StatResolver.Resolve(speed.Value, entityMods, StatType.EnemySpeed);
-                health.Max = StatResolver.Resolve(health.Max, entityMods, StatType.EnemyMaxHealth);
-                contactDamage.Value = StatResolver.Resolve(contactDamage.Value, entityMods, StatType.EnemyContactDamage);
+                speed.Value = StatResolver.ResolveEnemy(speed.BaseValue, ref blob, typeMods, entityMods, StatType.EnemySpeed, tier.Value);
+                health.Max = StatResolver.ResolveEnemy(health.BaseMax, ref blob, typeMods, entityMods, StatType.EnemyMaxHealth, tier.Value);
+                contactDamage.Value = StatResolver.ResolveEnemy(contactDamage.BaseValue, ref blob, typeMods, entityMods, StatType.EnemyContactDamage, tier.Value);
 
                 updateRequired.ValueRW = false;
             }

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using _Game.Components;
 using Unity.Entities;
 using UnityEngine;
@@ -15,10 +16,21 @@ namespace _Game.Authoring
         public float contactDamage = 1f;
         
         public float exp = 1f;
-
+        
+        [Header("Tier Overrides")]
+        public List<TieredModifierEntry> tierModifiers = new();
+        
         [Header("Type")]
         public EnemyType typeId;
-
+    
+        [Serializable]
+        public struct TieredModifierEntry {
+            public EnemyTier tier;
+            public StatType stat;
+            public ModifierType operation;
+            public float value;
+        }
+        
         private class Baker : Baker<EnemyAuthoring>
         {
             public override void Bake(EnemyAuthoring authoring)
@@ -43,6 +55,9 @@ namespace _Game.Authoring
                 AddBuffer<StatModifier>(entity);
 
                 AddComponent<EnemyStatUpdateRequired>(entity);
+                SetComponentEnabled<EnemyStatUpdateRequired>(entity, false);
+
+                AddComponent<Uninitialized>(entity);
 
                 // Per-type enemy tag
                 switch (authoring.typeId)

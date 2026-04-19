@@ -1,15 +1,11 @@
 using System.Collections.Generic;
 using _Game.Components;
+using Unity.Collections;
 using Unity.Entities;
 using UnityEngine;
 
 namespace _Game.Authoring
 {
-    /// <summary>
-    /// Place this on a single GameObject in the SubScene.
-    /// Add one entry per enemy prefab
-    /// The baker creates a live type entity per entry (queryable, holds StatModifier buffer).
-    /// </summary>
     public class EnemyTypeCatalogAuthoring : MonoBehaviour
     {
         public List<GameObject> prefabs = new();
@@ -25,19 +21,46 @@ namespace _Game.Authoring
                 {
                     DependsOn(prefab);
 
-                    EnemyType typeId = GetComponent<EnemyAuthoring>(prefab).typeId;
+                    EnemyAuthoring auth = GetComponent<EnemyAuthoring>(prefab);
 
-                    Entity typeEntity = CreateAdditionalEntity(TransformUsageFlags.None, entityName: $"EnemyType.{typeId}");
+                    Entity typeEntity = CreateAdditionalEntity(TransformUsageFlags.None, entityName: $"EnemyType.{auth.typeId}");
                     AddComponent<EnemyTypeTag>(typeEntity);
                     AddBuffer<StatModifier>(typeEntity);
+                    
+                    BlobAssetReference<EnemyTypeBlob> blobRef = BuildBlob(auth);
+                    AddBlobAsset(ref blobRef, out _);
+                    AddComponent(typeEntity, new EnemyTypeBlobRef { Value = blobRef });
 
                     buffer.Add(new EnemyTypeCatalogEntry
                     {
-                        TypeId = typeId,
+                        TypeId = auth.typeId,
                         Prefab = GetEntity(prefab, TransformUsageFlags.Dynamic),
                         TypeEntity = typeEntity,
                     });
                 }
+            }
+
+            private static BlobAssetReference<EnemyTypeBlob> BuildBlob(EnemyAuthoring auth)
+            {
+                using BlobBuilder builder = new(Allocator.Temp);
+                ref EnemyTypeBlob root = ref builder.ConstructRoot<EnemyTypeBlob>();
+                BlobBuilderArray<TieredStatModifier> blobArray = builder.Allocate(ref root.ConfigModifiers, auth.tierModifiers.Count);
+
+                for (int i = 0; i < auth.tierModifiers.Count; i++)
+                {
+                    blobArray[i] = new TieredStatModifier
+                    {
+                        Tier = auth.tierModifiers[i].tier,
+                        Modifier = new StatModifier
+                        {
+                            Stat = auth.tierModifiers[i].stat,
+                            Type = auth.tierModifiers[i].operation,
+                            Value = auth.tierModifiers[i].value
+                        }
+                    };
+                }
+
+                return builder.CreateBlobAssetReference<EnemyTypeBlob>(Allocator.Persistent);
             }
         }
     }

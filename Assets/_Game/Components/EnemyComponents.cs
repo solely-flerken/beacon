@@ -59,6 +59,22 @@ namespace _Game.Components
         public EnemyTier Value;
     }
     
+    public struct TieredStatModifier
+    {
+        public EnemyTier Tier;
+        public StatModifier Modifier;
+    }
+
+    public struct EnemyTypeBlob
+    {
+        public BlobArray<TieredStatModifier> ConfigModifiers;
+    }
+
+    public struct EnemyTypeBlobRef : IComponentData
+    {
+        public BlobAssetReference<EnemyTypeBlob> Value;
+    }
+    
     public enum EnemyType : byte
     {
         Basic,
