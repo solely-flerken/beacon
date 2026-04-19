@@ -54,25 +54,19 @@ namespace _Game.Gameplay.Waves
                 Seed = seed,
             }.Schedule(count, 64).Complete();
 
-            Random rng = new(seed);
-            int eliteCount = 0;
             for (int i = 0; i < count; i++)
             {
                 LocalTransform transform = em.GetComponentData<LocalTransform>(entities[i]);
                 transform.Position = new float3(positions[i].x, positions[i].y, 0f);
                 em.SetComponentData(entities[i], transform);
                 em.SetComponentData(entities[i], new EnemyTypeRef { Value = typeEntity });
-
-                bool isElite = rng.NextFloat() < group.EliteChance;
-                EnemyTier tier = isElite ? EnemyTier.Elite : EnemyTier.Normal;
-                em.SetComponentData(entities[i], new EnemyTierComponent { Value = tier });
-                if (isElite) eliteCount++;
+                em.SetComponentData(entities[i], new EnemyTierComponent { Value = group.Tier });
             }
 
             entities.Dispose();
             positions.Dispose();
 
-            Debug.Log($"[EnemySpawner] Spawned {count} {group.Type} ({eliteCount} elite).");
+            Debug.Log($"[EnemySpawner] Spawned {count} {group.Tier} {group.Type}.");
         }
     }
 

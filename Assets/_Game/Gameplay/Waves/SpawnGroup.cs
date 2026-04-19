@@ -1,11 +1,11 @@
-﻿using _Game.Components;
+using _Game.Components;
 
 namespace _Game.Gameplay.Waves
 {
     public struct SpawnGroup
     {
         public EnemyType Type;
+        public EnemyTier Tier;
         public int Count;
-        public float EliteChance;
     }
 }

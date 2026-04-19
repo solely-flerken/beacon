@@ -284,6 +284,39 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d1071fa4c04242f582e0fe5bf7768b2c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::_Game.Gameplay.Waves.WaveManager
+  budgetBase: 30
+  budgetPerWave: 5
+  enemyTypeDefinitions:
+  - type: 0
+    tiers:
+    - tier: 0
+      cost: 1
+      weight: 80
+      startWave: 1
+    - tier: 1
+      cost: 4
+      weight: 25
+      startWave: 5
+  - type: 1
+    tiers:
+    - tier: 0
+      cost: 2
+      weight: 50
+      startWave: 3
+    - tier: 1
+      cost: 5
+      weight: 20
+      startWave: 7
+  - type: 2
+    tiers:
+    - tier: 0
+      cost: 5
+      weight: 30
+      startWave: 6
+    - tier: 0
+      cost: 10
+      weight: 15
+      startWave: 12
 --- !u!1 &438619592
 GameObject:
   m_ObjectHideFlags: 0
