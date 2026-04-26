@@ -1,5 +1,6 @@
 using _Game.Components;
 using Unity.Entities;
+using UnityEngine;
 
 namespace _Game.Util
 {
@@ -103,7 +104,7 @@ namespace _Game.Util
         /// </summary>
         private static float Apply(float baseValue, float additive, float multiplicativeBonus)
         {
-            return (baseValue + additive) * (1f + multiplicativeBonus);
+            return Mathf.Max(0f, (baseValue + additive) * (1f + multiplicativeBonus));
         }
     }
 }
