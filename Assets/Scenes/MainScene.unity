@@ -291,32 +291,32 @@ MonoBehaviour:
     tiers:
     - tier: 0
       cost: 1
-      weight: 80
+      weight: 10
       startWave: 1
     - tier: 1
-      cost: 4
-      weight: 25
-      startWave: 5
+      cost: 3
+      weight: 4
+      startWave: 3
   - type: 1
     tiers:
     - tier: 0
       cost: 2
-      weight: 50
-      startWave: 3
+      weight: 6
+      startWave: 2
     - tier: 1
       cost: 5
-      weight: 20
-      startWave: 7
+      weight: 2
+      startWave: 5
   - type: 2
     tiers:
     - tier: 0
-      cost: 5
-      weight: 30
-      startWave: 6
-    - tier: 0
-      cost: 10
-      weight: 15
-      startWave: 12
+      cost: 4
+      weight: 4
+      startWave: 3
+    - tier: 1
+      cost: 9
+      weight: 2
+      startWave: 7
 --- !u!1 &438619592
 GameObject:
   m_ObjectHideFlags: 0
