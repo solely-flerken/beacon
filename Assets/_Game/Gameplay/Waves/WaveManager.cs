@@ -82,7 +82,7 @@ namespace _Game.Gameplay.Waves
 
         private void OnGameStateChanged(GameState from, GameState to)
         {
-            if (to == GameState.WaveRunning)
+            if (to == GameState.WaveRunning && from is GameState.WaveEnd or GameState.MainMenu or GameState.RunEnd)
             {
                 StartNextWave();
             }
