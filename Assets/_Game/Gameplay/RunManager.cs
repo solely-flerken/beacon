@@ -1,3 +1,4 @@
+using System;
 using _Game.Authoring;
 using _Game.Components;
 using _Game.Core;
@@ -9,7 +10,11 @@ namespace _Game.Gameplay
 {
     public class RunManager : MonoBehaviour
     {
+        private const int WeaponSlotCount = 6; // TODO: Create a RunConfig SO
+        
         private static RunManager Instance { get; set; }
+        
+        private readonly BeaconLoadout _loadout = new();
 
         private EntityManager _entityManager;
         
@@ -18,7 +23,7 @@ namespace _Game.Gameplay
         
         private PrefabRefs _prefabRefs;
         private Entity _beaconEntity;
-        private Entity _weaponEntity;
+        private Entity[] _weaponEntities = Array.Empty<Entity>();
 
         private void Awake()
         {
@@ -46,21 +51,25 @@ namespace _Game.Gameplay
 
             _prefabRefs = _prefabQuery.GetSingleton<PrefabRefs>();
 
+            _weaponEntities = new Entity[WeaponSlotCount];
+
             WarmupArchetypes();
         }
 
         public void StartRun()
         {
             SpawnBeacon();
-            SpawnWeapon(WeaponType.Basic);
+            SpawnWeapons();
             GameStateMachine.Instance.TransitionTo(GameState.WaveRunning);
         }
 
         public void Cleanup()
         {
             DestroyEntity(ref _beaconEntity);
-            DestroyEntity(ref _weaponEntity);
+            DestroyEntity(_weaponEntities);
 
+            _loadout.Reset();
+            
             WaveManager.Instance.ResetWaves();
             CardDraftManager.Instance.ResetHistory();
             ExpManager.Instance.Reset();
@@ -71,26 +80,41 @@ namespace _Game.Gameplay
             _beaconEntity = _entityManager.Instantiate(_prefabRefs.Beacon);
         }
 
-        private void SpawnWeapon(WeaponType type)
+        private void SpawnWeapons()
         {
+            _loadout.Initialize(WeaponSlotCount);
+            _loadout.SetWeapon(0, WeaponType.Basic);
+            
             if (_weaponCatalogQuery.IsEmpty)
             {
-                Debug.LogWarning($"[RunManager] Weapon catalog not found, cannot spawn {type}.");
+                Debug.LogWarning("[RunManager] Weapon catalog not found, cannot spawn weapons.");
                 return;
             }
 
             DynamicBuffer<WeaponCatalogEntry> catalog = _entityManager.GetBuffer<WeaponCatalogEntry>(_weaponCatalogQuery.GetSingletonEntity());
 
+            for (int i = 0; i < _loadout.SlotCount; i++)
+            {
+                WeaponType? type = _loadout.GetWeapon(i);
+                if (type == null) continue;
+
+                _weaponEntities[i] = SpawnWeapon(type.Value, catalog);
+            }
+        }
+
+        private Entity SpawnWeapon(WeaponType type, DynamicBuffer<WeaponCatalogEntry> catalog)
+        {
             for (int i = 0; i < catalog.Length; i++)
             {
                 if (catalog[i].Type != type) continue;
-                
-                _weaponEntity = _entityManager.Instantiate(catalog[i].Prefab);
+
+                Entity entity = _entityManager.Instantiate(catalog[i].Prefab);
                 Debug.Log($"[RunManager] Spawned weapon {type}.");
-                return;
+                return entity;
             }
 
             Debug.LogWarning($"[RunManager] Weapon type {type} not found in catalog.");
+            return Entity.Null;
         }
 
         private void DestroyEntity(ref Entity entity)
@@ -101,6 +125,19 @@ namespace _Game.Gameplay
             }
 
             entity = Entity.Null;
+        }
+        
+        private void DestroyEntity(Entity[] entities)
+        {
+            foreach (Entity entity in entities)
+            {
+                if (entity != Entity.Null && _entityManager.Exists(entity))
+                {
+                    _entityManager.DestroyEntity(entity);
+                }
+            }
+
+            Array.Clear(entities, 0, entities.Length);
         }
 
         private void WarmupArchetypes()
