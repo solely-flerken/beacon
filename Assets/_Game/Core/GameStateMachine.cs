@@ -35,7 +35,7 @@ namespace _Game.Core
             { GameState.Paused, new[] { GameState.WaveRunning } },
             { GameState.WaveEnd, new[] { GameState.WaveRunning, GameState.CardDraft, GameState.RunEnd } }, // TODO: WaveEnd -> RunEnd: Needed? Yes: Player might quit in this state | No: No enemies exist here = No death possible 
             { GameState.CardDraft, new[] { GameState.WaveRunning, GameState.WaveEnd } },
-            { GameState.RunEnd, new[] { GameState.None } },
+            { GameState.RunEnd, new[] { GameState.None, GameState.WaveRunning } },
         };
 
         private void Awake()

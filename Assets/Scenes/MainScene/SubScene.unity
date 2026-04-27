@@ -167,130 +167,63 @@ MonoBehaviour:
   - {fileID: 3278083793145703428, guid: 95872f07fe42d504c91f0a8968cff6e0, type: 3}
   - {fileID: 1845935900482092228, guid: 116272928a230474eb104138739c1dc0, type: 3}
   - {fileID: 1469045865374720774, guid: 7634a12c039a74a4685a939a2b620a6b, type: 3}
---- !u!1 &451592194
-GameObject:
+--- !u!1001 &1210175213
+PrefabInstance:
   m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 451592196}
-  - component: {fileID: 451592195}
-  m_Layer: 0
-  m_Name: BeaconAuthoring
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &451592195
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 451592194}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6aee23309f4f4dd2bbbdce5ea88b5878, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::_Game.Authoring.BeaconAuthoring
-  config: {fileID: 11400000, guid: 8406a116cfb073e4cbaeb7f76146eecb, type: 2}
---- !u!4 &451592196
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 451592194}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 1234442995}
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &1234442994
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1234442995}
-  - component: {fileID: 1234442998}
-  - component: {fileID: 1234442997}
-  - component: {fileID: 1234442996}
-  m_Layer: 0
-  m_Name: BaseWeapon
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &1234442995
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1234442994}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 451592196}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1234442996
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1234442994}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0a633a3c43ad445da1bded8e4b415b3e, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::_Game.Authoring.WeaponProjectileAuthoring
-  projectilePrefab: {fileID: 1204610400704658499, guid: d40c439e6ed49864a8c689991cf6929f, type: 3}
-  speed: 30
-  pierce: 0
---- !u!114 &1234442997
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1234442994}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b35946779fba43888bb28dfaf259fd84, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::_Game.Authoring.WeaponTargetingAuthoring
-  strategy: 1
---- !u!114 &1234442998
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1234442994}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7b1c8efc8cf04369846929ac6897e4ed, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::_Game.Authoring.WeaponBaseAuthoring
-  weaponType: 0
-  damage: 10
-  fireRate: 10
-  targetRange: 40
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 724973354300437547, guid: 6805d7eb800ad254c91d66896fb039dd, type: 3}
+      propertyPath: m_Name
+      value: WeaponBase
+      objectReference: {fileID: 0}
+    - target: {fileID: 1545516264438002586, guid: 6805d7eb800ad254c91d66896fb039dd, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1545516264438002586, guid: 6805d7eb800ad254c91d66896fb039dd, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1545516264438002586, guid: 6805d7eb800ad254c91d66896fb039dd, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1545516264438002586, guid: 6805d7eb800ad254c91d66896fb039dd, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1545516264438002586, guid: 6805d7eb800ad254c91d66896fb039dd, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1545516264438002586, guid: 6805d7eb800ad254c91d66896fb039dd, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1545516264438002586, guid: 6805d7eb800ad254c91d66896fb039dd, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1545516264438002586, guid: 6805d7eb800ad254c91d66896fb039dd, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1545516264438002586, guid: 6805d7eb800ad254c91d66896fb039dd, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1545516264438002586, guid: 6805d7eb800ad254c91d66896fb039dd, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 6805d7eb800ad254c91d66896fb039dd, type: 3}
 --- !u!1 &1524630794
 GameObject:
   m_ObjectHideFlags: 0
@@ -320,6 +253,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 255f55a13ed5423cba604ca6b8d14fa0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::_Game.Authoring.SpawnerAuthoring
+  beaconPrefab: {fileID: 618712398134167580, guid: 2658b6defe5204841b01a36695d31fd4, type: 3}
   projectilePrefab: {fileID: 1204610400704658499, guid: d40c439e6ed49864a8c689991cf6929f, type: 3}
   flarePrefab: {fileID: 6291189526652073928, guid: 980ae5667d3e9c34b85ade13aa7311e1, type: 3}
   expOrbPrefab: {fileID: 4836019042531272895, guid: a9b27f4f2c47ef148875e7e3eb3b2bd0, type: 3}
@@ -396,6 +330,6 @@ SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
   - {fileID: 1524630796}
-  - {fileID: 451592196}
   - {fileID: 1610158308}
   - {fileID: 11991937}
+  - {fileID: 1210175213}

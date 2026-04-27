@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using _Game.Authoring;
 using _Game.Cards;
 using _Game.Components;
@@ -15,6 +15,8 @@ namespace _Game.Gameplay
 {
     public class GameManager : MonoBehaviour
     {
+        [SerializeField] private RunManager runManager;
+
         private EntityManager _entityManager;
         private EntityQuery _enemyCountQuery;
         private EntityQuery _projectileCountQuery;
@@ -79,7 +81,7 @@ namespace _Game.Gameplay
                 
                 case GameState.MainMenu:
                     if (Keyboard.current.anyKey.wasPressedThisFrame)
-                        EnterWaveRunning();
+                        runManager.StartRun();
                     break;
 
                 case GameState.WaveRunning:
@@ -97,7 +99,7 @@ namespace _Game.Gameplay
 
                 case GameState.WaveEnd:
                     if (Keyboard.current.spaceKey.wasPressedThisFrame)
-                        EnterWaveRunning();
+                        GameStateMachine.Instance.TransitionTo(GameState.WaveRunning);
                     break;
 
                 case GameState.Paused:
@@ -111,18 +113,12 @@ namespace _Game.Gameplay
 
                 case GameState.RunEnd:
                     if (Keyboard.current.rKey.wasPressedThisFrame)
-                        RestartRun();
+                        runManager.StartRun();
                     break;
 
                 default:
                     throw new ArgumentOutOfRangeException();
             }
-        }
-
-        private void EnterWaveRunning()
-        {
-            GameStateMachine.Instance.TransitionTo(GameState.WaveRunning);
-            SetSimulation(true);
         }
 
         private void OnGameStateChanged(GameState from, GameState to)
@@ -132,8 +128,8 @@ namespace _Game.Gameplay
 
         private void OnBeaconDestroyed()
         {
+            runManager.Cleanup();
             GameStateMachine.Instance.TransitionTo(GameState.RunEnd);
-            SetSimulation(false);
         }
 
         private void SetSimulation(bool enable)
@@ -162,28 +158,6 @@ namespace _Game.Gameplay
             Debug.Log($"[GameManager] Applied 0.5x Speed modifier to EnemyType.{type}.");
         }
 
-        private void RestartRun()
-        {
-            using EntityQuery beaconQuery = _entityManager.CreateEntityQuery(typeof(BeaconStats));
-            if (!beaconQuery.IsEmpty)
-            {
-                Entity beacon = beaconQuery.GetSingletonEntity();
-                
-                BeaconStats stats = _entityManager.GetComponentData<BeaconStats>(beacon);
-                stats.CurrentHp = stats.MaxHp;
-                stats.IsAlive = true;
-                _entityManager.SetComponentData(beacon, stats);
-
-                // TODO: Reset weapon timers, modifiers, etc.
-                
-                EventBus.FireBeaconHit(stats.MaxHp, stats.MaxHp);
-            }
-            
-            CardDraftManager.Instance.ResetHistory();
-            WaveManager.Instance.ResetWaves();
-            GameStateMachine.Instance.TransitionTo(GameState.None);
-        }
-        
         private void SpawnFlare()
         {
             using EntityQuery prefabQuery = _entityManager.CreateEntityQuery(typeof(PrefabRefs));

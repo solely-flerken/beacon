@@ -184,6 +184,7 @@ GameObject:
   - component: {fileID: 238055989}
   - component: {fileID: 238055988}
   - component: {fileID: 238055992}
+  - component: {fileID: 238055996}
   - component: {fileID: 238055993}
   - component: {fileID: 238055994}
   - component: {fileID: 238055995}
@@ -247,6 +248,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 46846b689d324084b68cb609f6663f13, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameManager
+  runManager: {fileID: 238055996}
 --- !u!114 &238055993
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -317,6 +319,18 @@ MonoBehaviour:
       cost: 9
       weight: 2
       startWave: 7
+--- !u!114 &238055996
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 238055985}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8997d18b5e15d424e9eba11cee6cf10d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::_Game.Gameplay.RunManager
 --- !u!1 &438619592
 GameObject:
   m_ObjectHideFlags: 0

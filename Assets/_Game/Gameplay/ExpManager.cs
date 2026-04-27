@@ -61,6 +61,13 @@ namespace _Game.Gameplay
             EventBus.FireLevelUp(CurrentLevel);
         }
 
+        public void Reset()
+        {
+            TotalExp = 0f;
+            CurrentLevel = 1;
+            EventBus.FireExpChanged(CurrentLevel, 0f, expPerLevel);
+        }
+
         private int DeriveLevel(float exp)
         {
             return (int)(exp / expPerLevel) + 1;   
