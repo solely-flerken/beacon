@@ -104,7 +104,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 58c15ec19c6a4688bc799e11cce0e51a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::_Game.Data.ProjectileAuthoring
-  speed: 30
-  damage: 5
-  pierce: 0
-  lifetime: 4
+  lifetime: 2
