@@ -57,4 +57,10 @@ namespace _Game.Components
     /// Dirty flag. Enable this to force WeaponStatUpdateSystem to recalculate.
     /// </summary>
     public struct WeaponStatUpdateRequired : IComponentData, IEnableableComponent { }
+
+    public struct WeaponCatalogEntry : IBufferElementData
+    {
+        public WeaponType Type;
+        public Entity Prefab;
+    }
 }
