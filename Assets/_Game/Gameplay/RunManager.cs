@@ -88,7 +88,15 @@ namespace _Game.Gameplay
         private void SpawnWeapons()
         {
             _loadout.Initialize(slotProvider.WeaponSlotCount);
-            for (int i = 0; i < runConfig.startingWeapons.Length; i++)
+            
+            int weaponsToAssign = runConfig.startingWeapons.Length;
+            if (weaponsToAssign > slotProvider.WeaponSlotCount)
+            {
+                Debug.LogWarning($"[RunManager] RunConfig defines {weaponsToAssign} weapons but only {slotProvider.WeaponSlotCount} slots are available. Extra weapons will be ignored.");
+                weaponsToAssign = slotProvider.WeaponSlotCount;
+            }
+
+            for (int i = 0; i < weaponsToAssign; i++)
             {
                 _loadout.SetWeapon(i, runConfig.startingWeapons[i]);
             }
