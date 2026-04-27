@@ -5,6 +5,8 @@ using _Game.Config;
 using _Game.Core;
 using _Game.Gameplay.Waves;
 using Unity.Entities;
+using Unity.Mathematics;
+using Unity.Transforms;
 using UnityEngine;
 
 namespace _Game.Gameplay
@@ -14,6 +16,7 @@ namespace _Game.Gameplay
         private static RunManager Instance { get; set; }
 
         [SerializeField] private RunConfig runConfig;
+        [SerializeField] private BeaconSlotProvider slotProvider;
         
         private readonly BeaconLoadout _loadout = new();
 
@@ -52,7 +55,7 @@ namespace _Game.Gameplay
 
             _prefabRefs = _prefabQuery.GetSingleton<PrefabRefs>();
 
-            _weaponEntities = new Entity[runConfig.weaponSlotCount];
+            _weaponEntities = new Entity[slotProvider.WeaponSlotCount];
 
             WarmupArchetypes();
         }
@@ -70,7 +73,8 @@ namespace _Game.Gameplay
             DestroyEntity(_weaponEntities);
 
             _loadout.Reset();
-            
+            slotProvider.ClearWeaponEntities();
+
             WaveManager.Instance.ResetWaves();
             CardDraftManager.Instance.ResetHistory();
             ExpManager.Instance.Reset();
@@ -83,8 +87,7 @@ namespace _Game.Gameplay
 
         private void SpawnWeapons()
         {
-            _loadout.Initialize(runConfig.weaponSlotCount);
-
+            _loadout.Initialize(slotProvider.WeaponSlotCount);
             for (int i = 0; i < runConfig.startingWeapons.Length; i++)
             {
                 _loadout.SetWeapon(i, runConfig.startingWeapons[i]);
@@ -103,17 +106,21 @@ namespace _Game.Gameplay
                 WeaponType? type = _loadout.GetWeapon(i);
                 if (type == null) continue;
 
-                _weaponEntities[i] = SpawnWeapon(type.Value, catalog);
+                if (!slotProvider.TryGetSlot(i, out Transform slotTransform)) continue;
+                _weaponEntities[i] = SpawnWeapon(type.Value, catalog, slotTransform.position);
+                slotProvider.SetWeaponEntity(i, _weaponEntities[i]);
             }
         }
 
-        private Entity SpawnWeapon(WeaponType type, DynamicBuffer<WeaponCatalogEntry> catalog)
+        private Entity SpawnWeapon(WeaponType type, DynamicBuffer<WeaponCatalogEntry> catalog, float3 position)
         {
             for (int i = 0; i < catalog.Length; i++)
             {
                 if (catalog[i].Type != type) continue;
 
                 Entity entity = _entityManager.Instantiate(catalog[i].Prefab);
+                _entityManager.SetComponentData(entity, LocalTransform.FromPosition(position));
+                
                 Debug.Log($"[RunManager] Spawned weapon {type}.");
                 return entity;
             }
