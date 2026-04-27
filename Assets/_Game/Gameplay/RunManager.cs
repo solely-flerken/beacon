@@ -1,6 +1,7 @@
 using System;
 using _Game.Authoring;
 using _Game.Components;
+using _Game.Config;
 using _Game.Core;
 using _Game.Gameplay.Waves;
 using Unity.Entities;
@@ -10,9 +11,9 @@ namespace _Game.Gameplay
 {
     public class RunManager : MonoBehaviour
     {
-        private const int WeaponSlotCount = 6; // TODO: Create a RunConfig SO
-        
         private static RunManager Instance { get; set; }
+
+        [SerializeField] private RunConfig runConfig;
         
         private readonly BeaconLoadout _loadout = new();
 
@@ -51,7 +52,7 @@ namespace _Game.Gameplay
 
             _prefabRefs = _prefabQuery.GetSingleton<PrefabRefs>();
 
-            _weaponEntities = new Entity[WeaponSlotCount];
+            _weaponEntities = new Entity[runConfig.weaponSlotCount];
 
             WarmupArchetypes();
         }
@@ -82,9 +83,13 @@ namespace _Game.Gameplay
 
         private void SpawnWeapons()
         {
-            _loadout.Initialize(WeaponSlotCount);
-            _loadout.SetWeapon(0, WeaponType.Basic);
-            
+            _loadout.Initialize(runConfig.weaponSlotCount);
+
+            for (int i = 0; i < runConfig.startingWeapons.Length; i++)
+            {
+                _loadout.SetWeapon(i, runConfig.startingWeapons[i]);
+            }
+
             if (_weaponCatalogQuery.IsEmpty)
             {
                 Debug.LogWarning("[RunManager] Weapon catalog not found, cannot spawn weapons.");
