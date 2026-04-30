@@ -4,6 +4,7 @@ using _Game.Shared;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
+using Unity.Jobs;
 using Unity.Mathematics;
 using Unity.Transforms;
 
@@ -13,96 +14,45 @@ namespace _Game.Systems
     [UpdateAfter(typeof(SpatialGridSystem))]
     public partial struct ProjectileSystem : ISystem
     {
-        public struct HitRecord
-        {
-            public Entity ProjectileEntity;
-            public Entity EnemyEntity;
-            public float Damage;
-        }
-
-        private NativeQueue<HitRecord> _hitQueue;
-
         public void OnCreate(ref SystemState state)
         {
             state.RequireForUpdate<ProjectileTag>();
-            _hitQueue = new NativeQueue<HitRecord>(Allocator.Persistent);
-        }
-
-        public void OnDestroy(ref SystemState state)
-        {
-            if (_hitQueue.IsCreated) _hitQueue.Dispose();
+            state.RequireForUpdate<BeginSimulationEntityCommandBufferSystem.Singleton>();
         }
 
         public void OnUpdate(ref SystemState state)
         {
             // Move Projectiles
-            new MoveProjectilesJob { DeltaTime = SystemAPI.Time.DeltaTime }.ScheduleParallel();
-            state.Dependency.Complete();
-
-            // Collision detection
-            if (_hitQueue.IsCreated) _hitQueue.Clear();
-
-            if (!EnemyDataShared.IsValid || !SpatialGridShared.IsValid) return;
-            
-            new CollisionJob
+            state.Dependency = new MoveProjectilesJob
             {
-                EnemyPositions = EnemyDataShared.Positions,
-                EnemyEntities = EnemyDataShared.Entities,
-                SpatialGrid = SpatialGridShared.CellMap,
-                SpatialGridCellSize = SpatialGridShared.CellSize,
-                HitRadius = 0.5f,
-                HitQueue = _hitQueue.AsParallelWriter(),
-            }.ScheduleParallel();
-            state.Dependency.Complete();
-            
-            // Process hits
-            EntityManager em = state.EntityManager;
+                DeltaTime = SystemAPI.Time.DeltaTime
+            }.ScheduleParallel(state.Dependency);
 
-            while (_hitQueue.TryDequeue(out HitRecord hit))
+            // Check collisions
+            if (EnemyDataShared.IsValid && SpatialGridShared.IsValid)
             {
-                if (!em.Exists(hit.EnemyEntity)) continue;
-                if (!em.HasComponent<EnemyHealth>(hit.EnemyEntity)) continue;
-                
-                EnemyHealth health = em.GetComponentData<EnemyHealth>(hit.EnemyEntity);
-                health.Current -= hit.Damage;
+                BeginSimulationEntityCommandBufferSystem.Singleton ecbSingleton = SystemAPI.GetSingleton<BeginSimulationEntityCommandBufferSystem.Singleton>();
+                EntityCommandBuffer.ParallelWriter ecb = ecbSingleton.CreateCommandBuffer(state.WorldUnmanaged).AsParallelWriter();
 
-                if (health.Current <= 0f)
+                // Prepare the HitQueue for the bridge
+                bool hasHitQueue = DotsBridge.HitQueue.IsCreated;
+                NativeQueue<HitEvent>.ParallelWriter hitQueueWriter = default;
+                if (hasHitQueue) hitQueueWriter = DotsBridge.HitQueue.AsParallelWriter();
+
+                state.Dependency = new CollisionJob
                 {
-                    float3 pos = em.GetComponentData<LocalTransform>(hit.EnemyEntity).Position;
-                    EnemyReward reward = em.GetComponentData<EnemyReward>(hit.EnemyEntity);
-
-                    DeathEvent deathEvent = new() { Position = pos, Exp = reward.ExpValue };
-
-                    if (DotsBridge.DeathQueue.IsCreated) DotsBridge.DeathQueue.Enqueue(deathEvent);
-                    if (DotsBridge.ExpOrbQueue.IsCreated) DotsBridge.ExpOrbQueue.Enqueue(deathEvent);
-
-                    em.DestroyEntity(hit.EnemyEntity);
-                }
-                else
-                {
-                    em.SetComponentData(hit.EnemyEntity, health);
-
-                    if (DotsBridge.HitQueue.IsCreated)
-                    {
-                        float3 pos = em.GetComponentData<LocalTransform>(hit.EnemyEntity).Position;
-                        DotsBridge.HitQueue.Enqueue(new HitEvent { Position = pos, Damage = hit.Damage });
-                    }
-                }
-
-                // Handle pierce
-                if (!em.Exists(hit.ProjectileEntity)) continue;
-                
-                ProjectilePierce pierce = em.GetComponentData<ProjectilePierce>(hit.ProjectileEntity);
-                pierce.Remaining--;
-                if (pierce.Remaining < 0)
-                {
-                    em.DestroyEntity(hit.ProjectileEntity);
-                }
-                else
-                {
-                    em.SetComponentData(hit.ProjectileEntity, pierce);
-                }
+                    EnemyPositions = EnemyDataShared.Positions,
+                    EnemyEntities = EnemyDataShared.Entities,
+                    SpatialGrid = SpatialGridShared.CellMap,
+                    SpatialGridCellSize = SpatialGridShared.CellSize,
+                    HitRadius = 0.5f,
+                    ECB = ecb,
+                    HasHitQueue = hasHitQueue,
+                    HitQueue = hitQueueWriter
+                }.ScheduleParallel(state.Dependency);
             }
+            
+            DotsBridge.BridgeDependencies = JobHandle.CombineDependencies(DotsBridge.BridgeDependencies, state.Dependency);
         }
     }
 
@@ -133,10 +83,13 @@ namespace _Game.Systems
         [ReadOnly] public NativeParallelMultiHashMap<int2, int> SpatialGrid;
         [ReadOnly] public float SpatialGridCellSize;
         [ReadOnly] public float HitRadius;
-
-        [WriteOnly] public NativeQueue<ProjectileSystem.HitRecord>.ParallelWriter HitQueue;
-
-        private void Execute(Entity projectile, in LocalTransform transform, in ProjectileDamage damage)
+        
+        public EntityCommandBuffer.ParallelWriter ECB;
+        
+        public bool HasHitQueue;
+        [WriteOnly] public NativeQueue<HitEvent>.ParallelWriter HitQueue;
+        
+        private void Execute(Entity projectile, [EntityIndexInQuery] int sortKey, in LocalTransform transform, in ProjectileDamage damage, ref ProjectilePierce pierce)
         {
             float2 pos = new(transform.Position.x, transform.Position.y);
             float hitRadiusSq = HitRadius * HitRadius;
@@ -150,12 +103,28 @@ namespace _Game.Systems
                 {
                     if (math.distancesq(pos, EnemyPositions[enemyIdx]) > hitRadiusSq) continue;
 
-                    HitQueue.Enqueue(new ProjectileSystem.HitRecord
-                    {
-                        ProjectileEntity = projectile,
-                        EnemyEntity = EnemyEntities[enemyIdx],
-                        Damage = damage.Value,
+                    // Add damage to the enemy's buffer
+                    ECB.AppendToBuffer(sortKey, EnemyEntities[enemyIdx], new DamageBufferElement
+                    { 
+                        Value = damage.Value 
                     });
+                    
+                    // Send Hit Event to Bridge
+                    if (HasHitQueue)
+                    {
+                        HitQueue.Enqueue(new HitEvent 
+                        { 
+                            Position = transform.Position, 
+                            Damage = damage.Value 
+                        });
+                    }
+                    
+                    // Handle pierce 
+                    pierce.Remaining--;
+                    if (pierce.Remaining <= 0)
+                    {
+                        ECB.DestroyEntity(sortKey, projectile);
+                    }
                     return;
                 } while (SpatialGrid.TryGetNextValue(out enemyIdx, ref it));
             }

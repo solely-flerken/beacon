@@ -49,6 +49,8 @@ namespace _Game.Authoring
 
                 AddComponent(entity, new EnemyTierComponent { Value = EnemyTier.Normal });
                 
+                AddBuffer<DamageBufferElement>(entity);
+                
                 AddComponent<EnemyTypeRef>(entity);
                 
                 // Individual enemy modifiers. Used for elites.

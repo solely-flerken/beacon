@@ -1,5 +1,6 @@
 ﻿using System;
 using Unity.Collections;
+using Unity.Jobs;
 using UnityEngine;
 
 namespace _Game.Core
@@ -34,6 +35,8 @@ namespace _Game.Core
         private NativeArray<DeathEvent> _deathBatch;
         private NativeArray<HitEvent> _hitBatch;
 
+        public static JobHandle BridgeDependencies;
+        
         private void Awake()
         {
             DeathQueue  = new NativeQueue<DeathEvent>(Allocator.Persistent);
@@ -45,13 +48,17 @@ namespace _Game.Core
 
         private void LateUpdate()
         {
+            BridgeDependencies.Complete();
+            
             DrainQueue(DeathQueue, _deathBatch, EventBus.FireEnemiesDiedBatch);
             DrainQueue(HitQueue, _hitBatch, EventBus.FireEnemiesHitBatch);
+            
+            BridgeDependencies = default; 
         }
         
         private void OnDestroy()
         {
-            if (DeathQueue.IsCreated)  DeathQueue.Dispose();
+            if (DeathQueue.IsCreated) DeathQueue.Dispose();
             if (ExpOrbQueue.IsCreated) ExpOrbQueue.Dispose();
             if (HitQueue.IsCreated) HitQueue.Dispose();
             if (_deathBatch.IsCreated) _deathBatch.Dispose();
