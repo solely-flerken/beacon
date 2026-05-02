@@ -31,6 +31,7 @@ namespace _Game.Authoring
 
                 AddBuffer<StatModifier>(entity);
                 AddBuffer<GlobalStatModifier>(entity);
+                AddBuffer<DamageBufferElement>(entity);
                 
                 AddComponent<BeaconStatUpdateRequired>(entity);
             }
