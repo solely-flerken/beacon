@@ -28,7 +28,7 @@ namespace _Game.Systems
 
         public void OnUpdate(ref SystemState state)
         {
-            if (!EnemyDataShared.IsValid || !SpatialGridShared.IsValid || !FlowFieldShared.IsValid) return;
+            if (!EnemyDataShared.IsValid || !SpatialGridShared.EnemyGridValid || !FlowFieldShared.IsValid) return;
 
             // If we just spawned enemies, the shared arrays (Positions) might not have been 
             // resized by the EnemyDataSystem yet. We skip one frame to let data catch up.
@@ -43,7 +43,7 @@ namespace _Game.Systems
                 FlowFieldGridWidth = FlowFieldShared.GridWidth,
                 FlowFieldGridHeight = FlowFieldShared.GridHeight,
                 AttractorOwner = FlowFieldShared.AttractorOwner,
-                SpatialGrid = SpatialGridShared.CellMap,
+                SpatialGrid = SpatialGridShared.EnemyCellMap,
                 SpatialGridCellSize = SpatialGridShared.CellSize,
                 SeparationRadius = 1.0f,
                 SeparationStrength = 6.0f,

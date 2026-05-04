@@ -14,42 +14,72 @@ namespace _Game.Systems
     [UpdateAfter(typeof(SpatialGridSystem))]
     public partial struct ProjectileSystem : ISystem
     {
+        private EntityQuery _playerProjectiles;
+        private EntityQuery _enemyProjectiles;
+        
         public void OnCreate(ref SystemState state)
         {
             state.RequireForUpdate<ProjectileTag>();
             state.RequireForUpdate<BeginSimulationEntityCommandBufferSystem.Singleton>();
+            
+            _playerProjectiles = SystemAPI.QueryBuilder()
+                .WithAll<PlayerProjectileTag, LocalTransform, ProjectileVelocity, ProjectileDamage, ProjectilePierce>()
+                .Build();
+
+            _enemyProjectiles = SystemAPI.QueryBuilder()
+                .WithAll<EnemyProjectileTag, LocalTransform, ProjectileVelocity, ProjectileDamage, ProjectilePierce>()
+                .Build();
         }
 
         public void OnUpdate(ref SystemState state)
         {
-            // Move Projectiles
+            // Move all Projectiles
             state.Dependency = new MoveProjectilesJob
             {
                 DeltaTime = SystemAPI.Time.DeltaTime
             }.ScheduleParallel(state.Dependency);
 
+            BeginSimulationEntityCommandBufferSystem.Singleton ecbSingleton = SystemAPI.GetSingleton<BeginSimulationEntityCommandBufferSystem.Singleton>();
+            
             // Check collisions
-            if (EnemyDataShared.IsValid && SpatialGridShared.IsValid)
+            bool hasHitQueue = DotsBridge.HitQueue.IsCreated;
+            NativeQueue<HitEvent>.ParallelWriter hitQueueWriter = default;
+            if (hasHitQueue) hitQueueWriter = DotsBridge.HitQueue.AsParallelWriter();
+
+            // PLAYER PROJECTILES vs ENEMIES
+            if (SpatialGridShared.EnemyGridValid && !_playerProjectiles.IsEmpty)
             {
-                BeginSimulationEntityCommandBufferSystem.Singleton ecbSingleton = SystemAPI.GetSingleton<BeginSimulationEntityCommandBufferSystem.Singleton>();
                 EntityCommandBuffer.ParallelWriter ecb = ecbSingleton.CreateCommandBuffer(state.WorldUnmanaged).AsParallelWriter();
-
-                // Prepare the HitQueue for the bridge
-                bool hasHitQueue = DotsBridge.HitQueue.IsCreated;
-                NativeQueue<HitEvent>.ParallelWriter hitQueueWriter = default;
-                if (hasHitQueue) hitQueueWriter = DotsBridge.HitQueue.AsParallelWriter();
-
+                
                 state.Dependency = new CollisionJob
                 {
-                    EnemyPositions = EnemyDataShared.Positions,
-                    EnemyEntities = EnemyDataShared.Entities,
-                    SpatialGrid = SpatialGridShared.CellMap,
+                    TargetPositions = EnemyDataShared.Positions,
+                    TargetEntities = EnemyDataShared.Entities,
+                    SpatialGrid = SpatialGridShared.EnemyCellMap,
                     SpatialGridCellSize = SpatialGridShared.CellSize,
                     HitRadius = 0.5f,
                     ECB = ecb,
                     HasHitQueue = hasHitQueue,
                     HitQueue = hitQueueWriter
-                }.ScheduleParallel(state.Dependency);
+                }.ScheduleParallel(_playerProjectiles, state.Dependency);
+            }
+
+            // ENEMY PROJECTILES vs PLAYER
+            if (SpatialGridShared.AllyGridValid && !_enemyProjectiles.IsEmpty)
+            {
+                EntityCommandBuffer.ParallelWriter ecb = ecbSingleton.CreateCommandBuffer(state.WorldUnmanaged).AsParallelWriter();
+                
+                state.Dependency = new CollisionJob
+                {
+                    TargetPositions = AllyDataShared.Positions,
+                    TargetEntities = AllyDataShared.Entities,
+                    SpatialGrid = SpatialGridShared.AllyCellMap,
+                    SpatialGridCellSize = SpatialGridShared.CellSize,
+                    HitRadius = 0.5f,
+                    ECB = ecb,
+                    HasHitQueue = hasHitQueue,
+                    HitQueue = hitQueueWriter
+                }.ScheduleParallel(_enemyProjectiles, state.Dependency);
             }
             
             DotsBridge.BridgeDependencies = JobHandle.CombineDependencies(DotsBridge.BridgeDependencies, state.Dependency);
@@ -78,8 +108,8 @@ namespace _Game.Systems
             new(-1, 1), new(0, 1), new(1, 1),
         };
 
-        [ReadOnly] public NativeArray<float2> EnemyPositions;
-        [ReadOnly] public NativeArray<Entity> EnemyEntities;
+        [ReadOnly] public NativeArray<float2> TargetPositions;
+        [ReadOnly] public NativeArray<Entity> TargetEntities;
         [ReadOnly] public NativeParallelMultiHashMap<int2, int> SpatialGrid;
         [ReadOnly] public float SpatialGridCellSize;
         [ReadOnly] public float HitRadius;
@@ -101,10 +131,10 @@ namespace _Game.Systems
 
                 do
                 {
-                    if (math.distancesq(pos, EnemyPositions[enemyIdx]) > hitRadiusSq) continue;
+                    if (math.distancesq(pos, TargetPositions[enemyIdx]) > hitRadiusSq) continue;
 
                     // Add damage to the enemy's buffer
-                    ECB.AppendToBuffer(sortKey, EnemyEntities[enemyIdx], new DamageBufferElement
+                    ECB.AppendToBuffer(sortKey, TargetEntities[enemyIdx], new DamageBufferElement
                     { 
                         Value = damage.Value 
                     });

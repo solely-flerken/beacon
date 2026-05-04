@@ -1,5 +1,6 @@
 ﻿using _Game.Components;
 using Unity.Burst;
+using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
@@ -10,44 +11,87 @@ namespace _Game.Systems
     [UpdateAfter(typeof(WeaponTargetingSystem))]
     public partial struct ShootProjectileSystem : ISystem
     {
+        private ComponentLookup<LocalTransform> _transformLookup;
+        private ComponentLookup<PlayerTag> _playerTagLookup;
+
+        public void OnCreate(ref SystemState state)
+        {
+            state.RequireForUpdate<BeginSimulationEntityCommandBufferSystem.Singleton>();
+
+            _transformLookup = state.GetComponentLookup<LocalTransform>(isReadOnly: true);
+            _playerTagLookup = state.GetComponentLookup<PlayerTag>(isReadOnly: true);
+        }
+
         [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
-            EntityCommandBuffer ecb = new(state.WorldUpdateAllocator);
+            _transformLookup.Update(ref state);
+            _playerTagLookup.Update(ref state);
 
-            // Query weapons that are ready to fire and shoot normal projectiles
-            foreach ((RefRO<ShootProjectile> projectileData, RefRO<WeaponStats> stats, RefRO<ProjectileStats> projStats, RefRO<WeaponTargeting> targeting, RefRO<LocalToWorld> transform, Entity entity) in
-                     SystemAPI
-                         .Query<RefRO<ShootProjectile>, RefRO<WeaponStats>, RefRO<ProjectileStats>, RefRO<WeaponTargeting>, RefRO<LocalToWorld>>()
-                         .WithAll<ReadyToFire>()
-                         .WithEntityAccess())
+            BeginSimulationEntityCommandBufferSystem.Singleton ecbSingleton = SystemAPI.GetSingleton<BeginSimulationEntityCommandBufferSystem.Singleton>();
+            EntityCommandBuffer.ParallelWriter ecb = ecbSingleton.CreateCommandBuffer(state.WorldUnmanaged).AsParallelWriter();
+
+            state.Dependency = new ShootProjectileJob
             {
-                if (!targeting.ValueRO.HasTarget) continue;
+                ECB = ecb,
+                TransformLookup = _transformLookup,
+                PlayerTagLookup = _playerTagLookup
+            }.ScheduleParallel(state.Dependency);
+        }
+    }
 
-                float2 weaponPos = transform.ValueRO.Position.xy;
-                float2 targetPos = targeting.ValueRO.TargetPosition;
-                
-                float minDist = math.max(1.2f + 0.5f, 0.0001f) ; // TODO: "MinShootDistance"
-                
-                float2 delta = targetPos - weaponPos;
-                if (math.lengthsq(delta) < minDist) continue;
-                float2 baseDir = math.normalize(delta);
-                
-                Entity prefabToSpawn = projectileData.ValueRO.ProjectilePrefab;
+    [BurstCompile]
+    [WithAll(typeof(ReadyToFire))]
+    internal partial struct ShootProjectileJob : IJobEntity
+    {
+        public EntityCommandBuffer.ParallelWriter ECB;
+        [ReadOnly] public ComponentLookup<LocalTransform> TransformLookup;
+        [ReadOnly] public ComponentLookup<PlayerTag> PlayerTagLookup;
 
-                float3 spawnPos = new(weaponPos + baseDir * 1.2f, 0f); // TODO: "SpawnOffset" (Weapon Size + epsilon)
-                LocalTransform projTransform = SystemAPI.GetComponent<LocalTransform>(prefabToSpawn);
+        private void Execute(
+            Entity entity,
+            [EntityIndexInQuery] int sortKey,
+            in ShootProjectile projectileData,
+            in WeaponStats stats,
+            in ProjectileStats projStats,
+            in WeaponTargeting targeting,
+            in LocalToWorld transform,
+            in WeaponOwner owner)
+        {
+            if (!targeting.HasTarget) return;
 
-                Entity projectile = ecb.Instantiate(prefabToSpawn);
-                ecb.SetComponent(projectile, LocalTransform.FromPositionRotationScale(spawnPos, quaternion.identity, projTransform.Scale));
-                ecb.SetComponent(projectile, new ProjectileVelocity { Value = baseDir * projStats.ValueRO.Speed });
-                ecb.SetComponent(projectile, new ProjectileDamage { Value = stats.ValueRO.Damage });
-                ecb.SetComponent(projectile, new ProjectilePierce { Remaining = projStats.ValueRO.Pierce });
+            float2 weaponPos = transform.Position.xy;
+            float2 targetPos = targeting.TargetPosition;
 
-                SystemAPI.SetComponentEnabled<ReadyToFire>(entity, false);
+            const float minDistSq = 1.7f * 1.7f; // TODO: "MinShootDistance"
+            float2 delta = targetPos - weaponPos;
+
+            if (math.lengthsq(delta) < minDistSq) return;
+
+            float2 baseDir = math.normalize(delta);
+            Entity prefab = projectileData.ProjectilePrefab;
+            float3 spawnPos = new(weaponPos + baseDir * 1.2f, 0f); // TODO: "SpawnOffset" (Weapon Size + epsilon)
+
+            float scale = TransformLookup.HasComponent(prefab) ? TransformLookup[prefab].Scale : 1f;
+
+            // Spawn projectile
+            Entity projectile = ECB.Instantiate(sortKey, prefab);
+            ECB.SetComponent(sortKey, projectile, LocalTransform.FromPositionRotationScale(spawnPos, quaternion.identity, scale));
+            ECB.SetComponent(sortKey, projectile, new ProjectileVelocity { Value = baseDir * projStats.Speed });
+            ECB.SetComponent(sortKey, projectile, new ProjectileDamage { Value = stats.Damage });
+            ECB.SetComponent(sortKey, projectile, new ProjectilePierce { Remaining = projStats.Pierce });
+
+            // Who owns this weapon?
+            if (PlayerTagLookup.HasComponent(owner.Value))
+            {
+                ECB.AddComponent<PlayerProjectileTag>(sortKey, projectile);
+            }
+            else
+            {
+                ECB.AddComponent<EnemyProjectileTag>(sortKey, projectile);
             }
 
-            ecb.Playback(state.EntityManager);
+            ECB.SetComponentEnabled<ReadyToFire>(sortKey, entity, false);
         }
     }
 }

@@ -2,6 +2,8 @@
 
 namespace _Game.Components
 {
+    public struct PlayerTag : IComponentData { }
+    
     public struct BeaconStats : IComponentData
     {
         // Base Values (Authored)

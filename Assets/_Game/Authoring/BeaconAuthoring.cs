@@ -16,6 +16,8 @@ namespace _Game.Authoring
                 BeaconConfig config = authoring.config;
                 Entity entity = GetEntity(TransformUsageFlags.Dynamic);
 
+                AddComponent<PlayerTag>(entity);
+                
                 AddComponent(entity, new BeaconStats
                 {
                     BaseArrivalRadius = config.arrivalRadius,

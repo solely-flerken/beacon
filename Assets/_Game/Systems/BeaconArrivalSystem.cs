@@ -19,12 +19,12 @@ namespace _Game.Systems
 
         public void OnUpdate(ref SystemState state)
         {
-            if (!SpatialGridShared.IsValid || !EnemyDataShared.IsValid) return;
+            if (!SpatialGridShared.EnemyGridValid || !EnemyDataShared.IsValid) return;
 
             NativeArray<float2> positions = EnemyDataShared.Positions;
             NativeArray<Entity> entities = EnemyDataShared.Entities;
             
-            NativeParallelMultiHashMap<int2, int> grid = SpatialGridShared.CellMap;
+            NativeParallelMultiHashMap<int2, int> grid = SpatialGridShared.EnemyCellMap;
             float cellSize = SpatialGridShared.CellSize;
 
             EntityCommandBuffer ecb = new(state.WorldUpdateAllocator);

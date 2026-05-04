@@ -17,4 +17,14 @@ namespace _Game.Components
         public float2 TargetPosition;
         public bool HasTarget;
     }
+    
+    /// <summary>
+    /// Projectile shot by any player related entity
+    /// </summary>
+    public struct PlayerProjectileTag : IComponentData { }
+    
+    /// <summary>
+    /// Projectile shot by any enemy related entity
+    /// </summary>
+    public struct EnemyProjectileTag : IComponentData { }
 }
