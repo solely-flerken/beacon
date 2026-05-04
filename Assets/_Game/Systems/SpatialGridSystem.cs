@@ -42,11 +42,12 @@ namespace _Game.Systems
 
         public void OnUpdate(ref SystemState state)
         {
+            _enemyCellMap.Clear();
+            _allyCellMap.Clear();
+
             JobHandle enemyHandle = default;
             if (EnemyDataShared.IsValid)
             {
-                _enemyCellMap.Clear();
-                
                 enemyHandle = new RebuildGridJob
                 {
                     Positions = EnemyDataShared.Positions,
@@ -58,8 +59,6 @@ namespace _Game.Systems
             JobHandle allyHandle = default;
             if (AllyDataShared.IsValid)
             {
-                _allyCellMap.Clear();
-                
                 allyHandle = new RebuildGridJob
                 {
                     Positions = AllyDataShared.Positions,
