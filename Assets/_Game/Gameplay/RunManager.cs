@@ -115,12 +115,12 @@ namespace _Game.Gameplay
                 if (type == null) continue;
 
                 if (!slotProvider.TryGetSlot(i, out Transform slotTransform)) continue;
-                _weaponEntities[i] = SpawnWeapon(type.Value, catalog, slotTransform.position);
+                _weaponEntities[i] = SpawnWeapon(type.Value, catalog, slotTransform.position, _beaconEntity);
                 slotProvider.SetWeaponEntity(i, _weaponEntities[i]);
             }
         }
 
-        private Entity SpawnWeapon(WeaponType type, DynamicBuffer<WeaponCatalogEntry> catalog, float3 position)
+        private Entity SpawnWeapon(WeaponType type, DynamicBuffer<WeaponCatalogEntry> catalog, float3 position, Entity owner)
         {
             for (int i = 0; i < catalog.Length; i++)
             {
@@ -128,7 +128,9 @@ namespace _Game.Gameplay
 
                 Entity entity = _entityManager.Instantiate(catalog[i].Prefab);
                 _entityManager.SetComponentData(entity, LocalTransform.FromPosition(position));
-                
+                // _entityManager.AddComponentData(entity, new Parent { Value = owner });
+                _entityManager.SetComponentData(entity, new WeaponOwner { Value = owner });
+
                 Debug.Log($"[RunManager] Spawned weapon {type}.");
                 return entity;
             }

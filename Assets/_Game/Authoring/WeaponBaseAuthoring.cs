@@ -47,6 +47,14 @@ namespace _Game.Authoring
 
                 AddComponent<ReadyToFire>(entity);
                 SetComponentEnabled<ReadyToFire>(entity, false);
+
+                Entity owner = authoring.transform.parent != null
+                    ? GetEntity(authoring.transform.parent.gameObject, TransformUsageFlags.Dynamic)
+                    : Entity.Null;
+                AddComponent(entity, new WeaponOwner
+                {
+                    Value = owner
+                });
             }
         }
     }

@@ -4,6 +4,11 @@ namespace _Game.Components
 {
     public struct WeaponTag : IComponentData { }
     
+    public struct WeaponOwner : IComponentData
+    {
+        public Entity Value;
+    }
+    
     /// <summary>
     /// Enabled by the Cooldown system when the weapon is ready to fire.
     /// </summary>
