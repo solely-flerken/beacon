@@ -20,7 +20,7 @@ namespace _Game.Systems
         public void OnCreate(ref SystemState state)
         {
             state.RequireForUpdate<ProjectileTag>();
-            state.RequireForUpdate<BeginSimulationEntityCommandBufferSystem.Singleton>();
+            state.RequireForUpdate<EndSimulationEntityCommandBufferSystem.Singleton>();
             
             _playerProjectiles = SystemAPI.QueryBuilder()
                 .WithAll<PlayerProjectileTag, LocalTransform, ProjectileVelocity, ProjectileDamage, ProjectilePierce>()
@@ -39,8 +39,8 @@ namespace _Game.Systems
                 DeltaTime = SystemAPI.Time.DeltaTime
             }.ScheduleParallel(state.Dependency);
 
-            BeginSimulationEntityCommandBufferSystem.Singleton ecbSingleton = SystemAPI.GetSingleton<BeginSimulationEntityCommandBufferSystem.Singleton>();
-            
+            EndSimulationEntityCommandBufferSystem.Singleton ecbSingleton = SystemAPI.GetSingleton<EndSimulationEntityCommandBufferSystem.Singleton>();
+
             // Check collisions
             bool hasHitQueue = DotsBridge.HitQueue.IsCreated;
             NativeQueue<HitEvent>.ParallelWriter hitQueueWriter = default;
