@@ -10,6 +10,7 @@ namespace _Game.Systems
 {
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     [UpdateAfter(typeof(ProjectileSystem))]
+    [UpdateAfter(typeof(BeaconArrivalSystem))]
     public partial struct DamageAndDeathSystem : ISystem
     {
         public void OnCreate(ref SystemState state)
@@ -58,7 +59,7 @@ namespace _Game.Systems
             private void Execute(
                 Entity entity,
                 [EntityIndexInQuery] int sortKey,
-                ref EnemyHealth health,
+                ref Health health,
                 ref DynamicBuffer<DamageBufferElement> damageBuffer,
                 in EnemyReward reward,
                 in LocalTransform transform)

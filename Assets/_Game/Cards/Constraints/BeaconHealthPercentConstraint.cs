@@ -9,8 +9,8 @@ namespace _Game.Cards.Constraints
 
         public bool IsMet(CardDraftContext ctx)
         {
-            if (ctx.BeaconStats.MaxHp <= 0f) return false;
-            return ctx.BeaconStats.CurrentHp / ctx.BeaconStats.MaxHp >= MinHealthPercent;
+            if (ctx.BeaconHealth.Max <= 0f) return false;
+            return ctx.BeaconHealth.Current / ctx.BeaconHealth.Max >= MinHealthPercent;
         }
 
         public string GetLabel() => $"Beacon health >= {MinHealthPercent:P0}";

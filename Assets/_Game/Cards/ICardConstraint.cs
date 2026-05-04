@@ -12,6 +12,7 @@ namespace _Game.Cards
     {
         public IReadOnlyList<int> DraftedCardIds;
         public BeaconStats BeaconStats;
+        public Health BeaconHealth;
         public EntityManager EntityManager;
     }
 

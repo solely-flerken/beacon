@@ -25,16 +25,6 @@ namespace _Game.Components
     }
 
     /// <summary>
-    /// Enemy health.
-    /// </summary>
-    public struct EnemyHealth : IComponentData
-    {
-        public float BaseMax;
-        public float Max;
-        public float Current;
-    }
-
-    /// <summary>
     /// Dirty flag. Enable to force EnemyStatUpdateSystem to recalculate.
     /// </summary>
     public struct EnemyStatUpdateRequired : IComponentData, IEnableableComponent { }

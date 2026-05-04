@@ -41,7 +41,7 @@ namespace _Game.Authoring
                 AddComponent<TargetableTag>(entity);
                 
                 AddComponent(entity, new EnemySpeed { BaseValue = authoring.speed, Value = authoring.speed });
-                AddComponent(entity, new EnemyHealth { BaseMax = authoring.maxHealth, Max = authoring.maxHealth, Current = authoring.maxHealth });
+                AddComponent(entity, new Health() { BaseMax = authoring.maxHealth, Max = authoring.maxHealth, Current = authoring.maxHealth, IsAlive = true});
                 AddComponent(entity, new ContactDamage { BaseValue = authoring.contactDamage, Value = authoring.contactDamage });
                
                 AddComponent(entity, new EnemyReward { ExpValue = authoring.exp });

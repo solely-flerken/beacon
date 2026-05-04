@@ -30,9 +30,9 @@ namespace _Game.Systems
 
             EntityCommandBuffer ecb = new(state.WorldUpdateAllocator);
 
-            foreach ((RefRW<BeaconStats> stats, RefRO<LocalTransform> transform) in SystemAPI.Query<RefRW<BeaconStats>, RefRO<LocalTransform>>())
+            foreach ((RefRW<BeaconStats> stats, RefRW<Health> health, RefRO<LocalTransform> transform) in SystemAPI.Query<RefRW<BeaconStats>, RefRW<Health>, RefRO<LocalTransform>>())
             {
-                if (!stats.ValueRO.IsAlive) continue;
+                if (!health.ValueRO.IsAlive) continue;
 
                 float2 beaconPos = transform.ValueRO.Position.xy;
                 float radiusSq = stats.ValueRO.ArrivalRadius * stats.ValueRO.ArrivalRadius;
@@ -51,26 +51,19 @@ namespace _Game.Systems
                         if (!state.EntityManager.HasComponent<ContactDamage>(enemy)) continue;
                         totalDamage += state.EntityManager.GetComponentData<ContactDamage>(enemy).Value;
 
-                        // TODO: Refactor - can possibly code enemies as projectiles themselves and make beacon able to be damaged by them
-                        float3 pos = state.EntityManager.GetComponentData<LocalTransform>(enemy).Position;
-                        EnemyReward reward = state.EntityManager.GetComponentData<EnemyReward>(enemy);
-                        DeathEvent deathEvent = new() { Position = pos, Exp = reward.ExpValue };
-
-                        if (DotsBridge.DeathQueue.IsCreated) DotsBridge.DeathQueue.Enqueue(deathEvent);
-                        if (DotsBridge.ExpOrbQueue.IsCreated) DotsBridge.ExpOrbQueue.Enqueue(deathEvent);
-                        
-                        ecb.DestroyEntity(enemy);
+                        // TODO: Destroy enemy on contact?
+                        ecb.AppendToBuffer(enemy, new DamageBufferElement { Value = float.MaxValue });
                     } while (grid.TryGetNextValue(out idx, ref it));
                 }
 
                 if (totalDamage <= 0f) continue;
 
-                stats.ValueRW.CurrentHp = math.max(0f, stats.ValueRO.CurrentHp - totalDamage);
-                EventBus.FireBeaconHit(stats.ValueRO.CurrentHp, stats.ValueRO.MaxHp);
+                health.ValueRW.Current = math.max(0f, health.ValueRO.Current - totalDamage);
+                EventBus.FireBeaconHit(health.ValueRO.Current, health.ValueRO.Max);
 
-                if (stats.ValueRO.CurrentHp <= 0f)
+                if (health.ValueRO.Current <= 0f)
                 {
-                    stats.ValueRW.IsAlive = false;
+                    health.ValueRW.IsAlive = false;
                     ecb.AddComponent<BeaconDeathTag>(ecb.CreateEntity());
                 }
             }

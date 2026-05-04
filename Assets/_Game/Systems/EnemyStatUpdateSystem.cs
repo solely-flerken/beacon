@@ -57,7 +57,7 @@ namespace _Game.Systems
                 Entity entity,
                 [ChunkIndexInQuery] int chunkIndex,
                 ref EnemySpeed speed,
-                ref EnemyHealth health,
+                ref Health health,
                 ref ContactDamage contactDamage,
                 in EnemyTierComponent tier,
                 in EnemyTypeRef typeRef,
@@ -85,7 +85,7 @@ namespace _Game.Systems
 
             private void Execute(
                 ref EnemySpeed speed,
-                ref EnemyHealth health,
+                ref Health health,
                 ref ContactDamage contactDamage,
                 EnabledRefRW<EnemyStatUpdateRequired> updateRequired,
                 in EnemyTierComponent tier,

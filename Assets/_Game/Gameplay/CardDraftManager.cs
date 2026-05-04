@@ -80,15 +80,19 @@ namespace _Game.Gameplay
         private CardDraftContext BuildContext()
         {
             BeaconStats beaconStats = default;
-            using EntityQuery beaconQ = _em.CreateEntityQuery(typeof(BeaconStats));
+            Health beaconHealth = default;
+            
+            using EntityQuery beaconQ = _em.CreateEntityQuery(typeof(BeaconStats), typeof(Health));
             if (!beaconQ.IsEmpty)
             {
                 beaconStats = beaconQ.GetSingleton<BeaconStats>();
+                beaconHealth = beaconQ.GetSingleton<Health>();
             }
 
             return new CardDraftContext
             {
                 BeaconStats = beaconStats,
+                BeaconHealth = beaconHealth,
                 DraftedCardIds = _history.CardIds,
                 EntityManager = _em
             };
