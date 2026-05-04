@@ -1,7 +1,7 @@
 ﻿using Unity.Collections;
 using Unity.Mathematics;
 
-namespace _Game.Systems
+namespace _Game.Util
 {
     /// <summary>
     /// Stateless helpers for sampling a flow field NativeArray.

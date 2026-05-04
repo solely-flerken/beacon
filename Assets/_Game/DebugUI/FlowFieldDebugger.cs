@@ -1,10 +1,10 @@
 ﻿using _Game.Config;
 using _Game.Shared;
-using _Game.Systems;
+using _Game.Util;
 using Unity.Mathematics;
 using UnityEngine;
 
-namespace _Game.Editor
+namespace _Game.DebugUI
 {
     public class FlowFieldDebugger : MonoBehaviour
     {
