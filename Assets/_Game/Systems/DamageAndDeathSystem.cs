@@ -1,10 +1,8 @@
-﻿using _Game.Components;
+using _Game.Components;
 using _Game.Core;
 using Unity.Burst;
-using Unity.Collections;
 using Unity.Entities;
 using Unity.Jobs;
-using Unity.Transforms;
 
 namespace _Game.Systems
 {
@@ -17,30 +15,17 @@ namespace _Game.Systems
         {
             state.RequireForUpdate<BeginSimulationEntityCommandBufferSystem.Singleton>();
         }
-        
+
         public void OnUpdate(ref SystemState state)
         {
             BeginSimulationEntityCommandBufferSystem.Singleton ecbSingleton = SystemAPI.GetSingleton<BeginSimulationEntityCommandBufferSystem.Singleton>();
             EntityCommandBuffer.ParallelWriter ecb = ecbSingleton.CreateCommandBuffer(state.WorldUnmanaged).AsParallelWriter();
 
-            bool hasDeathQueue = DotsBridge.DeathQueue.IsCreated;
-            bool hasExpQueue = DotsBridge.ExpOrbQueue.IsCreated;
-
-            NativeQueue<DeathEvent>.ParallelWriter deathQueueWriter = default;
-            NativeQueue<DeathEvent>.ParallelWriter expQueueWriter = default;
-
-            if (hasDeathQueue) deathQueueWriter = DotsBridge.DeathQueue.AsParallelWriter();
-            if (hasExpQueue) expQueueWriter = DotsBridge.ExpOrbQueue.AsParallelWriter();
-
             state.Dependency = new ProcessDamageAndDeathJob
             {
                 ECB = ecb,
-                HasDeathQueue = hasDeathQueue,
-                HasExpQueue = hasExpQueue,
-                DeathQueue = deathQueueWriter,
-                ExpOrbQueue = expQueueWriter
             }.ScheduleParallel(state.Dependency);
-            
+
             DotsBridge.BridgeDependencies = JobHandle.CombineDependencies(DotsBridge.BridgeDependencies, state.Dependency);
         }
 
@@ -50,43 +35,23 @@ namespace _Game.Systems
         {
             public EntityCommandBuffer.ParallelWriter ECB;
 
-            public bool HasDeathQueue;
-            public bool HasExpQueue;
-
-            [WriteOnly] public NativeQueue<DeathEvent>.ParallelWriter DeathQueue;
-            [WriteOnly] public NativeQueue<DeathEvent>.ParallelWriter ExpOrbQueue;
-
             private void Execute(
                 Entity entity,
                 [EntityIndexInQuery] int sortKey,
                 ref Health health,
-                ref DynamicBuffer<DamageBufferElement> damageBuffer,
-                in EnemyReward reward,
-                in LocalTransform transform)
+                ref DynamicBuffer<DamageBufferElement> damageBuffer)
             {
                 if (damageBuffer.IsEmpty) return;
 
-                // Apply all damage from the buffer
                 foreach (DamageBufferElement damage in damageBuffer)
-                {
                     health.Current -= damage.Value;
-                }
 
                 damageBuffer.Clear();
 
-                // Check for Death
-                if (!(health.Current <= 0f)) return;
+                if (health.Current > 0f) return;
 
-                DeathEvent deathEvent = new()
-                {
-                    Position = transform.Position,
-                    Exp = reward.ExpValue
-                };
-
-                if (HasDeathQueue) DeathQueue.Enqueue(deathEvent);
-                if (HasExpQueue) ExpOrbQueue.Enqueue(deathEvent);
-
-                ECB.DestroyEntity(sortKey, entity);
+                health.IsAlive = false;
+                ECB.SetComponentEnabled<IsDead>(sortKey, entity, true);
             }
         }
     }

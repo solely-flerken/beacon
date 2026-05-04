@@ -50,6 +50,8 @@ namespace _Game.Authoring
                 AddComponent(entity, new EnemyTierComponent { Value = EnemyTier.Normal });
                 
                 AddBuffer<DamageBufferElement>(entity);
+                AddComponent<IsDead>(entity);
+                SetComponentEnabled<IsDead>(entity, false);
                 
                 AddComponent<EnemyTypeRef>(entity);
                 

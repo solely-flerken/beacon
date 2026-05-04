@@ -1,5 +1,4 @@
 ﻿using _Game.Components;
-using _Game.Core;
 using _Game.Shared;
 using Unity.Collections;
 using Unity.Entities;
@@ -30,7 +29,7 @@ namespace _Game.Systems
 
             EntityCommandBuffer ecb = new(state.WorldUpdateAllocator);
 
-            foreach ((RefRW<BeaconStats> stats, RefRW<Health> health, RefRO<LocalTransform> transform) in SystemAPI.Query<RefRW<BeaconStats>, RefRW<Health>, RefRO<LocalTransform>>())
+            foreach ((RefRW<BeaconStats> stats, RefRW<Health> health, RefRO<LocalTransform> transform, Entity beaconEntity) in SystemAPI.Query<RefRW<BeaconStats>, RefRW<Health>, RefRO<LocalTransform>>().WithEntityAccess())
             {
                 if (!health.ValueRO.IsAlive) continue;
 
@@ -49,6 +48,7 @@ namespace _Game.Systems
 
                         Entity enemy = entities[idx];
                         if (!state.EntityManager.HasComponent<ContactDamage>(enemy)) continue;
+                        if (!state.EntityManager.GetComponentData<Health>(enemy).IsAlive) continue;
                         totalDamage += state.EntityManager.GetComponentData<ContactDamage>(enemy).Value;
 
                         // TODO: Destroy enemy on contact?
@@ -57,15 +57,7 @@ namespace _Game.Systems
                 }
 
                 if (totalDamage <= 0f) continue;
-
-                health.ValueRW.Current = math.max(0f, health.ValueRO.Current - totalDamage);
-                EventBus.FireBeaconHit(health.ValueRO.Current, health.ValueRO.Max);
-
-                if (health.ValueRO.Current <= 0f)
-                {
-                    health.ValueRW.IsAlive = false;
-                    ecb.AddComponent<BeaconDeathTag>(ecb.CreateEntity());
-                }
+                ecb.AppendToBuffer(beaconEntity, new DamageBufferElement { Value = totalDamage });
             }
 
             ecb.Playback(state.EntityManager);

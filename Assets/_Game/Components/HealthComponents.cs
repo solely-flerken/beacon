@@ -15,4 +15,6 @@ namespace _Game.Components
     {
         public float Value;
     }
+
+    public struct IsDead : IComponentData, IEnableableComponent { }
 }

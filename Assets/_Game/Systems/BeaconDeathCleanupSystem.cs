@@ -1,4 +1,4 @@
-﻿using _Game.Components;
+using _Game.Components;
 using _Game.Core;
 using Unity.Entities;
 using UnityEngine;
@@ -13,7 +13,7 @@ namespace _Game.Systems
             EntityCommandBuffer ecb = new(state.WorldUpdateAllocator);
             bool signalFound = false;
 
-            foreach ((BeaconDeathTag _, Entity entity) in SystemAPI.Query<BeaconDeathTag>().WithEntityAccess())
+            foreach ((BeaconStats _, Entity entity) in SystemAPI.Query<BeaconStats>().WithAll<IsDead>().WithEntityAccess())
             {
                 signalFound = true;
                 ecb.DestroyEntity(entity);
