@@ -75,6 +75,9 @@ namespace _Game.Authoring
                     case EnemyType.Tank:
                         AddComponent<TankEnemyTag>(entity);
                         break;
+                    case EnemyType.Range:
+                        AddComponent<RangeEnemyTag>(entity);
+                        break;
                     default:
                         throw new ArgumentOutOfRangeException();
                 }

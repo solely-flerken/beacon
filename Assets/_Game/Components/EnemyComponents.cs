@@ -70,6 +70,7 @@ namespace _Game.Components
         Basic,
         Fast,
         Tank,
+        Range
     }
 
     /// <summary>
@@ -88,6 +89,7 @@ namespace _Game.Components
     public struct BasicEnemyTag : IComponentData { }
     public struct FastEnemyTag : IComponentData { }
     public struct TankEnemyTag : IComponentData { }
+    public struct RangeEnemyTag : IComponentData { }
     
     /// <summary>
     /// Buffer on the catalog entity mapping type IDs to prefab and type entities.
@@ -108,8 +110,9 @@ namespace _Game.Components
         public static ComponentType Get(EnemyType type) => type switch
         {
             EnemyType.Basic => ComponentType.ReadOnly<BasicEnemyTag>(),
-            EnemyType.Fast  => ComponentType.ReadOnly<FastEnemyTag>(),
-            EnemyType.Tank  => ComponentType.ReadOnly<TankEnemyTag>(),
+            EnemyType.Fast => ComponentType.ReadOnly<FastEnemyTag>(),
+            EnemyType.Tank => ComponentType.ReadOnly<TankEnemyTag>(),
+            EnemyType.Range => ComponentType.ReadOnly<RangeEnemyTag>(),
             _ => throw new ArgumentOutOfRangeException(nameof(type), type, null)
         };
     }
