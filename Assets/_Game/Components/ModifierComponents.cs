@@ -26,16 +26,9 @@ namespace _Game.Components
     /// <summary>
     /// Modifier for the beacon, weapons or enemies.
     ///
-    /// <param name="Value">Percentage as whole number (0-100)</param>
+    /// <value name="Value">Percentage as whole number (0-100)</value>
     /// </summary>
     public struct StatModifier : IBufferElementData
-    {
-        public StatType Stat;
-        public ModifierType Type;
-        public float Value;
-    }
-
-    public struct GlobalStatModifier : IBufferElementData
     {
         public StatType Stat;
         public ModifierType Type;

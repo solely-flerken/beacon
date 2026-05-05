@@ -8,39 +8,34 @@ namespace _Game.Systems
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     public partial struct WeaponStatUpdateSystem : ISystem
     {
-        private EntityQuery _beaconQuery;
-        private BufferLookup<GlobalStatModifier> _globalModsLookup;
-        
-        public void OnCreate(ref SystemState state)
-        {
-            _beaconQuery = state.EntityManager.CreateEntityQuery(typeof(BeaconStats), typeof(GlobalStatModifier));
-            _globalModsLookup = state.GetBufferLookup<GlobalStatModifier>(true);
-        }
-
         [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
-            _globalModsLookup.Update(ref state);
-
-            foreach ((RefRW<WeaponStats> stats, DynamicBuffer<StatModifier> localMods, Entity entity) in 
+            foreach ((RefRW<WeaponStats> stats, DynamicBuffer<StatModifier> localMods, Entity entity) in
                      SystemAPI.Query<RefRW<WeaponStats>, DynamicBuffer<StatModifier>>().WithAll<WeaponStatUpdateRequired>().WithEntityAccess())
             {
-                if (_beaconQuery.IsEmpty) return;
-           
-                Entity beacon = _beaconQuery.GetSingletonEntity();
-                DynamicBuffer<GlobalStatModifier> globalMods = state.EntityManager.GetBuffer<GlobalStatModifier>(beacon);
-
-                // Every weapon has those
-                stats.ValueRW.Damage = StatResolver.Resolve(stats.ValueRO.BaseDamage, localMods, globalMods, StatType.Damage);
-                stats.ValueRW.FireRate = StatResolver.Resolve(stats.ValueRO.BaseFireRate, localMods, globalMods, StatType.FireRate);
-                stats.ValueRW.TargetRange = StatResolver.Resolve(stats.ValueRO.BaseTargetRange, localMods, globalMods, StatType.TargetRange);
+                DynamicBuffer<StatModifier> ownerMods = default;
+                bool hasOwner = SystemAPI.HasComponent<WeaponOwner>(entity);
+                if (hasOwner)
+                {
+                    WeaponOwner owner = SystemAPI.GetComponent<WeaponOwner>(entity);
+                    if (SystemAPI.HasBuffer<StatModifier>(owner.Value))
+                    {
+                        ownerMods = SystemAPI.GetBuffer<StatModifier>(owner.Value);
+                    }
+                }
                 
+                // Every weapon has those
+                stats.ValueRW.Damage = StatResolver.Resolve(StatType.Damage, stats.ValueRO.BaseDamage, localMods, ownerMods);
+                stats.ValueRW.FireRate = StatResolver.Resolve(StatType.FireRate, stats.ValueRO.BaseFireRate, localMods, ownerMods);
+                stats.ValueRW.TargetRange = StatResolver.Resolve(StatType.TargetRange, stats.ValueRO.BaseTargetRange, localMods, ownerMods);
+
                 if (SystemAPI.HasComponent<ProjectileStats>(entity))
                 {
                     RefRW<ProjectileStats> baseProj = SystemAPI.GetComponentRW<ProjectileStats>(entity);
 
-                    baseProj.ValueRW.Speed = StatResolver.Resolve(baseProj.ValueRO.BaseSpeed, localMods, globalMods, StatType.ProjectileSpeed);
-                    baseProj.ValueRW.Pierce = (int)StatResolver.Resolve(baseProj.ValueRO.BasePierce, localMods, globalMods, StatType.Pierce);
+                    baseProj.ValueRW.Speed = StatResolver.Resolve(StatType.ProjectileSpeed, baseProj.ValueRO.BaseSpeed, localMods, ownerMods);
+                    baseProj.ValueRW.Pierce = (int)StatResolver.Resolve(StatType.Pierce, baseProj.ValueRO.BasePierce, localMods, ownerMods);
                 }
 
                 // Disable dirty flag

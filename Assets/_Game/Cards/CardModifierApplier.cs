@@ -20,14 +20,14 @@ namespace _Game.Cards
                     case CardTargetType.Beacon:
                         ApplyBeaconModifier(effect, em);
                         break;
-                    case CardTargetType.GlobalWeapons:
-                        ApplyGlobalWeaponModifier(effect, em);
+                    case CardTargetType.BeaconWeapons:
+                        ApplyBeaconWeaponModifier(effect, em);
                         break;
                     case CardTargetType.WeaponsOfType:
                         ApplyWeaponTypeModifier(effect, em);
                         break;
                     case CardTargetType.EnemiesOfType:
-                        ApplyEnemyModifier(effect, em);
+                        ApplyEnemyTypeModifier(effect, em);
                         break;
                 }
             }
@@ -35,14 +35,14 @@ namespace _Game.Cards
 
         private static void ApplyBeaconModifier(CardEffect effect, EntityManager em)
         {
-            using EntityQuery query = em.CreateEntityQuery(typeof(BeaconStats), typeof(StatModifier));
-            if (query.IsEmpty)
+            using EntityQuery beaconQuery = em.CreateEntityQuery(typeof(BeaconStats), typeof(StatModifier));
+            if (beaconQuery.IsEmpty)
             {
-                Debug.LogWarning("[CardModifierApplier] No beacon entity found for Beacon modifier.");
+                Debug.LogWarning("[CardModifierApplier] No beacon entity found to apply modifiers to.");
                 return;
             }
 
-            Entity beacon = query.GetSingletonEntity();
+            Entity beacon = beaconQuery.GetSingletonEntity();
             em.GetBuffer<StatModifier>(beacon).Add(new StatModifier
             {
                 Stat = effect.Stat,
@@ -52,22 +52,10 @@ namespace _Game.Cards
             em.SetComponentEnabled<BeaconStatUpdateRequired>(beacon, true);
         }
 
-        private static void ApplyGlobalWeaponModifier(CardEffect effect, EntityManager em)
+        // TODO: Refactor - right now setting all weapons as dirty
+        private static void ApplyBeaconWeaponModifier(CardEffect effect, EntityManager em)
         {
-            using EntityQuery beaconQuery = em.CreateEntityQuery(typeof(BeaconStats), typeof(GlobalStatModifier));
-            if (beaconQuery.IsEmpty)
-            {
-                Debug.LogWarning("[CardModifierApplier] No beacon entity found for GlobalWeapons modifier.");
-                return;
-            }
-
-            Entity beacon = beaconQuery.GetSingletonEntity();
-            em.GetBuffer<GlobalStatModifier>(beacon).Add(new GlobalStatModifier
-            {
-                Stat = effect.Stat,
-                Type = effect.ModifierType,
-                Value = effect.Value
-            });
+            ApplyBeaconModifier(effect, em);
 
             EntityQueryDesc weaponDesc = new()
             {
@@ -104,7 +92,7 @@ namespace _Game.Cards
             }
         }
         
-        private static void ApplyEnemyModifier(CardEffect effect, EntityManager em)
+        private static void ApplyEnemyTypeModifier(CardEffect effect, EntityManager em)
         {
             using EntityQuery catalogQuery = em.CreateEntityQuery(typeof(EnemyTypeCatalogEntry));
             if (catalogQuery.IsEmpty)

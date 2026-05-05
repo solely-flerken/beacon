@@ -19,16 +19,19 @@ namespace _Game.Util
             Accumulate(entityMods, statType, ref additive, ref multiplicativeBonus);
             return Apply(baseValue, additive, multiplicativeBonus);
         }
-
+        
         /// <summary>
-        /// Resolves a stat from local and global modifier buffers combined.
+        /// Resolves a stat from different modifier buffers.
         /// </summary>
-        public static float Resolve(float baseValue, DynamicBuffer<StatModifier> localMods, DynamicBuffer<GlobalStatModifier> globalMods, StatType statType)
+        public static float Resolve(StatType statType, float baseValue, DynamicBuffer<StatModifier> mods1, DynamicBuffer<StatModifier> mods2 = default, DynamicBuffer<StatModifier> mods3 = default)
         {
             float additive = 0f;
             float multiplicativeBonus = 0f;
-            Accumulate(localMods, statType, ref additive, ref multiplicativeBonus);
-            Accumulate(globalMods, statType, ref additive, ref multiplicativeBonus);
+
+            if (mods1.IsCreated) Accumulate(mods1, statType, ref additive, ref multiplicativeBonus);
+            if (mods2.IsCreated) Accumulate(mods2, statType, ref additive, ref multiplicativeBonus);
+            if (mods3.IsCreated) Accumulate(mods3, statType, ref additive, ref multiplicativeBonus);
+            
             return Apply(baseValue, additive, multiplicativeBonus);
         }
         
@@ -78,27 +81,7 @@ namespace _Game.Util
                 }
             }
         }
-
-        /// <summary>
-        /// Accumulates mods from a global modifier buffer into running totals.
-        /// </summary>
-        private static void Accumulate(DynamicBuffer<GlobalStatModifier> mods, StatType statType, ref float additive, ref float multiplicativeBonus)
-        {
-            for (int i = 0; i < mods.Length; i++)
-            {
-                if (mods[i].Stat != statType) continue;
-
-                if (mods[i].Type == ModifierType.Additive)
-                {
-                    additive += mods[i].Value;
-                }
-                else
-                {
-                    multiplicativeBonus += mods[i].Value / 100f;
-                }
-            }
-        }
-
+        
         /// <summary>
         /// Applies accumulated totals: (base + additive) * (1 + multiplicativeBonus).
         /// </summary>

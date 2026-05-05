@@ -11,14 +11,14 @@ namespace _Game.Systems
         [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
-            foreach ((RefRW<BeaconStats> stats, RefRW<Health> health, DynamicBuffer<StatModifier> localMods, DynamicBuffer<GlobalStatModifier> globalMods, Entity entity) in
-                     SystemAPI.Query<RefRW<BeaconStats>, RefRW<Health>, DynamicBuffer<StatModifier>, DynamicBuffer<GlobalStatModifier>>().WithAll<BeaconStatUpdateRequired>().WithEntityAccess())
+            foreach ((RefRW<BeaconStats> stats, RefRW<Health> health, DynamicBuffer<StatModifier> localMods, Entity entity) in
+                     SystemAPI.Query<RefRW<BeaconStats>, RefRW<Health>, DynamicBuffer<StatModifier>>().WithAll<BeaconStatUpdateRequired>().WithEntityAccess())
             {
                 float oldMaxHp = health.ValueRO.Max;
-                float newMaxHp = StatResolver.Resolve(health.ValueRO.BaseMax, localMods, globalMods, StatType.MaxHp);
+                float newMaxHp = StatResolver.Resolve(StatType.MaxHp, health.ValueRO.BaseMax, localMods);
                 health.ValueRW.Current += newMaxHp - oldMaxHp;
                 health.ValueRW.Max = newMaxHp;
-                stats.ValueRW.ArrivalRadius = StatResolver.Resolve(stats.ValueRO.BaseArrivalRadius, localMods, globalMods, StatType.ArrivalRadius);
+                stats.ValueRW.ArrivalRadius = StatResolver.Resolve(StatType.ArrivalRadius, stats.ValueRO.BaseArrivalRadius, localMods);
 
                 SystemAPI.SetComponentEnabled<BeaconStatUpdateRequired>(entity, false);
             }

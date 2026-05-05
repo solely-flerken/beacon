@@ -92,6 +92,9 @@ namespace _Game.Systems
                 in EnemyTypeRef typeRef,
                 in DynamicBuffer<StatModifier> entityMods)
             {
+                // TODO: Modifiers different from the ones listed below (speed, health, contactDamage) defined for each tier (in the blobArray) are not applied (e.g. weapon modifiers).
+                //       In theory this should be handled by the weaponStatUpdateSystem by looking up also the blobArray, but only enemies have one.
+                //       We just need to find a neat and scalable way to solve this.
                 ref BlobArray<TieredStatModifier> blob = ref BlobLookup[typeRef.Value].Value.Value.ConfigModifiers;
                 DynamicBuffer<StatModifier> typeMods = TypeModLookup[typeRef.Value];
 

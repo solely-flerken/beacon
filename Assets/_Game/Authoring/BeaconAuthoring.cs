@@ -35,7 +35,6 @@ namespace _Game.Authoring
                 AddComponent(entity, new NavigationAttractor { Range = 9999f });
 
                 AddBuffer<StatModifier>(entity);
-                AddBuffer<GlobalStatModifier>(entity);
                 
                 AddBuffer<DamageBufferElement>(entity);
                 AddComponent<IsDead>(entity);

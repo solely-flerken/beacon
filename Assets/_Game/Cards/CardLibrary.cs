@@ -22,7 +22,7 @@ namespace _Game.Cards
 
         private static CardEffect WeaponFx(StatType stat, ModifierType mod, float value) => new()
         {
-            TargetType = CardTargetType.GlobalWeapons,
+            TargetType = CardTargetType.BeaconWeapons,
             Stat = stat,
             ModifierType = mod,
             Value = value

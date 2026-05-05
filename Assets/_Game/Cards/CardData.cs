@@ -6,7 +6,7 @@ namespace _Game.Cards
     public enum CardTargetType : byte
     {
         Beacon,
-        GlobalWeapons,
+        BeaconWeapons,
         WeaponsOfType,
         EnemiesOfType,
     }
