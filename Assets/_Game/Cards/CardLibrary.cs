@@ -103,7 +103,7 @@ namespace _Game.Cards
             cardId: 301,
             title: "Tar Traps",
             description: "Basic enemies move 30% slower.",
-            effects: new[] { EnemyFx(EnemyType.Basic, StatType.EnemySpeed, ModifierType.Multiplicative, -30f) }
+            effects: new[] { EnemyFx(EnemyType.Basic, StatType.Speed, ModifierType.Multiplicative, -30f) }
         );
 
         #endregion

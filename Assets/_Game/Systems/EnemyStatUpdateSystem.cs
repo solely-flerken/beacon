@@ -66,9 +66,9 @@ namespace _Game.Systems
                 ref BlobArray<TieredStatModifier> blob = ref BlobLookup[typeRef.Value].Value.Value.ConfigModifiers;
                 DynamicBuffer<StatModifier> typeMods = TypeModLookup[typeRef.Value];
 
-                speed.Value = StatResolver.ResolveEnemy(speed.BaseValue, ref blob, typeMods, entityMods, StatType.EnemySpeed, tier.Value);
-                health.Max = StatResolver.ResolveEnemy(health.BaseMax, ref blob, typeMods, entityMods, StatType.EnemyMaxHealth, tier.Value);
-                contactDamage.Value = StatResolver.ResolveEnemy(contactDamage.BaseValue, ref blob, typeMods, entityMods, StatType.EnemyContactDamage, tier.Value);
+                speed.Value = StatResolver.ResolveEnemy(speed.BaseValue, ref blob, typeMods, entityMods, StatType.Speed, tier.Value);
+                health.Max = StatResolver.ResolveEnemy(health.BaseMax, ref blob, typeMods, entityMods, StatType.MaxHp, tier.Value);
+                contactDamage.Value = StatResolver.ResolveEnemy(contactDamage.BaseValue, ref blob, typeMods, entityMods, StatType.ContactDamage, tier.Value);
 
                 health.Current = health.Max;
 
@@ -95,9 +95,9 @@ namespace _Game.Systems
                 ref BlobArray<TieredStatModifier> blob = ref BlobLookup[typeRef.Value].Value.Value.ConfigModifiers;
                 DynamicBuffer<StatModifier> typeMods = TypeModLookup[typeRef.Value];
 
-                speed.Value = StatResolver.ResolveEnemy(speed.BaseValue, ref blob, typeMods, entityMods, StatType.EnemySpeed, tier.Value);
-                health.Max = StatResolver.ResolveEnemy(health.BaseMax, ref blob, typeMods, entityMods, StatType.EnemyMaxHealth, tier.Value);
-                contactDamage.Value = StatResolver.ResolveEnemy(contactDamage.BaseValue, ref blob, typeMods, entityMods, StatType.EnemyContactDamage, tier.Value);
+                speed.Value = StatResolver.ResolveEnemy(speed.BaseValue, ref blob, typeMods, entityMods, StatType.Speed, tier.Value);
+                health.Max = StatResolver.ResolveEnemy(health.BaseMax, ref blob, typeMods, entityMods, StatType.MaxHp, tier.Value);
+                contactDamage.Value = StatResolver.ResolveEnemy(contactDamage.BaseValue, ref blob, typeMods, entityMods, StatType.ContactDamage, tier.Value);
 
                 updateRequired.ValueRW = false;
             }

@@ -10,13 +10,11 @@ namespace _Game.Components
         TargetRange,
         ProjectileSpeed,
         Pierce,
-        // Beacon
+        // Beacon / Enemy
         MaxHp,
         ArrivalRadius,
-        // Enemy
-        EnemySpeed,
-        EnemyContactDamage,
-        EnemyMaxHealth,
+        Speed,
+        ContactDamage,
     }
 
     public enum ModifierType : byte
