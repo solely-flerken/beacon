@@ -9,10 +9,8 @@ namespace _Game.Authoring
     public class EnemyAuthoring : MonoBehaviour
     {
         [Header("Entity Classification")]
-        public TargetMask target = TargetMask.Character;
         public FactionMask faction = FactionMask.Enemy;
         public RoleMask role = RoleMask.Basic;
-        public TierMask tier = TierMask.Normal;
         
         [Header("Stats")] 
         public float speed = 4f;
@@ -46,34 +44,35 @@ namespace _Game.Authoring
                 AddComponent<EnemyTag>(entity);
                 AddComponent<TargetableTag>(entity);
 
+                // Classification
                 AddComponent(entity, new Classification
                 {
-                    Target = authoring.target,
+                    Target = TargetMask.Character,
                     Faction = authoring.faction,
                     Role = authoring.role,
-                    Tier = authoring.tier
+                    Tier = TierMask.Normal
                 });
                 
+                // Basic enemy stats
                 AddComponent(entity, new EnemySpeed { BaseValue = authoring.speed, Value = authoring.speed });
-                AddComponent(entity, new Health() { BaseMax = authoring.maxHealth, Max = authoring.maxHealth, Current = authoring.maxHealth, IsAlive = true});
-                AddComponent(entity, new ContactDamage { BaseValue = authoring.contactDamage, Value = authoring.contactDamage });
-               
-                AddComponent(entity, new EnemyReward { ExpValue = authoring.exp });
                 AddComponent(entity, new EnemySpeedVariation { Value = authoring.speedVariation });
-
+                AddComponent(entity, new EnemyReward { ExpValue = authoring.exp });
+                AddComponent(entity, new ContactDamage { BaseValue = authoring.contactDamage, Value = authoring.contactDamage });
+                AddComponent(entity, new Health { BaseMax = authoring.maxHealth, Max = authoring.maxHealth, Current = authoring.maxHealth, IsAlive = true});
+                
+                // Reference to the enemy type 
+                AddComponent<EnemyTypeRef>(entity);
+                
+                // Damage
                 AddBuffer<DamageBufferElement>(entity);
                 AddComponent<IsDead>(entity);
                 SetComponentEnabled<IsDead>(entity, false);
                 
-                AddComponent<EnemyTypeRef>(entity);
-                
-                // Individual enemy modifiers. Used for elites.
+                // Individual enemy modifiers
                 AddBuffer<StatModifier>(entity);
-
+                AddComponent<Uninitialized>(entity);
                 AddComponent<EnemyStatUpdateRequired>(entity);
                 SetComponentEnabled<EnemyStatUpdateRequired>(entity, false);
-
-                AddComponent<Uninitialized>(entity);
 
                 // Per-type enemy tag
                 switch (authoring.role)

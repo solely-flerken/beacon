@@ -88,4 +88,15 @@ namespace _Game.Components
     }
     
     public struct GlobalModSingleton : IComponentData { }
+    
+    public static class TierMaskMap
+    {
+        public static TierMask Get(EnemyTier tier) => tier switch
+        {
+            EnemyTier.Normal => TierMask.Normal,
+            EnemyTier.Elite => TierMask.Elite,
+            EnemyTier.Boss => TierMask.Boss,
+            _ => throw new ArgumentOutOfRangeException(nameof(tier), tier, null)
+        };
+    }
 }

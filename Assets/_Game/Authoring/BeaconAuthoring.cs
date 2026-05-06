@@ -18,6 +18,16 @@ namespace _Game.Authoring
 
                 AddComponent<PlayerTag>(entity);
                 
+                // Classification
+                AddComponent(entity, new Classification
+                {
+                    Target = TargetMask.Character,
+                    Faction = FactionMask.Player,
+                    Role = RoleMask.None,
+                    Tier = TierMask.None
+                });
+                
+                // Basic beacon stats
                 AddComponent(entity, new BeaconStats
                 {
                     BaseArrivalRadius = config.arrivalRadius,
@@ -32,14 +42,16 @@ namespace _Game.Authoring
                     IsAlive = true
                 });
                 
+                // Attractor
                 AddComponent(entity, new NavigationAttractor { Range = 9999f });
-
-                AddBuffer<StatModifier>(entity);
                 
+                // Damage
                 AddBuffer<DamageBufferElement>(entity);
                 AddComponent<IsDead>(entity);
                 SetComponentEnabled<IsDead>(entity, false);
                 
+                // Modifier
+                AddBuffer<StatModifier>(entity);
                 AddComponent<BeaconStatUpdateRequired>(entity);
             }
         }

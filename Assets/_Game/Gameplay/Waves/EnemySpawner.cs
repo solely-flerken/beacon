@@ -54,13 +54,18 @@ namespace _Game.Gameplay.Waves
                 Seed = seed,
             }.Schedule(count, 64).Complete();
 
+            TierMask tierMask = TierMaskMap.Get(group.Tier);
             for (int i = 0; i < count; i++)
             {
+                em.SetComponentData(entities[i], new EnemyTypeRef { Value = typeEntity });
+                
                 LocalTransform transform = em.GetComponentData<LocalTransform>(entities[i]);
                 transform.Position = new float3(positions[i].x, positions[i].y, 0f);
                 em.SetComponentData(entities[i], transform);
-                em.SetComponentData(entities[i], new EnemyTypeRef { Value = typeEntity });
-                em.SetComponentData(entities[i], new EnemyTierComponent { Value = group.Tier });
+                
+                Classification classification = em.GetComponentData<Classification>(entities[i]);
+                classification.Tier = tierMask;
+                em.SetComponentData(entities[i], classification);
             }
 
             entities.Dispose();

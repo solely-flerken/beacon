@@ -18,8 +18,18 @@ namespace _Game.Authoring
             public override void Bake(WeaponBaseAuthoring authoring)
             {
                 Entity entity = GetEntity(TransformUsageFlags.Dynamic);
+
+                AddComponent<WeaponTag>(entity);
                 
-                AddComponent(entity, new WeaponStats()
+                // Classification
+                AddComponent(entity, new Classification
+                {
+                    Target = TargetMask.Weapon
+                    // Other values are set at spawn time
+                });
+                
+                // Basic weapon stats
+                AddComponent(entity, new WeaponStats
                 {
                     BaseDamage = authoring.damage,
                     BaseFireRate = authoring.fireRate,
@@ -28,33 +38,32 @@ namespace _Game.Authoring
                     FireRate = authoring.fireRate,
                     TargetRange = authoring.targetRange,
                 });
-
+                
+                // Reference to the weapon type 
+                // TODO: Replace with classification and completely remove WeaponTypeRef
                 AddComponent(entity, new WeaponTypeRef
                 {
                     WeaponType = authoring.weaponType
                 });
                 
-                AddComponent(entity, new WeaponState
-                {
-                    Timer = 0f
-                });
-
-                AddComponent<WeaponTag>(entity);
-
-                AddBuffer<StatModifier>(entity);
-
-                AddComponent<WeaponStatUpdateRequired>(entity);
-
-                AddComponent<ReadyToFire>(entity);
-                SetComponentEnabled<ReadyToFire>(entity, false);
-
-                Entity owner = authoring.transform.parent != null
-                    ? GetEntity(authoring.transform.parent.gameObject, TransformUsageFlags.Dynamic)
-                    : Entity.Null;
+                // Weapon owner
+                Entity owner = authoring.transform.parent != null ? GetEntity(authoring.transform.parent.gameObject, TransformUsageFlags.Dynamic) : Entity.Null;
                 AddComponent(entity, new WeaponOwner
                 {
                     Value = owner
                 });
+                
+                // Weapon state
+                AddComponent(entity, new WeaponState
+                {
+                    Timer = 0f
+                });
+                AddComponent<ReadyToFire>(entity);
+                SetComponentEnabled<ReadyToFire>(entity, false);
+                
+                // Modifier
+                AddBuffer<StatModifier>(entity);
+                AddComponent<WeaponStatUpdateRequired>(entity);
             }
         }
     }
