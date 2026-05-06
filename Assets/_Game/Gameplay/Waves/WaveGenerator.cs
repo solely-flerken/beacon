@@ -10,10 +10,10 @@ namespace _Game.Gameplay.Waves
         public static WaveDefinition Generate(int waveNumber, WaveGeneratorConfig config)
         {
             int budget = config.BudgetBase + waveNumber * config.BudgetPerWave;
-            Dictionary<(EnemyType, EnemyTier), int> counts = FillBudget(budget, config, waveNumber);
+            Dictionary<(RoleMask, EnemyTier), int> counts = FillBudget(budget, config, waveNumber);
 
             List<SpawnGroup> groups = new();
-            foreach (((EnemyType type, EnemyTier tier), int count) in counts)
+            foreach (((RoleMask type, EnemyTier tier), int count) in counts)
             {
                 if (count <= 0) continue;
 
@@ -31,9 +31,9 @@ namespace _Game.Gameplay.Waves
         /// <summary>
         /// Spends the budget by repeatedly picking enemy types until nothing affordable remains.
         /// </summary>
-        private static Dictionary<(EnemyType, EnemyTier), int> FillBudget(int budget, WaveGeneratorConfig config, int waveNumber)
+        private static Dictionary<(RoleMask, EnemyTier), int> FillBudget(int budget, WaveGeneratorConfig config, int waveNumber)
         {
-            Dictionary<(EnemyType, EnemyTier), int> counts = new();
+            Dictionary<(RoleMask, EnemyTier), int> counts = new();
 
             int remaining = budget;
             while (remaining > 0)
@@ -45,7 +45,7 @@ namespace _Game.Gameplay.Waves
                     break;
                 }
 
-                (EnemyType, EnemyTier) key = (picked.Value.Type, picked.Value.Tier);
+                (RoleMask, EnemyTier) key = (picked.Value.Type, picked.Value.Tier);
                 counts[key] = counts.TryGetValue(key, out int existing) ? existing + 1 : 1;
                 remaining -= picked.Value.Cost;
             }

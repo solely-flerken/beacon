@@ -393,7 +393,7 @@ MonoBehaviour:
   budgetBase: 30
   budgetPerWave: 5
   enemyTypeDefinitions:
-  - type: 0
+  - type: 1
     tiers:
     - tier: 0
       cost: 1
@@ -403,7 +403,7 @@ MonoBehaviour:
       cost: 3
       weight: 4
       startWave: 3
-  - type: 1
+  - type: 2
     tiers:
     - tier: 0
       cost: 2
@@ -413,7 +413,7 @@ MonoBehaviour:
       cost: 5
       weight: 2
       startWave: 5
-  - type: 2
+  - type: 4
     tiers:
     - tier: 0
       cost: 4
@@ -423,7 +423,7 @@ MonoBehaviour:
       cost: 9
       weight: 2
       startWave: 7
-  - type: 3
+  - type: 8
     tiers:
     - tier: 0
       cost: 2

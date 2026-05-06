@@ -14,7 +14,7 @@ namespace _Game.Cards
     public struct CardEffect
     {
         public CardTargetType TargetType;
-        public EnemyType EnemyType; // only relevant when TargetType == EnemiesOfType
+        public RoleMask EnemyType; // only relevant when TargetType == EnemiesOfType
         public WeaponType WeaponType; // only relevant when TargetType == WeaponsOfType
         public StatType Stat;
         public ModifierType ModifierType;

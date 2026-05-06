@@ -8,6 +8,12 @@ namespace _Game.Authoring
 {
     public class EnemyAuthoring : MonoBehaviour
     {
+        [Header("Entity Classification")]
+        public TargetMask target = TargetMask.Character;
+        public FactionMask faction = FactionMask.Enemy;
+        public RoleMask role = RoleMask.Basic;
+        public TierMask tier = TierMask.Normal;
+        
         [Header("Stats")] 
         public float speed = 4f;
         public float speedVariation = 0.5f;
@@ -20,8 +26,8 @@ namespace _Game.Authoring
         [Header("Tier Overrides")]
         public List<TieredModifierEntry> tierModifiers = new();
         
-        [Header("Type")]
-        public EnemyType typeId;
+        // [Header("Type")]
+        // public EnemyType typeId;
     
         [Serializable]
         public struct TieredModifierEntry {
@@ -39,6 +45,14 @@ namespace _Game.Authoring
 
                 AddComponent<EnemyTag>(entity);
                 AddComponent<TargetableTag>(entity);
+
+                AddComponent(entity, new Classification
+                {
+                    Target = authoring.target,
+                    Faction = authoring.faction,
+                    Role = authoring.role,
+                    Tier = authoring.tier
+                });
                 
                 AddComponent(entity, new EnemySpeed { BaseValue = authoring.speed, Value = authoring.speed });
                 AddComponent(entity, new Health() { BaseMax = authoring.maxHealth, Max = authoring.maxHealth, Current = authoring.maxHealth, IsAlive = true});
@@ -64,18 +78,18 @@ namespace _Game.Authoring
                 AddComponent<Uninitialized>(entity);
 
                 // Per-type enemy tag
-                switch (authoring.typeId)
+                switch (authoring.role)
                 {
-                    case EnemyType.Basic:
+                    case RoleMask.Basic:
                         AddComponent<BasicEnemyTag>(entity);
                         break;
-                    case EnemyType.Fast:
+                    case RoleMask.Fast:
                         AddComponent<FastEnemyTag>(entity);
                         break;
-                    case EnemyType.Tank:
+                    case RoleMask.Tank:
                         AddComponent<TankEnemyTag>(entity);
                         break;
-                    case EnemyType.Range:
+                    case RoleMask.Range:
                         AddComponent<RangeEnemyTag>(entity);
                         break;
                     default:

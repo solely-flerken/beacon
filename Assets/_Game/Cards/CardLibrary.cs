@@ -37,7 +37,7 @@ namespace _Game.Cards
             Value = value
         };
 
-        private static CardEffect EnemyFx(EnemyType type, StatType stat, ModifierType mod, float value) => new()
+        private static CardEffect EnemyFx(RoleMask type, StatType stat, ModifierType mod, float value) => new()
         {
             TargetType = CardTargetType.EnemiesOfType,
             EnemyType = type,
@@ -103,7 +103,7 @@ namespace _Game.Cards
             cardId: 301,
             title: "Tar Traps",
             description: "Basic enemies move 30% slower.",
-            effects: new[] { EnemyFx(EnemyType.Basic, StatType.Speed, ModifierType.Multiplicative, -30f) }
+            effects: new[] { EnemyFx(RoleMask.Basic, StatType.Speed, ModifierType.Multiplicative, -30f) }
         );
 
         #endregion

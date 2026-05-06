@@ -64,14 +64,6 @@ namespace _Game.Components
     {
         public BlobAssetReference<EnemyTypeBlob> Value;
     }
-    
-    public enum EnemyType : byte
-    {
-        Basic,
-        Fast,
-        Tank,
-        Range
-    }
 
     /// <summary>
     /// Marks the shared type entity that holds StatModifier buffers for an enemy type.
@@ -96,7 +88,7 @@ namespace _Game.Components
     /// </summary>
     public struct EnemyTypeCatalogEntry : IBufferElementData
     {
-        public EnemyType TypeId;
+        public RoleMask TypeId;
         public Entity Prefab;
         public Entity TypeEntity;
     }
@@ -107,12 +99,12 @@ namespace _Game.Components
     /// </summary>
     public static class EnemyTypeTagMap
     {
-        public static ComponentType Get(EnemyType type) => type switch
+        public static ComponentType Get(RoleMask type) => type switch
         {
-            EnemyType.Basic => ComponentType.ReadOnly<BasicEnemyTag>(),
-            EnemyType.Fast => ComponentType.ReadOnly<FastEnemyTag>(),
-            EnemyType.Tank => ComponentType.ReadOnly<TankEnemyTag>(),
-            EnemyType.Range => ComponentType.ReadOnly<RangeEnemyTag>(),
+            RoleMask.Basic => ComponentType.ReadOnly<BasicEnemyTag>(),
+            RoleMask.Fast => ComponentType.ReadOnly<FastEnemyTag>(),
+            RoleMask.Tank => ComponentType.ReadOnly<TankEnemyTag>(),
+            RoleMask.Range => ComponentType.ReadOnly<RangeEnemyTag>(),
             _ => throw new ArgumentOutOfRangeException(nameof(type), type, null)
         };
     }

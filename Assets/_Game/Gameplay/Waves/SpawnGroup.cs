@@ -4,7 +4,7 @@ namespace _Game.Gameplay.Waves
 {
     public struct SpawnGroup
     {
-        public EnemyType Type;
+        public RoleMask Type;
         public EnemyTier Tier;
         public int Count;
     }

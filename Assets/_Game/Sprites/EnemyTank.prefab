@@ -104,6 +104,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cdbe47da6a5b4252bebb3ea0bbefdb64, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::_Game.Authoring.EnemyAuthoring
+  target: 1
+  faction: 2
+  role: 4
+  tier: 1
   speed: 2
   speedVariation: 0.5
   maxHealth: 30
@@ -111,7 +115,6 @@ MonoBehaviour:
   exp: 1
   tierModifiers:
   - tier: 1
-    stat: 9
+    stat: 5
     operation: 1
     value: 200
-  typeId: 2

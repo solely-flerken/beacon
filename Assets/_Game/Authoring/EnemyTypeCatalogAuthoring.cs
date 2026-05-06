@@ -23,7 +23,7 @@ namespace _Game.Authoring
 
                     EnemyAuthoring auth = GetComponent<EnemyAuthoring>(prefab);
 
-                    Entity typeEntity = CreateAdditionalEntity(TransformUsageFlags.None, entityName: $"EnemyType.{auth.typeId}");
+                    Entity typeEntity = CreateAdditionalEntity(TransformUsageFlags.None, entityName: $"EnemyType.{auth.role}");
                     AddComponent<EnemyTypeTag>(typeEntity);
                     AddBuffer<StatModifier>(typeEntity);
                     
@@ -33,7 +33,7 @@ namespace _Game.Authoring
 
                     buffer.Add(new EnemyTypeCatalogEntry
                     {
-                        TypeId = auth.typeId,
+                        TypeId = auth.role,
                         Prefab = GetEntity(prefab, TransformUsageFlags.Dynamic),
                         TypeEntity = typeEntity,
                     });

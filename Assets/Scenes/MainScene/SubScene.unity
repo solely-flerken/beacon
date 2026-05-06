@@ -168,6 +168,37 @@ MonoBehaviour:
   - {fileID: 1845935900482092228, guid: 116272928a230474eb104138739c1dc0, type: 3}
   - {fileID: 1469045865374720774, guid: 7634a12c039a74a4685a939a2b620a6b, type: 3}
   - {fileID: 3278083793145703428, guid: e14dcfc749492d1419ec6d719e5442b5, type: 3}
+--- !u!1 &923053395
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 923053396}
+  m_Layer: 0
+  m_Name: GlobalGameRules
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &923053396
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 923053395}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1524630794
 GameObject:
   m_ObjectHideFlags: 0
@@ -323,3 +354,4 @@ SceneRoots:
   - {fileID: 1610158308}
   - {fileID: 11991937}
   - {fileID: 1985131385}
+  - {fileID: 923053396}

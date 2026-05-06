@@ -94,7 +94,7 @@ namespace _Game.Gameplay
                     if (Keyboard.current.bKey.wasPressedThisFrame)
                         ApplyTestBeaconModifier();
                     if (Keyboard.current.nKey.wasPressedThisFrame)
-                        ApplyTestEnemyModifier(EnemyType.Basic);
+                        ApplyTestEnemyModifier(RoleMask.Basic);
                     break;
 
                 case GameState.WaveEnd:
@@ -151,7 +151,7 @@ namespace _Game.Gameplay
             Debug.Log("[GameManager] Applied Beacon +50% MaxHp modifier.");
         }
 
-        private void ApplyTestEnemyModifier(EnemyType type)
+        private void ApplyTestEnemyModifier(RoleMask type)
         {
             CardData cardData = CardLibrary.SlowBasicEnemies;
             CardModifierApplier.ApplyCard(cardData, _entityManager);

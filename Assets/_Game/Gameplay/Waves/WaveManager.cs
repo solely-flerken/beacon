@@ -20,14 +20,14 @@ namespace _Game.Gameplay.Waves
     [Serializable]
     public class EnemyTypeDefinition
     {
-        public EnemyType type;
+        public RoleMask type;
         public List<EnemyTierEntry> tiers = new();
     }
 
     // Flat internal representation consumed by WaveGenerator
     public struct EnemyTypeEntry
     {
-        public EnemyType Type;
+        public RoleMask Type;
         public EnemyTier Tier;
         public int Cost;
         public int Weight;
