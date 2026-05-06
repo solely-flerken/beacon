@@ -43,12 +43,7 @@ namespace _Game.Components
     }
 
     public enum EnemyTier : byte { Normal, Elite, Boss }
-    
-    public struct EnemyTierComponent : IComponentData
-    {
-        public EnemyTier Value;
-    }
-    
+
     public struct TieredStatModifier
     {
         public EnemyTier Tier;

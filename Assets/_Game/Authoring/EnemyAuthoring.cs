@@ -61,8 +61,6 @@ namespace _Game.Authoring
                 AddComponent(entity, new EnemyReward { ExpValue = authoring.exp });
                 AddComponent(entity, new EnemySpeedVariation { Value = authoring.speedVariation });
 
-                AddComponent(entity, new EnemyTierComponent { Value = EnemyTier.Normal });
-                
                 AddBuffer<DamageBufferElement>(entity);
                 AddComponent<IsDead>(entity);
                 SetComponentEnabled<IsDead>(entity, false);
