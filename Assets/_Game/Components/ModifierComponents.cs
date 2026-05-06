@@ -98,5 +98,14 @@ namespace _Game.Components
             EnemyTier.Boss => TierMask.Boss,
             _ => throw new ArgumentOutOfRangeException(nameof(tier), tier, null)
         };
+
+        public static EnemyTier Get(TierMask mask)
+        {
+            if ((mask & TierMask.Elite) != 0) return EnemyTier.Elite;
+            if ((mask & TierMask.Boss) != 0) return EnemyTier.Boss;
+            if ((mask & TierMask.Normal) != 0) return EnemyTier.Normal;
+
+            throw new ArgumentOutOfRangeException(nameof(mask), mask, null);
+        }
     }
 }

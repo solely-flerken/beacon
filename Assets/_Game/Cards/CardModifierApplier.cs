@@ -94,32 +94,19 @@ namespace _Game.Cards
         
         private static void ApplyEnemyTypeModifier(CardEffect effect, EntityManager em)
         {
-            using EntityQuery catalogQuery = em.CreateEntityQuery(typeof(EnemyTypeCatalogEntry));
-            if (catalogQuery.IsEmpty)
+            using EntityQuery globalQuery = em.CreateEntityQuery(typeof(GlobalModSingleton));
+            if (globalQuery.IsEmpty)
             {
-                Debug.LogWarning("[CardModifierApplier] No EnemyTypeCatalog found for EnemiesOfType modifier.");
+                Debug.LogWarning("[CardModifierApplier] No GlobalModSingleton found.");
                 return;
             }
 
-            DynamicBuffer<EnemyTypeCatalogEntry> catalog = em.GetBuffer<EnemyTypeCatalogEntry>(catalogQuery.GetSingletonEntity());
+            DynamicBuffer<GlobalStatModifier> globalBuffer = em.GetBuffer<GlobalStatModifier>(globalQuery.GetSingletonEntity());
 
-            Entity typeEntity = Entity.Null;
-            for (int i = 0; i < catalog.Length; i++)
-            {
-                if (catalog[i].TypeId != effect.EnemyType) continue;
-                typeEntity = catalog[i].TypeEntity;
-                break;
-            }
-
-            if (typeEntity == Entity.Null)
-            {
-                Debug.LogWarning($"[CardModifierApplier] No catalog entry for EnemyType.{effect.EnemyType}.");
-                return;
-            }
-
-            em.GetBuffer<StatModifier>(typeEntity).Add(new StatModifier
+            globalBuffer.Add(new GlobalStatModifier
             {
                 Stat = effect.Stat,
+                Mask = new Classification { Faction = FactionMask.Enemy, Role = effect.EnemyType },
                 Type = effect.ModifierType,
                 Value = effect.Value
             });
