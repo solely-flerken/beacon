@@ -25,7 +25,6 @@ namespace _Game.Authoring
 
                     Entity typeEntity = CreateAdditionalEntity(TransformUsageFlags.None, entityName: $"EnemyType.{auth.role}");
                     AddComponent<EnemyTypeTag>(typeEntity);
-                    AddBuffer<StatModifier>(typeEntity);
                     
                     BlobAssetReference<EnemyTypeBlob> blobRef = BuildBlob(auth);
                     AddBlobAsset(ref blobRef, out _);

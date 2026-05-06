@@ -86,4 +86,6 @@ namespace _Game.Components
         Elite = 1 << 1,
         Boss = 1 << 2
     }
+    
+    public struct GlobalModSingleton : IComponentData { }
 }
