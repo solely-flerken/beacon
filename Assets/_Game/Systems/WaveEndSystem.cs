@@ -7,6 +7,7 @@ namespace _Game.Systems
     /// Runs only when WaveEndedTag exists
     /// </summary>
     [UpdateInGroup(typeof(SimulationSystemGroup))]
+    [UpdateAfter(typeof(ExpOrbSpawnSystem))]
     [UpdateBefore(typeof(BeaconCollectExpSystem))]
     public partial struct WaveEndCollectSystem : ISystem
     {
