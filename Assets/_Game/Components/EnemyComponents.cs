@@ -87,6 +87,13 @@ namespace _Game.Components
         public Entity Prefab;
         public Entity TypeEntity;
     }
+    
+    [InternalBufferCapacity(4)]
+    public struct HitCooldown : IBufferElementData
+    {
+        public Entity Source;
+        public float Expiry;
+    }
 
     /// <summary>
     /// Maps EnemyType enum values to their corresponding per-type tag ComponentType.

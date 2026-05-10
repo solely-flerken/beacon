@@ -7,6 +7,7 @@ using Unity.Entities;
 using Unity.Jobs;
 using Unity.Mathematics;
 using Unity.Transforms;
+using UnityEngine;
 
 namespace _Game.Systems
 {
@@ -46,6 +47,9 @@ namespace _Game.Systems
             NativeQueue<HitEvent>.ParallelWriter hitQueueWriter = default;
             if (hasHitQueue) hitQueueWriter = DotsBridge.HitQueue.AsParallelWriter();
 
+            BufferLookup<DamageBufferElement> damageBufferLookup = SystemAPI.GetBufferLookup<DamageBufferElement>(true);
+            BufferLookup<HitCooldown> hitCooldownLookup = SystemAPI.GetBufferLookup<HitCooldown>(true);
+
             // PLAYER PROJECTILES vs ENEMIES
             if (SpatialGridShared.EnemyGridValid && !_playerProjectiles.IsEmpty)
             {
@@ -60,7 +64,9 @@ namespace _Game.Systems
                     HitRadius = 0.5f,
                     ECB = ecb,
                     HasHitQueue = hasHitQueue,
-                    HitQueue = hitQueueWriter
+                    HitQueue = hitQueueWriter,
+                    DamageBuffer = damageBufferLookup,
+                    HitCooldowns = hitCooldownLookup,
                 }.ScheduleParallel(_playerProjectiles, state.Dependency);
             }
 
@@ -78,7 +84,9 @@ namespace _Game.Systems
                     HitRadius = 0.5f,
                     ECB = ecb,
                     HasHitQueue = hasHitQueue,
-                    HitQueue = hitQueueWriter
+                    HitQueue = hitQueueWriter,
+                    DamageBuffer = damageBufferLookup,
+                    HitCooldowns = hitCooldownLookup,
                 }.ScheduleParallel(_enemyProjectiles, state.Dependency);
             }
             
@@ -119,6 +127,9 @@ namespace _Game.Systems
         public bool HasHitQueue;
         [WriteOnly] public NativeQueue<HitEvent>.ParallelWriter HitQueue;
         
+        [ReadOnly] public BufferLookup<DamageBufferElement> DamageBuffer;
+        [ReadOnly] public BufferLookup<HitCooldown> HitCooldowns;
+        
         private void Execute(Entity projectile, [EntityIndexInQuery] int sortKey, in LocalTransform transform, in ProjectileDamage damage, ref ProjectilePierce pierce)
         {
             float2 pos = new(transform.Position.x, transform.Position.y);
@@ -133,12 +144,42 @@ namespace _Game.Systems
                 {
                     if (math.distancesq(pos, TargetPositions[enemyIdx]) > hitRadiusSq) continue;
 
-                    // Add damage to the enemy's buffer
-                    ECB.AppendToBuffer(sortKey, TargetEntities[enemyIdx], new DamageBufferElement
-                    { 
-                        Value = damage.Value 
-                    });
-                    
+                    Entity target = TargetEntities[enemyIdx];
+
+                    // Check if projectile can damage the current entity
+                    if (HitCooldowns.HasBuffer(target))
+                    {
+                        bool onCooldown = false;
+                        DynamicBuffer<HitCooldown> cds = HitCooldowns[target];
+                        
+                        for (int i = 0; i < cds.Length; i++)
+                        {
+                            if (cds[i].Source != projectile) continue;
+                            
+                            onCooldown = true;
+                            break;
+                        }
+                        
+                        // Projectile can't hit the entity - continue with next
+                        if (onCooldown) continue;
+                        
+                        ECB.AppendToBuffer(sortKey, target, new HitCooldown { Source = projectile, Expiry = float.PositiveInfinity });
+                    }
+                    else
+                    {
+                        Debug.Log($"[ProjectileSystem] Entity {target.Index} is missing HitCooldown! Skipping hit."); // TODO: Development only. Remove later.
+                    }
+
+                    // Append damage
+                    if (DamageBuffer.HasBuffer(target))
+                    {
+                        ECB.AppendToBuffer(sortKey, target, new DamageBufferElement { Value = damage.Value });
+                    }
+                    else
+                    {
+                        Debug.Log($"[ProjectileSystem] Entity {target.Index} is missing DamageBuffer! Skipping hit."); // TODO: Development only. Remove later.
+                    }
+
                     // Send Hit Event to Bridge
                     if (HasHitQueue)
                     {

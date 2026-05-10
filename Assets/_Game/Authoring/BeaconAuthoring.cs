@@ -46,6 +46,7 @@ namespace _Game.Authoring
                 AddComponent(entity, new NavigationAttractor { Range = 9999f });
                 
                 // Damage
+                AddBuffer<HitCooldown>(entity);
                 AddBuffer<DamageBufferElement>(entity);
                 AddComponent<IsDead>(entity);
                 SetComponentEnabled<IsDead>(entity, false);
