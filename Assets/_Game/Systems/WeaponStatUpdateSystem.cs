@@ -62,6 +62,15 @@ namespace _Game.Systems
                     proj.ValueRW.Pierce = (int)StatResolver.ResolveWeapon(StatType.Pierce, proj.ValueRO.BasePierce, mask.ValueRO, globalBuffer, localMods, ownerMods, ownerBlobRef);
                 }
 
+                if (SystemAPI.HasComponent<BeamStats>(entity))
+                {
+                    RefRW<BeamStats> beam = SystemAPI.GetComponentRW<BeamStats>(entity);
+                    
+                    // TODO: Create StatTypes and resolve stats to enable Beam modifications
+                    beam.ValueRW.Width = beam.ValueRO.BaseWidth;
+                    beam.ValueRW.RotationSpeed = beam.ValueRO.BaseRotationSpeed;
+                }
+
                 SystemAPI.SetComponentEnabled<WeaponStatUpdateRequired>(entity, false);
             }
         }

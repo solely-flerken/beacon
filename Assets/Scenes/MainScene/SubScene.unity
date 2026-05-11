@@ -360,6 +360,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::_Game.Authoring.WeaponTypeCatalogAuthoring
   prefabs:
   - {fileID: 724973354300437547, guid: 6805d7eb800ad254c91d66896fb039dd, type: 3}
+  - {fileID: 724973354300437547, guid: 820d6957dc16f2048b9a602ef176945c, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

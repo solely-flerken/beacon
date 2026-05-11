@@ -17,6 +17,7 @@ namespace _Game.Components
     public enum WeaponType : byte
     {
         Basic,
+        Beam,
     }
 
     public struct WeaponTypeRef : IComponentData

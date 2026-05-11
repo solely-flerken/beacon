@@ -42,6 +42,9 @@ namespace _Game.Systems
 
             EndSimulationEntityCommandBufferSystem.Singleton ecbSingleton = SystemAPI.GetSingleton<EndSimulationEntityCommandBufferSystem.Singleton>();
 
+            // Depend on any prior HitQueue writers (e.g. BeamDamageJob) before scheduling collision jobs
+            state.Dependency = JobHandle.CombineDependencies(state.Dependency, DotsBridge.BridgeDependencies);
+
             // Check collisions
             bool hasHitQueue = DotsBridge.HitQueue.IsCreated;
             NativeQueue<HitEvent>.ParallelWriter hitQueueWriter = default;
