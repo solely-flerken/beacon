@@ -63,6 +63,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::_Game.Authoring.WeaponTargetingAuthoring
   strategy: 1
+  stickyLock: 0
+  swapCooldown: 0.35
 --- !u!114 &2200160674013294798
 MonoBehaviour:
   m_ObjectHideFlags: 0

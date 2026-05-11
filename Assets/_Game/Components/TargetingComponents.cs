@@ -16,6 +16,9 @@ namespace _Game.Components
         public Entity CurrentTarget;
         public float2 TargetPosition;
         public bool HasTarget;
+        public bool StickyLock;
+        public float SwapCooldown;
+        public float SwapCooldownRemaining;
     }
     
     /// <summary>

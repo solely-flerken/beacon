@@ -8,6 +8,10 @@ namespace _Game.Authoring
     public class WeaponTargetingAuthoring : MonoBehaviour
     {
         public TargetStrategy strategy = TargetStrategy.Nearest;
+        
+        [Header("Sticky Targeting")]
+        public bool stickyLock = false;
+        public float swapCooldown = 0.35f;
 
         private class Baker : Baker<WeaponTargetingAuthoring>
         {
@@ -19,7 +23,10 @@ namespace _Game.Authoring
                 {
                     Strategy = authoring.strategy,
                     CurrentTarget = Entity.Null,
-                    HasTarget = false
+                    HasTarget = false,
+                    StickyLock = authoring.stickyLock,
+                    SwapCooldown = authoring.swapCooldown,
+                    SwapCooldownRemaining = authoring.swapCooldown,
                 });
             }
         }
