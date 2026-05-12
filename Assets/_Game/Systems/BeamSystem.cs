@@ -24,6 +24,7 @@ namespace _Game.Systems
         {
             state.Dependency.Complete();
 
+            BeamVisualShared.Beams.Clear();
             float deltaTime = SystemAPI.Time.DeltaTime;
 
             // Update beam direction and shared data for beam visuals
@@ -41,6 +42,13 @@ namespace _Game.Systems
                 facing.ValueRW.Direction = RotateToward(facing.ValueRO.Direction, desired, beamStats.ValueRO.RotationSpeed * deltaTime);
 
                 SystemAPI.SetComponentEnabled<BeamActive>(entity, true);
+                
+                BeamVisualShared.Beams.Add(new BeamVisualData
+                {
+                    Origin = transform.ValueRO.Position,
+                    End = new float3(weaponPos + facing.ValueRO.Direction * stats.ValueRO.TargetRange, 0f),
+                    Width = beamStats.ValueRO.Width,
+                });
             }
 
             // Handle collisions
