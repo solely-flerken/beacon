@@ -22,5 +22,6 @@ namespace _Game.Components
     public struct BeamFacing : IComponentData
     {
         public float2 Direction;
+        public float2 PreviousDirection;
     }
 }

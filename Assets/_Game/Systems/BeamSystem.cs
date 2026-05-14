@@ -1,4 +1,5 @@
 ﻿using _Game.Components;
+using _Game.Config;
 using _Game.Core;
 using _Game.Shared;
 using Unity.Burst;
@@ -25,7 +26,7 @@ namespace _Game.Systems
             state.Dependency.Complete();
 
             BeamVisualShared.Beams.Clear();
-            float deltaTime = SystemAPI.Time.DeltaTime;
+            float deltaTime = math.min(SystemAPI.Time.DeltaTime, SimulationConfig.MaxDeltaTime);
 
             // Update beam direction and shared data for beam visuals
             foreach ((RefRW<BeamFacing> facing, RefRO<WeaponTargeting> targeting, RefRO<WeaponStats> stats, RefRO<BeamStats> beamStats, RefRO<LocalToWorld> transform, Entity entity) in
@@ -39,6 +40,7 @@ namespace _Game.Systems
 
                 float2 weaponPos = transform.ValueRO.Position.xy;
                 float2 desired = math.normalize(targeting.ValueRO.TargetPosition - weaponPos);
+                facing.ValueRW.PreviousDirection = facing.ValueRO.Direction;
                 facing.ValueRW.Direction = RotateToward(facing.ValueRO.Direction, desired, beamStats.ValueRO.RotationSpeed * deltaTime);
 
                 SystemAPI.SetComponentEnabled<BeamActive>(entity, true);
@@ -69,6 +71,7 @@ namespace _Game.Systems
                 TargetEntities = EnemyDataShared.Entities,
                 SpatialGrid = SpatialGridShared.EnemyCellMap,
                 SpatialGridCellSize = SpatialGridShared.CellSize,
+                EnemyHitRadius = 0.5f,
                 HitCooldowns = SystemAPI.GetBufferLookup<HitCooldown>(true),
                 ECB = ecb,
                 CurrentTime = (float)SystemAPI.Time.ElapsedTime,
@@ -106,6 +109,7 @@ namespace _Game.Systems
         [ReadOnly] public NativeArray<Entity> TargetEntities;
         [ReadOnly] public NativeParallelMultiHashMap<int2, int> SpatialGrid;
         [ReadOnly] public float SpatialGridCellSize;
+        [ReadOnly] public float EnemyHitRadius;
         [ReadOnly] public BufferLookup<HitCooldown> HitCooldowns;
 
         public EntityCommandBuffer.ParallelWriter ECB;
@@ -124,13 +128,16 @@ namespace _Game.Systems
         {
             float2 start = transform.Position.xy;
             float2 dir = facing.Direction;
+            float2 prevDir = facing.PreviousDirection;
 
             if (math.lengthsq(dir) < 0.001f) return;
 
             float range = stats.TargetRange;
             float2 end = start + dir * range;
+            float2 prevEnd = start + prevDir * range;
             float halfWidth = beamStats.Width * 0.5f;
-            float halfWidthSq = halfWidth * halfWidth;
+            float hitThreshold = halfWidth + EnemyHitRadius;
+            float hitThresholdSq = hitThreshold * hitThreshold;
             float tickInterval = 1f / stats.FireRate;
 
             float stepSize = SpatialGridCellSize * 0.5f;
@@ -152,7 +159,8 @@ namespace _Game.Systems
                         Entity target = TargetEntities[idx];
                         
                         if (hitSet.Contains(idx)) continue;
-                        if (DistToSegmentSq(TargetPositions[idx], start, end) > halfWidthSq) continue;
+                        float2 pos = TargetPositions[idx];
+                        if (DistToSegmentSq(pos, start, end) > hitThresholdSq && DistToSegmentSq(pos, start, prevEnd) > hitThresholdSq) continue;
                         if (IsOnCooldown(target, beamEntity)) continue;
 
                         hitSet.Add(idx);
@@ -185,8 +193,8 @@ namespace _Game.Systems
             DynamicBuffer<HitCooldown> cds = HitCooldowns[target];
             for (int i = 0; i < cds.Length; i++)
             {
-                if (cds[i].Source == source) 
-                    return true;    
+                if (cds[i].Source == source && CurrentTime < cds[i].Expiry)
+                    return true;
             }
             
             return false;
