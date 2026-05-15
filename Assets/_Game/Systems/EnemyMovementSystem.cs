@@ -17,23 +17,9 @@ namespace _Game.Systems
     [UpdateAfter(typeof(SpatialGridSystem))]
     public partial struct EnemyMovementSystem : ISystem
     {
-        private EntityQuery _enemyQuery;
-
-        public void OnCreate(ref SystemState state)
-        {
-            state.RequireForUpdate<EnemyTag>();
-
-            _enemyQuery = state.GetEntityQuery(typeof(EnemyTag));
-        }
-
         public void OnUpdate(ref SystemState state)
         {
             if (!EnemyDataShared.IsValid || !SpatialGridShared.EnemyGridValid || !FlowFieldShared.IsValid) return;
-
-            // If we just spawned enemies, the shared arrays (Positions) might not have been 
-            // resized by the EnemyDataSystem yet. We skip one frame to let data catch up.
-            int enemyCount = _enemyQuery.CalculateEntityCount();
-            if (enemyCount == 0 || EnemyDataShared.Positions.Length < enemyCount) return;
 
             new MoveEnemyJob
             {
