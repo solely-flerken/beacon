@@ -1,4 +1,5 @@
-﻿using _Game.Components;
+using _Game.Components;
+using _Game.Shared;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
@@ -8,87 +9,97 @@ using Unity.Transforms;
 namespace _Game.Systems
 {
     [UpdateInGroup(typeof(SimulationSystemGroup))]
-    [UpdateAfter(typeof(ExpOrbSpawnSystem))]
+    [UpdateAfter(typeof(ExpOrbGridSystem))]
     public partial struct ExpOrbMergeSystem : ISystem
     {
-        private EntityQuery _expOrbQuery;
+        private static readonly int2[] NeighborOffsets =
+        {
+            new(-1, -1), new(0, -1), new(1, -1),
+            new(-1, 0), new(0, 0), new(1, 0),
+            new(-1, 1), new(0, 1), new(1, 1),
+        };
         
         public void OnCreate(ref SystemState state)
         {
             state.RequireForUpdate<ExpOrbTag>();
             state.RequireForUpdate<ExpOrbConfig>();
-
-            _expOrbQuery = state.GetEntityQuery(
-                ComponentType.ReadOnly<ExpOrbTag>(),
-                ComponentType.ReadWrite<ExpOrbData>(),
-                ComponentType.ReadWrite<LocalTransform>(),
-                ComponentType.Exclude<SaturatedTag>());
         }
 
         public void OnUpdate(ref SystemState state)
         {
+            if (!ExpOrbGridShared.IsValid) return;
+
             ExpOrbConfig config = SystemAPI.GetSingleton<ExpOrbConfig>();
             EntityManager entityManager = state.EntityManager;
 
-            using NativeArray<Entity> entities = _expOrbQuery.ToEntityArray(Allocator.Temp);
-            using NativeArray<LocalTransform> transforms = _expOrbQuery.ToComponentDataArray<LocalTransform>(Allocator.Temp);
-            using NativeArray<ExpOrbData> dataArray = _expOrbQuery.ToComponentDataArray<ExpOrbData>(Allocator.Temp);
-
+            int count = ExpOrbGridShared.Count;
+            NativeArray<Entity> entities = ExpOrbGridShared.Entities;
+            NativeArray<float2> positions = ExpOrbGridShared.Positions;
+            NativeArray<ExpOrbData> dataArray = ExpOrbGridShared.OrbData;
+            NativeParallelMultiHashMap<int2, int> cellMap = ExpOrbGridShared.CellMap;
+            
+            float cellSize = config.MergeRadius;
             float mergeRadiusSq = config.MergeRadius * config.MergeRadius;
 
-            // Pair idle orbs bidirectionally
+            // Pair idle orbs bidirectionally using the spatial grid - O(n·k)
             EntityCommandBuffer pairingEcb = new(state.WorldUpdateAllocator);
-            NativeHashSet<Entity> paired = new(entities.Length, Allocator.Temp);
+            NativeHashSet<Entity> paired = new(count, Allocator.Temp);
 
-            for (int i = 0; i < entities.Length; i++)
+            for (int i = 0; i < count; i++)
             {
-                if (paired.Contains(entities[i])) continue;
-
-                ExpOrbData expOrbData = dataArray[i];
-                if (expOrbData.State != ExpOrbState.Idle) continue;
-
-                float2 posI = transforms[i].Position.xy;
+                Entity entityI = entities[i];
                 
+                if (paired.Contains(entityI)) continue;
+                if (dataArray[i].State != ExpOrbState.Idle) continue;
+
+                float2 posI = positions[i];
+                int2 cellI = new((int)math.floor(posI.x / cellSize), (int)math.floor(posI.y / cellSize));
+
                 int nearestOrbIndex = -1;
                 float shortestDistSq = mergeRadiusSq;
 
-                for (int j = 0; j < entities.Length; j++)
+                foreach (int2 offset in NeighborOffsets)
                 {
-                    if (i == j) continue;
-                    if (paired.Contains(entities[j])) continue;
-                    if (dataArray[j].State == ExpOrbState.Saturated) continue;
+                    int2 neighbor = cellI + offset;
+                    if (!cellMap.TryGetFirstValue(neighbor, out int j, out NativeParallelMultiHashMapIterator<int2> it)) continue;
 
-                    float distSq = math.distancesq(posI, transforms[j].Position.xy);
-                    if (distSq >= shortestDistSq) continue;
+                    do
+                    {
+                        if (j == i || paired.Contains(entities[j])) continue;
 
-                    shortestDistSq = distSq;
-                    nearestOrbIndex = j;
+                        float distSq = math.distancesq(posI, positions[j]);
+                        if (distSq >= shortestDistSq) continue;
+
+                        shortestDistSq = distSq;
+                        nearestOrbIndex = j;
+                    }
+                    while (cellMap.TryGetNextValue(out j, ref it));
                 }
 
                 if (nearestOrbIndex == -1) continue;
 
-                paired.Add(entities[i]);
+                paired.Add(entityI);
                 paired.Add(entities[nearestOrbIndex]);
 
-                ExpOrbData updatedI = expOrbData;
+                ExpOrbData updatedI = dataArray[i];
                 updatedI.State = ExpOrbState.Merging;
                 updatedI.MergeTarget = entities[nearestOrbIndex];
-                pairingEcb.SetComponent(entities[i], updatedI);
+                pairingEcb.SetComponent(entityI, updatedI);
 
                 ExpOrbData updatedJ = dataArray[nearestOrbIndex];
                 updatedJ.State = ExpOrbState.Merging;
-                updatedJ.MergeTarget = entities[i];
+                updatedJ.MergeTarget = entityI;
                 pairingEcb.SetComponent(entities[nearestOrbIndex], updatedJ);
             }
 
             paired.Dispose();
             pairingEcb.Playback(entityManager);
 
-            // Move merging orbs
-            NativeHashMap<Entity, float2> targetPositions = new(entities.Length, Allocator.TempJob);
-            for (int i = 0; i < entities.Length; i++)
+            // Build target lookup for move job from shared data (all non-saturated orbs)
+            NativeHashMap<Entity, float2> targetPositions = new(count, Allocator.TempJob);
+            for (int i = 0; i < count; i++)
             {
-                targetPositions.TryAdd(entities[i], transforms[i].Position.xy);
+                targetPositions.TryAdd(entities[i], positions[i]);
             }
             
             new MoveOrbsJob

@@ -1,4 +1,4 @@
-﻿using _Game.Components;
+using _Game.Components;
 using _Game.Core;
 using Unity.Entities;
 using Unity.Mathematics;
@@ -24,7 +24,7 @@ namespace _Game.Systems
 
             EntityCommandBuffer ecb = new(state.WorldUpdateAllocator);
             
-            foreach ((RefRW<ExpOrbData> dataRW, RefRW<LocalTransform> transform, Entity entity) in SystemAPI.Query<RefRW<ExpOrbData>, RefRW<LocalTransform>>().WithAll<ExpOrbTag, SaturatedTag>().WithEntityAccess())
+            foreach ((RefRO<ExpOrbData> dataRW, RefRW<LocalTransform> transform, Entity entity) in SystemAPI.Query<RefRO<ExpOrbData>, RefRW<LocalTransform>>().WithAll<ExpOrbTag, SaturatedTag>().WithEntityAccess())
             {
                 float2 pos = transform.ValueRO.Position.xy;
                 float2 dir = beaconPos - pos;
