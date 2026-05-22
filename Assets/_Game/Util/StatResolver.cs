@@ -190,7 +190,10 @@ namespace _Game.Util
         /// </summary>
         private static float Apply(float baseValue, float additive, float multiplicativeBonus)
         {
-            return math.max(0f, (baseValue + additive) * (1f + multiplicativeBonus));
+            float flat = math.max(0f, baseValue + additive);
+            float mult = math.max(0f, 1f + multiplicativeBonus);
+            
+            return flat * mult;
         }
 
         /// <summary>
