@@ -18,7 +18,14 @@ namespace _Game.Gameplay
 
         private readonly DraftHistory _history = new();
         private CardData[] _currentOffer;
+        
         private EntityManager _em;
+        private EntityQuery _saturatedOrbQuery;
+
+        // Post-wave aggregation: level-ups during post-wave orb collection are queued and
+        // drained one-by-one after all orbs have been absorbed.
+        private bool _postWaveQueuing;
+        private int _pendingLevelUps;
 
         private void Awake()
         {
@@ -31,21 +38,60 @@ namespace _Game.Gameplay
             Instance = this;
             
             _em = World.DefaultGameObjectInjectionWorld.EntityManager;
+            _saturatedOrbQuery = _em.CreateEntityQuery(typeof(SaturatedTag));
         }
         
         private void OnEnable()
         {
             EventBus.OnLevelUp += OnLevelUp;
+            EventBus.OnWaveCleared += OnWaveCleared;
             draftUI.OnCardSelected += HandleCardSelected;
         }
 
         private void OnDisable()
         {
             EventBus.OnLevelUp -= OnLevelUp;
+            EventBus.OnWaveCleared -= OnWaveCleared;
             draftUI.OnCardSelected -= HandleCardSelected;
         } 
 
+        // TODO: Refactor - can we remove the update loop entirely?
+        //       Could be event-driven but would require additional ECS coupling
+        private void Update()
+        {
+            if (!_postWaveQueuing) return;
+            if (!_saturatedOrbQuery.IsEmpty) return;
+
+            _postWaveQueuing = false;
+            DrainNextPending();
+        }
+
+        private void OnWaveCleared(int _)
+        {
+            _postWaveQueuing = true;
+            _pendingLevelUps = 0;
+        }
+
         private void OnLevelUp(int _)
+        {
+            if (_postWaveQueuing)
+            {
+                _pendingLevelUps++;
+                return;
+            }
+
+            TryStartDraft();
+        }
+
+        private void DrainNextPending()
+        {
+            if (_pendingLevelUps <= 0) return;
+            
+            _pendingLevelUps--;
+            TryStartDraft();
+        }
+
+        private void TryStartDraft()
         {
             if (!GameStateMachine.Instance.TransitionTo(GameState.CardDraft)) return;
             StartDraft(3);
@@ -73,9 +119,20 @@ namespace _Game.Gameplay
 
             draftUI.Hide();
             GameStateMachine.Instance.TransitionToPrevious();
+
+            if (GameStateMachine.Instance.CurrentState == GameState.WaveEnd && _pendingLevelUps > 0)
+            {
+                DrainNextPending();
+            }
         }
 
-        public void ResetHistory() => _history.Clear();
+        public void ResetHistory()
+        {
+            _history.Clear();
+            
+            _pendingLevelUps = 0;
+            _postWaveQueuing = false;
+        }
 
         private CardDraftContext BuildContext()
         {
