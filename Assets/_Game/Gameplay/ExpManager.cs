@@ -10,17 +10,16 @@ namespace _Game.Gameplay
     {
         public static ExpManager Instance { get; private set; }
 
-        [SerializeField] private float expPerLevel = 100f;
+        [SerializeField] private float baseExpCost = 70f;
+        [SerializeField] private float growthFactor = 1.18f;
 
         public float TotalExp { get; private set; }
         public int CurrentLevel { get; private set; } = 1;
-        
-        public float ExpPerLevel => expPerLevel;
 
         /// <summary>
-        /// Exp progress toward next level, 0-1.
+        /// Exp progress toward next level, 0–1.
         /// </summary>
-        public float LevelProgress => TotalExp % expPerLevel / expPerLevel;
+        public float LevelProgress => (TotalExp - ExpToLevel(CurrentLevel)) / CostToNextLevel(CurrentLevel);
 
         private void Awake()
         {
@@ -35,17 +34,12 @@ namespace _Game.Gameplay
 
         private void OnEnable()
         {
-            EventBus.OnExpCollected += OnExpCollected;
+            EventBus.OnExpCollected += AddExp;
         }
 
         private void OnDisable()
         {
-            EventBus.OnExpCollected -= OnExpCollected;
-        }
-
-        private void OnExpCollected(float amount)
-        {
-            AddExp(amount);
+            EventBus.OnExpCollected -= AddExp;
         }
 
         private void AddExp(float amount)
@@ -53,7 +47,7 @@ namespace _Game.Gameplay
             TotalExp += amount;
 
             int newLevel = DeriveLevel(TotalExp);
-            EventBus.FireExpChanged(CurrentLevel, TotalExp % expPerLevel, expPerLevel);
+            EventBus.FireExpChanged(CurrentLevel, TotalExp - ExpToLevel(CurrentLevel), CostToNextLevel(CurrentLevel));
 
             if (newLevel <= CurrentLevel) return;
 
@@ -65,12 +59,38 @@ namespace _Game.Gameplay
         {
             TotalExp = 0f;
             CurrentLevel = 1;
-            EventBus.FireExpChanged(CurrentLevel, 0f, expPerLevel);
+            EventBus.FireExpChanged(1, 0f, CostToNextLevel(1));
         }
 
         private int DeriveLevel(float exp)
         {
-            return (int)(exp / expPerLevel) + 1;   
+            int level = 1;
+
+            while (exp >= ExpToLevel(level + 1))
+            {
+                level++;
+            }
+
+            return level;
+        }
+
+        /// <summary>
+        /// Cumulative exp required to reach `level`
+        /// (i.e. sum of costs for levels 1..level-1).
+        /// </summary>
+        private float ExpToLevel(int level)
+        {
+            if (level <= 1) return 0f;
+            
+            return baseExpCost * (Mathf.Pow(growthFactor, level - 1) - 1f) / (growthFactor - 1f);
+        }
+
+        /// <summary>
+        /// Cost to go from `level` to `level + 1`: baseExpCost * growthFactor^(level-1).
+        /// </summary>
+        private float CostToNextLevel(int level)
+        {
+            return baseExpCost * Mathf.Pow(growthFactor, level - 1);
         }
     }
 }
