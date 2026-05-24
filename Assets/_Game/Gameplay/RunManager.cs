@@ -78,6 +78,7 @@ namespace _Game.Gameplay
             WaveManager.Instance.ResetWaves();
             CardDraftManager.Instance.ResetHistory();
             ExpManager.Instance.Reset();
+            RunStatsManager.Instance.ResetStats();
         }
 
         private void SpawnBeacon()

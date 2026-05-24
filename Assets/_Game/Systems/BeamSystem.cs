@@ -174,6 +174,7 @@ namespace _Game.Systems
                             {
                                 Position = new float3(TargetPositions[idx], 0f),
                                 Damage = stats.Damage,
+                                WeaponEntity = beamEntity,
                             });
                         }
                     } while (SpatialGrid.TryGetNextValue(out idx, ref it));

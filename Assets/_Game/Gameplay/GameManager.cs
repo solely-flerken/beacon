@@ -208,6 +208,18 @@ namespace _Game.Gameplay
                 if (progress > 0) GUI.Box(new Rect(10, 130, 150 * progress, 16), "");
             }
 
+            // Stats
+            if (RunStatsManager.Instance)
+            {
+                int y = 200;
+                foreach (Entity e in RunStatsManager.Instance.WeaponStats.Keys)
+                {
+                    RunStatsManager.WeaponRecord r = RunStatsManager.Instance.WeaponStats[e];
+                    GUI.Box(new Rect(10, y, 150, 25), $"{e.Index} {r.Raw:0}");
+                    y += 30;
+                }
+            }
+
             // Controls hint
             string hint = GameStateMachine.Instance?.CurrentState switch
             {

@@ -52,6 +52,8 @@ namespace _Game.Systems
 
             BufferLookup<DamageBufferElement> damageBufferLookup = SystemAPI.GetBufferLookup<DamageBufferElement>(true);
             BufferLookup<HitCooldown> hitCooldownLookup = SystemAPI.GetBufferLookup<HitCooldown>(true);
+            
+            ComponentLookup<ProjectileWeapon> weaponSourceLookup = SystemAPI.GetComponentLookup<ProjectileWeapon>(true);
 
             // PLAYER PROJECTILES vs ENEMIES
             if (SpatialGridShared.EnemyGridValid && !_playerProjectiles.IsEmpty)
@@ -70,6 +72,7 @@ namespace _Game.Systems
                     HitQueue = hitQueueWriter,
                     DamageBuffer = damageBufferLookup,
                     HitCooldowns = hitCooldownLookup,
+                    WeaponSourceLookup = weaponSourceLookup,
                 }.ScheduleParallel(_playerProjectiles, state.Dependency);
             }
 
@@ -86,10 +89,11 @@ namespace _Game.Systems
                     SpatialGridCellSize = SpatialGridShared.CellSize,
                     HitRadius = 0.5f,
                     ECB = ecb,
-                    HasHitQueue = hasHitQueue,
+                    HasHitQueue = false, // TODO: enemy -> beacon hits don't count as player weapon stats. Need to create a dedicated HitQueue
                     HitQueue = hitQueueWriter,
                     DamageBuffer = damageBufferLookup,
                     HitCooldowns = hitCooldownLookup,
+                    WeaponSourceLookup = weaponSourceLookup,
                 }.ScheduleParallel(_enemyProjectiles, state.Dependency);
             }
             
@@ -132,7 +136,8 @@ namespace _Game.Systems
         
         [ReadOnly] public BufferLookup<DamageBufferElement> DamageBuffer;
         [ReadOnly] public BufferLookup<HitCooldown> HitCooldowns;
-        
+        [ReadOnly] public ComponentLookup<ProjectileWeapon> WeaponSourceLookup;
+
         private void Execute(Entity projectile, [EntityIndexInQuery] int sortKey, in LocalTransform transform, in ProjectileDamage damage, ref ProjectilePierce pierce)
         {
             float2 pos = new(transform.Position.x, transform.Position.y);
@@ -173,6 +178,8 @@ namespace _Game.Systems
                         Debug.Log($"[ProjectileSystem] Entity {target.Index} is missing HitCooldown! Skipping hit."); // TODO: Development only. Remove later.
                     }
 
+                    Entity weaponEntity = WeaponSourceLookup.HasComponent(projectile) ? WeaponSourceLookup[projectile].Value : Entity.Null;
+
                     // Append damage
                     if (DamageBuffer.HasBuffer(target))
                     {
@@ -186,10 +193,11 @@ namespace _Game.Systems
                     // Send Hit Event to Bridge
                     if (HasHitQueue)
                     {
-                        HitQueue.Enqueue(new HitEvent 
-                        { 
-                            Position = transform.Position, 
-                            Damage = damage.Value 
+                        HitQueue.Enqueue(new HitEvent
+                        {
+                            Position = transform.Position,
+                            Damage = damage.Value,
+                            WeaponEntity = weaponEntity,
                         });
                     }
                     

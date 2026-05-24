@@ -1,4 +1,5 @@
-﻿using Unity.Mathematics;
+﻿using Unity.Entities;
+using Unity.Mathematics;
 
 namespace _Game.Core
 {
@@ -12,6 +13,7 @@ namespace _Game.Core
     {
         public float3 Position;
         public float Damage;
+        public Entity WeaponEntity;
     }
 
     public struct RunResult
