@@ -32,4 +32,12 @@ namespace _Game.Components
     {
         public int Remaining;
     }
+
+    /// <summary>
+    /// Links a projectile back to the weapon entity that fired it.
+    /// </summary>
+    public struct ProjectileWeapon : IComponentData
+    {
+        public Entity Value;
+    }
 }

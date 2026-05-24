@@ -85,6 +85,7 @@ namespace _Game.Systems
             if (PlayerTagLookup.HasComponent(owner.Value))
             {
                 ECB.AddComponent<PlayerProjectileTag>(sortKey, projectile);
+                ECB.AddComponent(sortKey, projectile, new ProjectileWeapon { Value = entity });
             }
             else
             {
