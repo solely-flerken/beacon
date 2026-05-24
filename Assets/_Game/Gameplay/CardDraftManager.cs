@@ -1,6 +1,6 @@
 using _Game.Cards;
-using _Game.Core;
 using _Game.Components;
+using _Game.Core;
 using _Game.UI.CardDraft;
 using Unity.Entities;
 using UnityEngine;
@@ -8,7 +8,9 @@ using UnityEngine;
 namespace _Game.Gameplay
 {
     /// <summary>
-    /// Owns the card draft flow. Drives CardDraftUI directly.
+    /// Owns the non-blocking card draft flow.
+    /// Level-ups enqueue card offers into a pending queue.
+    /// The player opens the drawer at will to pick; the game never pauses.
     /// </summary>
     public class CardDraftManager : MonoBehaviour
     {
@@ -17,15 +19,9 @@ namespace _Game.Gameplay
         [SerializeField] private CardDraftUI draftUI;
 
         private readonly DraftHistory _history = new();
-        private CardData[] _currentOffer;
-        
-        private EntityManager _em;
-        private EntityQuery _saturatedOrbQuery;
+        private readonly PendingCardQueue _queue = new();
 
-        // Post-wave aggregation: level-ups during post-wave orb collection are queued and
-        // drained one-by-one after all orbs have been absorbed.
-        private bool _postWaveQueuing;
-        private int _pendingLevelUps;
+        private EntityManager _em;
 
         private void Awake()
         {
@@ -36,103 +32,87 @@ namespace _Game.Gameplay
             }
 
             Instance = this;
-            
             _em = World.DefaultGameObjectInjectionWorld.EntityManager;
-            _saturatedOrbQuery = _em.CreateEntityQuery(typeof(SaturatedTag));
         }
-        
+
         private void OnEnable()
         {
             EventBus.OnLevelUp += OnLevelUp;
-            EventBus.OnWaveCleared += OnWaveCleared;
             draftUI.OnCardSelected += HandleCardSelected;
+            draftUI.OnToggleRequested += ToggleDrawer;
         }
 
         private void OnDisable()
         {
             EventBus.OnLevelUp -= OnLevelUp;
-            EventBus.OnWaveCleared -= OnWaveCleared;
             draftUI.OnCardSelected -= HandleCardSelected;
-        } 
-
-        // TODO: Refactor - can we remove the update loop entirely?
-        //       Could be event-driven but would require additional ECS coupling
-        private void Update()
-        {
-            if (!_postWaveQueuing) return;
-            if (!_saturatedOrbQuery.IsEmpty) return;
-
-            _postWaveQueuing = false;
-            DrainNextPending();
-        }
-
-        private void OnWaveCleared(int _)
-        {
-            _postWaveQueuing = true;
-            _pendingLevelUps = 0;
+            draftUI.OnToggleRequested -= ToggleDrawer;
         }
 
         private void OnLevelUp(int _)
         {
-            if (_postWaveQueuing)
+            TryEnqueueCards();
+        }
+
+        private void TryEnqueueCards()
+        {
+            CardDraftContext ctx = BuildContext();
+            CardData[] cards = CardLibrary.SelectCards(ctx, 3);
+            _queue.Enqueue(cards);
+            NotifyPendingChanged();
+        }
+
+        /// <summary>
+        /// Called by input to open or close the card drawer.
+        /// </summary>
+        public void ToggleDrawer()
+        {
+            if (draftUI.IsVisible)
             {
-                _pendingLevelUps++;
+                draftUI.Hide();
                 return;
             }
 
-            TryStartDraft();
-        }
+            if (!_queue.HasPending) return;
 
-        private void DrainNextPending()
-        {
-            if (_pendingLevelUps <= 0) return;
-            
-            _pendingLevelUps--;
-            TryStartDraft();
-        }
-
-        private void TryStartDraft()
-        {
-            if (!GameStateMachine.Instance.TransitionTo(GameState.CardDraft)) return;
-            StartDraft(3);
-        }
-
-        private void StartDraft(int numCards)
-        {
-            CardDraftContext ctx = BuildContext();
-            _currentOffer = CardLibrary.SelectCards(ctx, numCards);
-
-            draftUI.ShowCards(_currentOffer);
+            draftUI.ShowCards(_queue.Peek());
         }
 
         private void HandleCardSelected(int offerIndex)
         {
-            if (_currentOffer == null || offerIndex < 0 || offerIndex >= _currentOffer.Length) return;
+            CardData[] offer = _queue.Peek();
+            if (offer == null || offerIndex < 0 || offerIndex >= offer.Length) return;
 
-            CardData chosen = _currentOffer[offerIndex];
-            _currentOffer = null; // prevent double-selection
+            CardData chosen = offer[offerIndex];
 
             CardModifierApplier.ApplyCard(chosen, _em);
-            _history.Add(chosen.CardId);
-
             EventBus.FireCardDrafted(chosen.CardId);
 
-            draftUI.Hide();
-            GameStateMachine.Instance.TransitionToPrevious();
+            _history.Add(chosen.CardId);
+            _queue.Dequeue();
+            NotifyPendingChanged();
 
-            if (GameStateMachine.Instance.CurrentState == GameState.WaveEnd && _pendingLevelUps > 0)
+            if (_queue.HasPending)
             {
-                DrainNextPending();
+                draftUI.ShowCards(_queue.Peek());
+            }
+            else
+            {
+                draftUI.Hide();
             }
         }
 
         public void ResetHistory()
         {
             _history.Clear();
-            
-            _pendingLevelUps = 0;
-            _postWaveQueuing = false;
+            _queue.Clear();
+            NotifyPendingChanged();
         }
+
+        private void NotifyPendingChanged()
+        {
+            draftUI.UpdateBadge(_queue.Count);
+        } 
 
         private CardDraftContext BuildContext()
         {

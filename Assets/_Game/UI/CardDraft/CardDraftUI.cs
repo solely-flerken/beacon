@@ -16,16 +16,32 @@ namespace _Game.UI.CardDraft
         /// </summary>
         public event Action<int> OnCardSelected;
 
+        /// <summary>
+        /// Raised when the player taps the toggle button.
+        /// </summary>
+        public event Action OnToggleRequested;
+
+        public bool IsVisible => _overlay.style.display == DisplayStyle.Flex;
+
         private VisualElement _overlay;
         private VisualElement[] _cardPanels;
         private Label[] _cardTitles;
         private Label[] _cardDescriptions;
+        private Label _badge;
 
         private void Awake()
         {
             VisualElement root = uiDocument.rootVisualElement;
 
             _overlay = root.Q<VisualElement>("draft-overlay");
+            _badge = root.Q<Label>("draft-badge");
+
+            Button toggleBtn = root.Q<Button>("draft-toggle-btn");
+            if (toggleBtn != null)
+            {
+                toggleBtn.clicked += () => OnToggleRequested?.Invoke();
+            }
+
             _cardPanels = new VisualElement[CardCount];
             _cardTitles = new Label[CardCount];
             _cardDescriptions = new Label[CardCount];
@@ -40,6 +56,7 @@ namespace _Game.UI.CardDraft
             }
 
             Hide();
+            UpdateBadge(0);
         }
 
         public void ShowCards(CardData[] cards)
@@ -62,5 +79,13 @@ namespace _Game.UI.CardDraft
         }
 
         public void Hide() => _overlay.style.display = DisplayStyle.None;
+
+        public void UpdateBadge(int count)
+        {
+            if (_badge == null) return;
+            
+            _badge.text = count.ToString();
+            _badge.style.display = count > 0 ? DisplayStyle.Flex : DisplayStyle.None;
+        }
     }
 }

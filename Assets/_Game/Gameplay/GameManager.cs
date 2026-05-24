@@ -95,11 +95,15 @@ namespace _Game.Gameplay
                         ApplyTestBeaconModifier();
                     if (Keyboard.current.nKey.wasPressedThisFrame)
                         ApplyTestEnemyModifier(RoleMask.Basic);
+                    if (Keyboard.current.tabKey.wasPressedThisFrame)
+                        CardDraftManager.Instance.ToggleDrawer();
                     break;
 
                 case GameState.WaveEnd:
                     if (Keyboard.current.spaceKey.wasPressedThisFrame)
                         GameStateMachine.Instance.TransitionTo(GameState.WaveRunning);
+                    if (Keyboard.current.tabKey.wasPressedThisFrame)
+                        CardDraftManager.Instance.ToggleDrawer();
                     break;
 
                 case GameState.Paused:
@@ -208,8 +212,8 @@ namespace _Game.Gameplay
             string hint = GameStateMachine.Instance?.CurrentState switch
             {
                 GameState.MainMenu => "Any key to start",
-                GameState.WaveRunning => "Flare(F), Pause(P), Weapon Mod(M), Beacon Mod(B), Enemy Mod(N)",
-                GameState.WaveEnd => "Start next wave(spc)",
+                GameState.WaveRunning => "Flare(F), Pause(P), Cards(Tab), Weapon Mod(M), Beacon Mod(B), Enemy Mod(N)",
+                GameState.WaveEnd => "Next wave(Spc), Cards(Tab)",
                 GameState.RunEnd => "Restart(R)",
                 GameState.Paused => "Unpause(P)",
                 GameState.CardDraft => "Choose a card...",

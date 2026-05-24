@@ -1,3 +1,35 @@
+/* ── Toggle button ────────────────────────────────────────────── */
+.draft-toggle-btn {
+    position: absolute;
+    bottom: 24px;
+    right: 24px;
+    flex-direction: row;
+    align-items: center;
+    background-color: rgb(11, 16, 30);
+    border-radius: 8px;
+    border-width: 1px;
+    border-color: rgb(232, 168, 32);
+    padding: 8px 14px;
+}
+
+.draft-toggle-label {
+    font-size: 13px;
+    -unity-font-style: bold;
+    color: rgb(232, 168, 32);
+    -unity-text-align: middle-center;
+}
+
+.draft-badge {
+    font-size: 11px;
+    -unity-font-style: bold;
+    color: rgb(11, 16, 30);
+    background-color: rgb(232, 168, 32);
+    border-radius: 10px;
+    padding: 1px 5px;
+    margin-left: 6px;
+    -unity-text-align: middle-center;
+}
+
 /* ── Overlay ──────────────────────────────────────────────────── */
 .draft-overlay {
     position: absolute;
