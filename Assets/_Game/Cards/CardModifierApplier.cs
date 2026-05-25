@@ -1,4 +1,5 @@
 using _Game.Components;
+using _Game.Gameplay.Waves;
 using Unity.Collections;
 using Unity.Entities;
 using UnityEngine;
@@ -28,6 +29,13 @@ namespace _Game.Cards
                         break;
                     case CardTargetType.EnemiesOfType:
                         ApplyEnemyTypeModifier(effect, em);
+                        break;
+                    case CardTargetType.WaveEnemies:
+                        ApplyWaveModifier(effect, em, TargetMask.None, FactionMask.Enemy);
+                        break;
+                    case CardTargetType.WaveWeapons:
+                        // TODO: Only applies to player right now
+                        ApplyWaveModifier(effect, em, TargetMask.Weapon, FactionMask.Player);
                         break;
                 }
             }
@@ -92,6 +100,28 @@ namespace _Game.Cards
             }
         }
         
+        private static void ApplyWaveModifier(CardEffect effect, EntityManager em, TargetMask target, FactionMask faction)
+        {
+            using EntityQuery globalQuery = em.CreateEntityQuery(typeof(GlobalModSingleton));
+            if (globalQuery.IsEmpty)
+            {
+                Debug.LogWarning("[CardModifierApplier] No GlobalModSingleton found.");
+                return;
+            }
+
+            Entity singleton = globalQuery.GetSingletonEntity();
+            float duration = effect.Duration <= 0f ? float.MaxValue : effect.Duration;
+
+            em.GetBuffer<WaveStatModifier>(singleton).Add(new WaveStatModifier
+            {
+                Stat = effect.Stat,
+                Mask = new Classification { Target = target, Faction = faction, Role = effect.EnemyType },
+                Type = effect.ModifierType,
+                Value = effect.Value,
+                ExpiryTime = WaveManager.Instance.WaveElapsed + duration,
+            });
+        }
+
         private static void ApplyEnemyTypeModifier(CardEffect effect, EntityManager em)
         {
             using EntityQuery globalQuery = em.CreateEntityQuery(typeof(GlobalModSingleton));
@@ -110,19 +140,6 @@ namespace _Game.Cards
                 Type = effect.ModifierType,
                 Value = effect.Value
             });
-
-            EntityQueryDesc enemyDesc = new()
-            {
-                All = new[]
-                {
-                    ComponentType.ReadOnly<EnemyTag>(),
-                    ComponentType.ReadOnly<EnemyStatUpdateRequired>(),
-                    EnemyTypeTagMap.Get(effect.EnemyType)
-                },
-                Options = EntityQueryOptions.IgnoreComponentEnabledState
-            };
-            using EntityQuery enemyQ = em.CreateEntityQuery(enemyDesc);
-            em.SetComponentEnabled<EnemyStatUpdateRequired>(enemyQ, true);
         }
     }
 }

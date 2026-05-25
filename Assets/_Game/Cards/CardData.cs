@@ -9,16 +9,19 @@ namespace _Game.Cards
         BeaconWeapons,
         WeaponsOfType,
         EnemiesOfType,
+        WaveEnemies,
+        WaveWeapons,
     }
 
     public struct CardEffect
     {
         public CardTargetType TargetType;
-        public RoleMask EnemyType; // only relevant when TargetType == EnemiesOfType
-        public WeaponType WeaponType; // only relevant when TargetType == WeaponsOfType
+        public RoleMask EnemyType; // relevant for EnemiesOfType and WaveEnemies
+        public WeaponType WeaponType; // relevant for WeaponsOfType
         public StatType Stat;
         public ModifierType ModifierType;
         public float Value;
+        public float Duration; // seconds; 0 = rest of wave
     }
 
     public class CardData

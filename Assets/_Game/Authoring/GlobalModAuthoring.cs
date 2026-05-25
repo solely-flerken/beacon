@@ -49,6 +49,8 @@ namespace _Game.Authoring
                         }
                     });
                 }
+                
+                AddBuffer<WaveStatModifier>(entity);
             }
         }
     }

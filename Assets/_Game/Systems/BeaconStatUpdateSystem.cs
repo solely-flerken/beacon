@@ -11,20 +11,23 @@ namespace _Game.Systems
         [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
-            if (!SystemAPI.TryGetSingletonBuffer(out DynamicBuffer<GlobalStatModifier> globalBuffer)) 
+            if (!SystemAPI.TryGetSingletonBuffer(out DynamicBuffer<GlobalStatModifier> globalBuffer, isReadOnly: true))
                 return;
-            
+
+            if (!SystemAPI.TryGetSingletonBuffer(out DynamicBuffer<WaveStatModifier> waveBuffer, isReadOnly: true))
+                return;
+
             foreach ((RefRW<BeaconStats> stats, RefRW<Health> health, Classification mask, DynamicBuffer<StatModifier> localMods, Entity entity) in
                      SystemAPI.Query<RefRW<BeaconStats>, RefRW<Health>, Classification, DynamicBuffer<StatModifier>>().WithAll<BeaconStatUpdateRequired>().WithEntityAccess())
             {
                 // HP
                 float oldMaxHp = health.ValueRO.Max;
-                float newMaxHp = StatResolver.Resolve(StatType.MaxHp, health.ValueRO.BaseMax, mask, globalBuffer, localMods);
+                float newMaxHp = StatResolver.Resolve(StatType.MaxHp, health.ValueRO.BaseMax, mask, globalBuffer, waveBuffer, localMods);
                 health.ValueRW.Current += newMaxHp - oldMaxHp;
                 health.ValueRW.Max = newMaxHp;
-                
+
                 // Arrival radius
-                stats.ValueRW.ArrivalRadius = StatResolver.Resolve(StatType.ArrivalRadius, stats.ValueRO.BaseArrivalRadius, mask, globalBuffer, localMods);
+                stats.ValueRW.ArrivalRadius = StatResolver.Resolve(StatType.ArrivalRadius, stats.ValueRO.BaseArrivalRadius, mask, globalBuffer, waveBuffer, localMods);
 
                 SystemAPI.SetComponentEnabled<BeaconStatUpdateRequired>(entity, false);
             }

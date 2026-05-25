@@ -11,7 +11,10 @@ namespace _Game.Systems
         [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
-            if (!SystemAPI.TryGetSingletonBuffer(out DynamicBuffer<GlobalStatModifier> globalBuffer))
+            if (!SystemAPI.TryGetSingletonBuffer(out DynamicBuffer<GlobalStatModifier> globalBuffer, isReadOnly: true))
+                return;
+
+            if (!SystemAPI.TryGetSingletonBuffer(out DynamicBuffer<WaveStatModifier> waveBuffer, isReadOnly: true))
                 return;
 
             foreach ((RefRW<WeaponStats> stats, RefRW<Classification> mask, DynamicBuffer<StatModifier> localMods, Entity entity) in
@@ -50,16 +53,16 @@ namespace _Game.Systems
                     }
                 }
 
-                stats.ValueRW.Damage = StatResolver.ResolveWeapon(StatType.Damage, stats.ValueRO.BaseDamage, mask.ValueRO, globalBuffer, localMods, ownerMods, ownerBlobRef);
-                stats.ValueRW.FireRate = StatResolver.ResolveWeapon(StatType.FireRate, stats.ValueRO.BaseFireRate, mask.ValueRO, globalBuffer, localMods, ownerMods, ownerBlobRef);
-                stats.ValueRW.TargetRange = StatResolver.ResolveWeapon(StatType.TargetRange, stats.ValueRO.BaseTargetRange, mask.ValueRO, globalBuffer, localMods, ownerMods, ownerBlobRef);
+                stats.ValueRW.Damage = StatResolver.ResolveWeapon(StatType.Damage, stats.ValueRO.BaseDamage, mask.ValueRO, globalBuffer, waveBuffer, localMods, ownerMods, ownerBlobRef);
+                stats.ValueRW.FireRate = StatResolver.ResolveWeapon(StatType.FireRate, stats.ValueRO.BaseFireRate, mask.ValueRO, globalBuffer, waveBuffer, localMods, ownerMods, ownerBlobRef);
+                stats.ValueRW.TargetRange = StatResolver.ResolveWeapon(StatType.TargetRange, stats.ValueRO.BaseTargetRange, mask.ValueRO, globalBuffer, waveBuffer, localMods, ownerMods, ownerBlobRef);
 
                 if (SystemAPI.HasComponent<ProjectileStats>(entity))
                 {
                     RefRW<ProjectileStats> proj = SystemAPI.GetComponentRW<ProjectileStats>(entity);
 
-                    proj.ValueRW.Speed = StatResolver.ResolveWeapon(StatType.ProjectileSpeed, proj.ValueRO.BaseSpeed, mask.ValueRO, globalBuffer, localMods, ownerMods, ownerBlobRef);
-                    proj.ValueRW.Pierce = (int)StatResolver.ResolveWeapon(StatType.Pierce, proj.ValueRO.BasePierce, mask.ValueRO, globalBuffer, localMods, ownerMods, ownerBlobRef);
+                    proj.ValueRW.Speed = StatResolver.ResolveWeapon(StatType.ProjectileSpeed, proj.ValueRO.BaseSpeed, mask.ValueRO, globalBuffer, waveBuffer, localMods, ownerMods, ownerBlobRef);
+                    proj.ValueRW.Pierce = (int)StatResolver.ResolveWeapon(StatType.Pierce, proj.ValueRO.BasePierce, mask.ValueRO, globalBuffer, waveBuffer, localMods, ownerMods, ownerBlobRef);
                 }
 
                 if (SystemAPI.HasComponent<BeamStats>(entity))

@@ -27,13 +27,15 @@ namespace _Game.Systems
             _blobLookup.Update(ref state);
 
             DynamicBuffer<GlobalStatModifier> globalMods = SystemAPI.GetSingletonBuffer<GlobalStatModifier>(isReadOnly: true);
-            
+            DynamicBuffer<WaveStatModifier> waveMods = SystemAPI.GetSingletonBuffer<WaveStatModifier>(isReadOnly: true);
+
             EndSimulationEntityCommandBufferSystem.Singleton ecbSingleton = SystemAPI.GetSingleton<EndSimulationEntityCommandBufferSystem.Singleton>();
             EntityCommandBuffer.ParallelWriter ecb = ecbSingleton.CreateCommandBuffer(state.WorldUnmanaged).AsParallelWriter();
 
             new SpawnInitJob
             {
                 GlobalMods = globalMods,
+                WaveMods = waveMods,
                 BlobLookup = _blobLookup,
                 Ecb = ecb
             }.ScheduleParallel();
@@ -41,6 +43,7 @@ namespace _Game.Systems
             new UpdateStatsJob
             {
                 GlobalMods = globalMods,
+                WaveMods = waveMods,
                 BlobLookup = _blobLookup,
             }.ScheduleParallel();
         }
@@ -50,6 +53,7 @@ namespace _Game.Systems
         public partial struct SpawnInitJob : IJobEntity
         {
             [ReadOnly] public DynamicBuffer<GlobalStatModifier> GlobalMods;
+            [ReadOnly] public DynamicBuffer<WaveStatModifier> WaveMods;
             [ReadOnly] public ComponentLookup<EnemyTypeBlobRef> BlobLookup;
             public EntityCommandBuffer.ParallelWriter Ecb;
 
@@ -66,9 +70,9 @@ namespace _Game.Systems
                 ref BlobArray<TieredStatModifier> blob = ref BlobLookup[typeRef.Value].Value.Value.ConfigModifiers;
                 EnemyTier tierEnum = TierMaskMap.Get(mask.Tier);
 
-                speed.Value = StatResolver.ResolveEnemy(tierEnum, StatType.Speed, speed.BaseValue, mask, GlobalMods, entityMods, ref blob);
-                health.Max = StatResolver.ResolveEnemy(tierEnum, StatType.MaxHp, health.BaseMax, mask, GlobalMods, entityMods, ref blob);
-                contactDamage.Value = StatResolver.ResolveEnemy(tierEnum, StatType.ContactDamage, contactDamage.BaseValue, mask, GlobalMods, entityMods, ref blob);
+                speed.Value = StatResolver.ResolveEnemy(tierEnum, StatType.Speed, speed.BaseValue, mask, GlobalMods, WaveMods, entityMods, ref blob);
+                health.Max = StatResolver.ResolveEnemy(tierEnum, StatType.MaxHp, health.BaseMax, mask, GlobalMods, WaveMods, entityMods, ref blob);
+                contactDamage.Value = StatResolver.ResolveEnemy(tierEnum, StatType.ContactDamage, contactDamage.BaseValue, mask, GlobalMods, WaveMods, entityMods, ref blob);
 
                 health.Current = health.Max;
                 
@@ -81,6 +85,7 @@ namespace _Game.Systems
         public partial struct UpdateStatsJob : IJobEntity
         {
             [ReadOnly] public DynamicBuffer<GlobalStatModifier> GlobalMods;
+            [ReadOnly] public DynamicBuffer<WaveStatModifier> WaveMods;
             [ReadOnly] public ComponentLookup<EnemyTypeBlobRef> BlobLookup;
 
             private void Execute(
@@ -95,10 +100,10 @@ namespace _Game.Systems
                 ref BlobArray<TieredStatModifier> blob = ref BlobLookup[typeRef.Value].Value.Value.ConfigModifiers;
                 EnemyTier tierEnum = TierMaskMap.Get(mask.Tier);
 
-                speed.Value = StatResolver.ResolveEnemy(tierEnum, StatType.Speed, speed.BaseValue, mask, GlobalMods, entityMods, ref blob);
-                health.Max = StatResolver.ResolveEnemy(tierEnum, StatType.MaxHp, health.BaseMax, mask, GlobalMods, entityMods, ref blob);
-                contactDamage.Value = StatResolver.ResolveEnemy(tierEnum, StatType.ContactDamage, contactDamage.BaseValue, mask, GlobalMods, entityMods, ref blob);
-                
+                speed.Value = StatResolver.ResolveEnemy(tierEnum, StatType.Speed, speed.BaseValue, mask, GlobalMods, WaveMods, entityMods, ref blob);
+                health.Max = StatResolver.ResolveEnemy(tierEnum, StatType.MaxHp, health.BaseMax, mask, GlobalMods, WaveMods, entityMods, ref blob);
+                contactDamage.Value = StatResolver.ResolveEnemy(tierEnum, StatType.ContactDamage, contactDamage.BaseValue, mask, GlobalMods, WaveMods, entityMods, ref blob);
+
                 updateRequired.ValueRW = false;
             }
         }

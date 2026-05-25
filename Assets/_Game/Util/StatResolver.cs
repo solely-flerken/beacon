@@ -16,6 +16,7 @@ namespace _Game.Util
             float baseValue,
             Classification mask,
             DynamicBuffer<GlobalStatModifier> globalMods,
+            DynamicBuffer<WaveStatModifier> waveMods,
             DynamicBuffer<StatModifier> localMods1,
             DynamicBuffer<StatModifier> localMods2 = default)
         {
@@ -24,6 +25,9 @@ namespace _Game.Util
 
             if (globalMods.IsCreated)
                 Accumulate(statType, mask, globalMods, ref additive, ref multiplicativeBonus);
+
+            if (waveMods.IsCreated)
+                Accumulate(statType, mask, waveMods, ref additive, ref multiplicativeBonus);
 
             if (localMods1.IsCreated)
                 Accumulate(statType, localMods1, ref additive, ref multiplicativeBonus);
@@ -44,6 +48,7 @@ namespace _Game.Util
             float baseValue,
             Classification mask,
             DynamicBuffer<GlobalStatModifier> globalMods,
+            DynamicBuffer<WaveStatModifier> waveMods,
             DynamicBuffer<StatModifier> localMods1,
             DynamicBuffer<StatModifier> localMods2,
             BlobAssetReference<EnemyTypeBlob> blobRef)
@@ -53,6 +58,9 @@ namespace _Game.Util
 
             if (globalMods.IsCreated)
                 Accumulate(statType, mask, globalMods, ref additive, ref multiplicativeBonus);
+
+            if (waveMods.IsCreated)
+                Accumulate(statType, mask, waveMods, ref additive, ref multiplicativeBonus);
 
             if (localMods1.IsCreated)
                 Accumulate(statType, localMods1, ref additive, ref multiplicativeBonus);
@@ -84,6 +92,7 @@ namespace _Game.Util
             float baseValue,
             Classification mask,
             DynamicBuffer<GlobalStatModifier> globalMods,
+            DynamicBuffer<WaveStatModifier> waveMods,
             DynamicBuffer<StatModifier> localMods,
             ref BlobArray<TieredStatModifier> blobMods)
         {
@@ -92,6 +101,9 @@ namespace _Game.Util
 
             if (globalMods.IsCreated)
                 Accumulate(statType, mask, globalMods, ref additive, ref multiplicativeBonus);
+
+            if (waveMods.IsCreated)
+                Accumulate(statType, mask, waveMods, ref additive, ref multiplicativeBonus);
 
             if (localMods.IsCreated)
                 Accumulate(statType, localMods, ref additive, ref multiplicativeBonus);
@@ -124,6 +136,24 @@ namespace _Game.Util
             }
         }
 
+        private static void Accumulate(
+            StatType statType,
+            Classification entityMask,
+            DynamicBuffer<WaveStatModifier> mods,
+            ref float additive,
+            ref float multiplicative)
+        {
+            for (int i = 0; i < mods.Length; i++)
+            {
+                WaveStatModifier mod = mods[i];
+                
+                if (mod.Stat != statType) continue;
+                if (!IsMatch(entityMask, mod.Mask)) continue;
+                
+                AddMod(mod.Type, mod.Value, ref additive, ref multiplicative);
+            }
+        }
+        
         /// <summary>
         /// Accumulates blob-asset tier mods. Normal-tier entries apply to all enemies;
         /// non-Normal entries only apply when the enemy's current tier matches exactly.

@@ -43,6 +43,15 @@ namespace _Game.Components
         public ModifierType Type;
         public float Value;
     }
+
+    public struct WaveStatModifier : IBufferElementData
+    {
+        public StatType Stat;
+        public Classification Mask;
+        public ModifierType Type;
+        public float Value;
+        public float ExpiryTime;
+    }
     
     public struct Classification : IComponentData
     {

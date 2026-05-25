@@ -47,6 +47,7 @@ namespace _Game.Gameplay.Waves
 
         public int CurrentWave { get; private set; }
         public bool IsWaveActive { get; private set; }
+        public float WaveElapsed { get; private set; }
 
         [Header("Wave Budget")]
         [SerializeField] private int budgetBase = 30;
@@ -94,7 +95,9 @@ namespace _Game.Gameplay.Waves
         
         private void Update()
         {
+            if (!GameStateMachine.Instance.IsSimulationRunning) return;
             if (!IsWaveActive) return;
+            WaveElapsed += Time.deltaTime;
             if (!_enemyQuery.IsEmpty) return;
             
             WaveCleared();
@@ -104,11 +107,13 @@ namespace _Game.Gameplay.Waves
         {
             CurrentWave = 0;
             IsWaveActive = false;
+            WaveElapsed = 0f;
         }
         
         private void StartNextWave()
         {
             CurrentWave++;
+            WaveElapsed = 0f;
             
             Debug.Log($"[WaveManager] Wave {CurrentWave} started.");
 
@@ -153,6 +158,11 @@ namespace _Game.Gameplay.Waves
         private void WaveCleared()
         {
             IsWaveActive = false;
+            WaveElapsed = 0f;
+
+            using EntityQuery globalModQuery = _entityManager.CreateEntityQuery(typeof(GlobalModSingleton));
+            _entityManager.GetBuffer<WaveStatModifier>(globalModQuery.GetSingletonEntity()).Clear();
+
             EventBus.FireWaveCleared(CurrentWave);
             Debug.Log($"[WaveManager] Wave {CurrentWave} cleared.");
 

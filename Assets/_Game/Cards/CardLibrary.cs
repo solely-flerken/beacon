@@ -46,6 +46,25 @@ namespace _Game.Cards
             Value = value
         };
 
+        private static CardEffect WaveEnemyFx(RoleMask role, StatType stat, ModifierType mod, float value, float duration = 0f) => new()
+        {
+            TargetType = CardTargetType.WaveEnemies,
+            EnemyType = role,
+            Stat = stat,
+            ModifierType = mod,
+            Value = value,
+            Duration = duration,
+        };
+
+        private static CardEffect WaveWeaponFx(StatType stat, ModifierType mod, float value, float duration = 0f) => new()
+        {
+            TargetType = CardTargetType.WaveWeapons,
+            Stat = stat,
+            ModifierType = mod,
+            Value = value,
+            Duration = duration,
+        };
+
         #endregion
 
         #region Constraint factories
@@ -106,6 +125,25 @@ namespace _Game.Cards
             effects: new[] { EnemyFx(RoleMask.Basic, StatType.Speed, ModifierType.Multiplicative, -30f) }
         );
 
+        // Wave-scoped cards
+        public static readonly CardData Overclocked = new(
+            cardId: 401,
+            title: "Overclocked",
+            description: "All weapons deal 100% more damage for 5 seconds.",
+            effects: new[] { WaveWeaponFx(StatType.Damage, ModifierType.Multiplicative, 100f, duration: 5f) }
+        );
+
+        public static readonly CardData DangerousGame = new(
+            cardId: 402,
+            title: "Dangerous Game",
+            description: "All enemies move 40% slower for this wave, but deal 50% more contact damage.",
+            effects: new[]
+            {
+                WaveEnemyFx(RoleMask.None, StatType.Speed, ModifierType.Multiplicative, -40f),
+                WaveEnemyFx(RoleMask.None, StatType.ContactDamage, ModifierType.Multiplicative, 50f),
+            }
+        );
+
         #endregion
 
         private static readonly CardData[] All =
@@ -116,6 +154,8 @@ namespace _Game.Cards
             DeepMagazine,
             ArmorPiercing,
             SlowBasicEnemies,
+            Overclocked,
+            DangerousGame,
         };
 
         #region Utility functions
