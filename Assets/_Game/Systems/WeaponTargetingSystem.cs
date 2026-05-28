@@ -62,9 +62,12 @@ namespace _Game.Systems
         public float CellSize;
         public float DeltaTime;
 
-        private void Execute(ref WeaponTargeting targeting, in WeaponStats weaponStats, in LocalToWorld transform, in WeaponOwner owner)
+        private void Execute(Entity entity, ref WeaponTargeting targeting, in WeaponStats weaponStats, in LocalToWorld transform, in WeaponOwner owner)
         {
             float2 weaponPos = transform.Position.xy;
+
+            if (targeting.RandomSeed == 0)
+                targeting.RandomSeed = (uint)entity.Index * 2654435761u + 1u;
             
             bool isEnemyWeapon = EnemyTagLookup.HasComponent(owner.Value);
             NativeArray<float2> positions = isEnemyWeapon ? AllyPositions : EnemyPositions;
@@ -105,12 +108,76 @@ namespace _Game.Systems
             // Acquire target
             targeting.HasTarget = false;
             targeting.CurrentTarget = Entity.Null;
-            
-            if (!FindNearest(weaponPos, positions, cellMap, CellSize, weaponStats.TargetRange, out float2 targetPos2, out int bestIdx)) return;
-            
+
+            bool foundTarget;
+            float2 foundTargetPos;
+            int foundTargetIdx;
+
+            switch (targeting.Strategy)
+            {
+                case TargetStrategy.Furthest:
+                    foundTarget = FindNearest(weaponPos, positions, cellMap, CellSize, weaponStats.TargetRange, out foundTargetPos, out foundTargetIdx, invert: true);
+                    break;
+                case TargetStrategy.Random:
+                    foundTarget = FindRandom(weaponPos, positions, cellMap, CellSize, weaponStats.TargetRange, ref targeting.RandomSeed, out foundTargetPos, out foundTargetIdx);
+                    break;
+                case TargetStrategy.Nearest:
+                default:
+                    foundTarget = FindNearest(weaponPos, positions, cellMap, CellSize, weaponStats.TargetRange, out foundTargetPos, out foundTargetIdx);
+                    break;
+            }
+
+            if (!foundTarget) return;
+
             targeting.HasTarget = true;
-            targeting.TargetPosition = targetPos2;
-            targeting.CurrentTarget = entities[bestIdx];
+            targeting.TargetPosition = foundTargetPos;
+            targeting.CurrentTarget = entities[foundTargetIdx];
+        }
+
+        private static bool FindRandom(
+            float2 origin,
+            NativeArray<float2> positions,
+            NativeParallelMultiHashMap<int2, int> cellMap,
+            float cellSize,
+            float maxRange,
+            ref uint seed,
+            out float2 randomPos,
+            out int randomIdx)
+        {
+            randomPos = float2.zero;
+            randomIdx = -1;
+
+            float maxRangeSq = maxRange * maxRange;
+            int2 centerCell = new((int)math.floor(origin.x / cellSize), (int)math.floor(origin.y / cellSize));
+            int cellRange = (int)math.ceil(maxRange / cellSize);
+
+            Random rng = new(seed);
+            int count = 0;
+
+            for (int cx = -cellRange; cx <= cellRange; cx++)
+            {
+                for (int cy = -cellRange; cy <= cellRange; cy++)
+                {
+                    int2 cell = centerCell + new int2(cx, cy);
+
+                    // Is an entity present in the current cell?
+                    if (!cellMap.TryGetFirstValue(cell, out int idx, out NativeParallelMultiHashMapIterator<int2> it)) continue;
+
+                    // Check all entities in the current cell
+                    do
+                    {
+                        if (math.distancesq(origin, positions[idx]) > maxRangeSq) continue;
+
+                        count++;
+                        if (rng.NextInt(0, count) != 0) continue;
+                        randomPos = positions[idx];
+                        randomIdx = idx;
+                    } while (cellMap.TryGetNextValue(out idx, ref it));
+                }
+            }
+
+            seed = rng.state;
+            return randomIdx != -1;
         }
 
         private static bool FindNearest(
@@ -119,13 +186,15 @@ namespace _Game.Systems
             NativeParallelMultiHashMap<int2, int> cellMap,
             float cellSize,
             float maxRange,
-            out float2 nearestPos,
-            out int nearestIdx)
+            out float2 resultPos,
+            out int resultIdx,
+            bool invert = false)
         {
-            nearestPos = float2.zero;
-            nearestIdx = -1;
-            
-            float shortestSq = maxRange * maxRange;
+            resultPos = float2.zero;
+            resultIdx = -1;
+
+            float maxRangeSq = maxRange * maxRange;
+            float bestSq = invert ? 0f : maxRangeSq;
             bool found = false;
 
             int2 centerCell = new((int)math.floor(origin.x / cellSize), (int)math.floor(origin.y / cellSize));
@@ -144,11 +213,12 @@ namespace _Game.Systems
                     do
                     {
                         float distSq = math.distancesq(origin, positions[idx]);
-                        if (distSq >= shortestSq) continue;
+                        bool betterTarget = invert ? distSq <= maxRangeSq && distSq > bestSq : distSq < bestSq;
+                        if (!betterTarget) continue;
                         
-                        shortestSq = distSq;
-                        nearestPos = positions[idx];
-                        nearestIdx = idx;
+                        bestSq = distSq;
+                        resultPos = positions[idx];
+                        resultIdx = idx;
                         found = true;
                     } while (cellMap.TryGetNextValue(out idx, ref it));
                 }

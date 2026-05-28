@@ -19,6 +19,7 @@ namespace _Game.Components
         public bool StickyLock;
         public float SwapCooldown;
         public float SwapCooldownRemaining;
+        public uint RandomSeed;
     }
     
     /// <summary>
