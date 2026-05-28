@@ -109,6 +109,22 @@ namespace _Game.Cards
             effects: new[] { WeaponFx(StatType.TargetRange, ModifierType.Multiplicative, 50f) },
             constraints: new[] { MinCards(3) }
         );
+        
+        public static readonly CardData OverloadLens = new(
+            cardId: 204,
+            title: "Overload Lens",
+            description: "Beam width increases by 400%.",
+            effects: new[] { WeaponFx(StatType.BeamWidth, ModifierType.Multiplicative, 400) },
+            constraints: new[] { HasWeaponOfType(WeaponType.Beam) }
+        );
+
+        public static readonly CardData LaserShow = new(
+            cardId: 205,
+            title: "Laser Show",
+            description: "Beam rotation speed doubles.",
+            effects: new[] { WeaponFx(StatType.BeamRotationSpeed, ModifierType.Multiplicative, 100) },
+            constraints: new[] { HasWeaponOfType(WeaponType.Beam) }
+        );
 
         // Per-type weapon cards
         public static readonly CardData ArmorPiercing = new(
@@ -157,6 +173,8 @@ namespace _Game.Cards
             SlowBasicEnemies,
             Overclocked,
             DangerousGame,
+            OverloadLens,
+            LaserShow
         };
 
         #region Utility functions

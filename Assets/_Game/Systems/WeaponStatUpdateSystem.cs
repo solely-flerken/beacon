@@ -69,9 +69,8 @@ namespace _Game.Systems
                 {
                     RefRW<BeamStats> beam = SystemAPI.GetComponentRW<BeamStats>(entity);
                     
-                    // TODO: Create StatTypes and resolve stats to enable Beam modifications
-                    beam.ValueRW.Width = beam.ValueRO.BaseWidth;
-                    beam.ValueRW.RotationSpeed = beam.ValueRO.BaseRotationSpeed;
+                    beam.ValueRW.Width = StatResolver.ResolveWeapon(StatType.BeamWidth, beam.ValueRO.BaseWidth, mask.ValueRO, globalBuffer, waveBuffer, localMods, ownerMods, ownerBlobRef);
+                    beam.ValueRW.RotationSpeed = StatResolver.ResolveWeapon(StatType.BeamRotationSpeed, beam.ValueRO.BaseRotationSpeed, mask.ValueRO, globalBuffer, waveBuffer, localMods, ownerMods, ownerBlobRef);
                 }
 
                 SystemAPI.SetComponentEnabled<WeaponStatUpdateRequired>(entity, false);

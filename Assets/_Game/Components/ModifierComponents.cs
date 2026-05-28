@@ -16,6 +16,9 @@ namespace _Game.Components
         ArrivalRadius,
         Speed,
         ContactDamage,
+        // Beam Weapon
+        BeamRotationSpeed,
+        BeamWidth
     }
 
     public enum ModifierType : byte
