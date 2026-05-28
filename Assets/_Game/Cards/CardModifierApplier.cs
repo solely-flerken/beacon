@@ -8,7 +8,6 @@ namespace _Game.Cards
 {
     /// <summary>
     /// One-shot utility that applies a card's effects to the appropriate ECS entities.
-    /// Called on the main thread while simulation is paused (CardDraft state).
     /// </summary>
     public static class CardModifierApplier
     {

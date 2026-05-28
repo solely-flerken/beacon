@@ -11,7 +11,6 @@ namespace _Game.Core
         Paused,
         WaveRunning,
         WaveEnd,
-        CardDraft,
         RunEnd
     }
 
@@ -31,10 +30,9 @@ namespace _Game.Core
         {
             { GameState.None, new[] { GameState.MainMenu } },
             { GameState.MainMenu, new[] { GameState.WaveRunning } },
-            { GameState.WaveRunning, new[] { GameState.WaveEnd, GameState.RunEnd, GameState.CardDraft, GameState.Paused } },
+            { GameState.WaveRunning, new[] { GameState.WaveEnd, GameState.RunEnd, GameState.Paused } },
             { GameState.Paused, new[] { GameState.WaveRunning } },
-            { GameState.WaveEnd, new[] { GameState.WaveRunning, GameState.CardDraft, GameState.RunEnd } }, // TODO: WaveEnd -> RunEnd: Needed? Yes: Player might quit in this state | No: No enemies exist here = No death possible 
-            { GameState.CardDraft, new[] { GameState.WaveRunning, GameState.WaveEnd } },
+            { GameState.WaveEnd, new[] { GameState.WaveRunning, GameState.RunEnd } }, // TODO: WaveEnd -> RunEnd: Needed? Yes: Player might quit in this state | No: No enemies exist here = No death possible
             { GameState.RunEnd, new[] { GameState.None, GameState.WaveRunning } },
         };
 

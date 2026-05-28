@@ -113,10 +113,6 @@ namespace _Game.Gameplay
                         GameStateMachine.Instance.TransitionTo(GameState.WaveRunning);
                     break;
                 
-                case GameState.CardDraft:
-                    // Card draft
-                    break;
-
                 case GameState.RunEnd:
                     if (Keyboard.current.rKey.wasPressedThisFrame)
                         runManager.StartRun();
@@ -230,7 +226,6 @@ namespace _Game.Gameplay
                 GameState.WaveEnd => "Next wave(Spc), Cards(Tab)",
                 GameState.RunEnd => "Restart(R)",
                 GameState.Paused => "Unpause(P)",
-                GameState.CardDraft => "Choose a card...",
                 _ => ""
             };
             GUI.Box(new Rect(10, Screen.height - 35, 400, 25), hint);
