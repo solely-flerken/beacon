@@ -13,12 +13,12 @@ namespace _Game.Gameplay
 {
     public class RunManager : MonoBehaviour
     {
-        private static RunManager Instance { get; set; }
+        public static RunManager Instance { get; private set; }
 
         [SerializeField] private RunConfig runConfig;
         [SerializeField] private BeaconSlotProvider slotProvider;
-        
-        private readonly BeaconLoadout _loadout = new();
+
+        public BeaconLoadout Loadout { get; } = new();
 
         private EntityManager _entityManager;
         
@@ -72,7 +72,7 @@ namespace _Game.Gameplay
             DestroyEntity(ref _beaconEntity);
             DestroyEntity(_weaponEntities);
 
-            _loadout.Reset();
+            Loadout.Reset();
             slotProvider.ClearWeaponEntities();
 
             WaveManager.Instance.ResetWaves();
@@ -88,7 +88,7 @@ namespace _Game.Gameplay
 
         private void SpawnWeapons()
         {
-            _loadout.Initialize(slotProvider.WeaponSlotCount);
+            Loadout.Initialize(slotProvider.WeaponSlotCount);
             
             int weaponsToAssign = runConfig.startingWeapons.Length;
             if (weaponsToAssign > slotProvider.WeaponSlotCount)
@@ -99,7 +99,7 @@ namespace _Game.Gameplay
 
             for (int i = 0; i < weaponsToAssign; i++)
             {
-                _loadout.SetWeapon(i, runConfig.startingWeapons[i]);
+                Loadout.SetWeapon(i, runConfig.startingWeapons[i]);
             }
 
             if (_weaponCatalogQuery.IsEmpty)
@@ -110,9 +110,9 @@ namespace _Game.Gameplay
 
             DynamicBuffer<WeaponCatalogEntry> catalog = _entityManager.GetBuffer<WeaponCatalogEntry>(_weaponCatalogQuery.GetSingletonEntity());
 
-            for (int i = 0; i < _loadout.SlotCount; i++)
+            for (int i = 0; i < Loadout.SlotCount; i++)
             {
-                WeaponType? type = _loadout.GetWeapon(i);
+                WeaponType? type = Loadout.GetWeapon(i);
                 if (type == null) continue;
 
                 if (!slotProvider.TryGetSlot(i, out Transform slotTransform)) continue;

@@ -72,6 +72,7 @@ namespace _Game.Cards
         private static ICardConstraint HasCard(int cardId) => new HasDraftedCardConstraint { RequiredCardId = cardId };
         private static ICardConstraint MinCards(int count) => new MinDraftedCardsConstraint { MinCount = count };
         private static ICardConstraint MinHealth(float percent) => new BeaconHealthPercentConstraint { MinHealthPercent = percent };
+        private static ICardConstraint HasWeaponOfType(WeaponType type) => new HasWeaponTypeConstraint { WeaponType = type };
 
         #endregion
 

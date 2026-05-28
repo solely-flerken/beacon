@@ -1,3 +1,4 @@
+using System.Linq;
 using _Game.Components;
 
 namespace _Game.Gameplay
@@ -21,6 +22,11 @@ namespace _Game.Gameplay
         public WeaponType? GetWeapon(int slot)
         {
             return _weaponSlots[slot];
+        }
+
+        public bool HasWeaponOfType(WeaponType type)
+        {
+            return _weaponSlots != null && _weaponSlots.Any(slot => slot == type);
         }
 
         public void Reset()
