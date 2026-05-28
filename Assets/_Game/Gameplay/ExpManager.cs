@@ -47,12 +47,14 @@ namespace _Game.Gameplay
             TotalExp += amount;
 
             int newLevel = DeriveLevel(TotalExp);
+
+            while (CurrentLevel < newLevel)
+            {
+                CurrentLevel++;
+                EventBus.FireLevelUp(CurrentLevel);
+            }
+
             EventBus.FireExpChanged(CurrentLevel, TotalExp - ExpToLevel(CurrentLevel), CostToNextLevel(CurrentLevel));
-
-            if (newLevel <= CurrentLevel) return;
-
-            CurrentLevel = newLevel;
-            EventBus.FireLevelUp(CurrentLevel);
         }
 
         public void Reset()
