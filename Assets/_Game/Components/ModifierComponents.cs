@@ -25,6 +25,7 @@ namespace _Game.Components
     {
         Additive,
         Multiplicative,
+        Overwrite,
     }
 
     /// <summary>

@@ -7,6 +7,43 @@ namespace _Game.Util
 {
     public static class StatResolver
     {
+        private struct ModAccumulator
+        {
+            private float _additive;
+            private float _multiplicativeBonus;
+            private bool _hasOverwrite;
+            private float _overwriteValue;
+
+            public void Add(ModifierType type, float value)
+            {
+                switch (type)
+                {
+                    case ModifierType.Additive:
+                        _additive += value;
+                        break;
+                    case ModifierType.Multiplicative:
+                        _multiplicativeBonus += value / 100f;
+                        break;
+                    case ModifierType.Overwrite:
+                        _hasOverwrite = true;
+                        _overwriteValue = value;
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+            }
+
+            public float Resolve(float baseValue)
+            {
+                if (_hasOverwrite) return math.max(0f, _overwriteValue);
+
+                float flat = math.max(0f, baseValue + _additive);
+                float mult = math.max(0f, 1f + _multiplicativeBonus);
+
+                return flat * mult;
+            }
+        }
+
         /// <summary>
         /// Resolves a stat for a generic entity by accumulating global mods (filtered by classification),
         /// up to two local mod buffers, then applying the final formula.
@@ -20,22 +57,21 @@ namespace _Game.Util
             DynamicBuffer<StatModifier> localMods1,
             DynamicBuffer<StatModifier> localMods2 = default)
         {
-            float additive = 0f;
-            float multiplicativeBonus = 0f;
+            ModAccumulator acc = default;
 
             if (globalMods.IsCreated)
-                Accumulate(statType, mask, globalMods, ref additive, ref multiplicativeBonus);
+                Accumulate(statType, mask, globalMods, ref acc);
 
             if (waveMods.IsCreated)
-                Accumulate(statType, mask, waveMods, ref additive, ref multiplicativeBonus);
+                Accumulate(statType, mask, waveMods, ref acc);
 
             if (localMods1.IsCreated)
-                Accumulate(statType, localMods1, ref additive, ref multiplicativeBonus);
+                Accumulate(statType, localMods1, ref acc);
 
             if (localMods2.IsCreated)
-                Accumulate(statType, localMods2, ref additive, ref multiplicativeBonus);
+                Accumulate(statType, localMods2, ref acc);
 
-            return Apply(baseValue, additive, multiplicativeBonus);
+            return acc.Resolve(baseValue);
         }
 
         /// <summary>
@@ -53,20 +89,19 @@ namespace _Game.Util
             DynamicBuffer<StatModifier> localMods2,
             BlobAssetReference<EnemyTypeBlob> blobRef)
         {
-            float additive = 0f;
-            float multiplicativeBonus = 0f;
+            ModAccumulator acc = default;
 
             if (globalMods.IsCreated)
-                Accumulate(statType, mask, globalMods, ref additive, ref multiplicativeBonus);
+                Accumulate(statType, mask, globalMods, ref acc);
 
             if (waveMods.IsCreated)
-                Accumulate(statType, mask, waveMods, ref additive, ref multiplicativeBonus);
+                Accumulate(statType, mask, waveMods, ref acc);
 
             if (localMods1.IsCreated)
-                Accumulate(statType, localMods1, ref additive, ref multiplicativeBonus);
+                Accumulate(statType, localMods1, ref acc);
 
             if (localMods2.IsCreated)
-                Accumulate(statType, localMods2, ref additive, ref multiplicativeBonus);
+                Accumulate(statType, localMods2, ref acc);
 
             if (blobRef.IsCreated)
             {
@@ -74,11 +109,11 @@ namespace _Game.Util
                 ref BlobArray<TieredStatModifier> blobMods = ref blobRef.Value.ConfigModifiers;
                 if (blobMods.Length != 0)
                 {
-                    Accumulate(statType, tier, ref blobMods, ref additive, ref multiplicativeBonus);
+                    Accumulate(statType, tier, ref blobMods, ref acc);
                 }
             }
 
-            return Apply(baseValue, additive, multiplicativeBonus);
+            return acc.Resolve(baseValue);
         }
 
         /// <summary>
@@ -96,34 +131,31 @@ namespace _Game.Util
             DynamicBuffer<StatModifier> localMods,
             ref BlobArray<TieredStatModifier> blobMods)
         {
-            float additive = 0f;
-            float multiplicativeBonus = 0f;
+            ModAccumulator acc = default;
 
             if (globalMods.IsCreated)
-                Accumulate(statType, mask, globalMods, ref additive, ref multiplicativeBonus);
+                Accumulate(statType, mask, globalMods, ref acc);
 
             if (waveMods.IsCreated)
-                Accumulate(statType, mask, waveMods, ref additive, ref multiplicativeBonus);
+                Accumulate(statType, mask, waveMods, ref acc);
 
             if (localMods.IsCreated)
-                Accumulate(statType, localMods, ref additive, ref multiplicativeBonus);
+                Accumulate(statType, localMods, ref acc);
 
             if (blobMods.Length != 0)
-                Accumulate(statType, tier, ref blobMods, ref additive, ref multiplicativeBonus);
+                Accumulate(statType, tier, ref blobMods, ref acc);
 
-            return Apply(baseValue, additive, multiplicativeBonus);
+            return acc.Resolve(baseValue);
         }
 
         /// <summary>
-        /// Accumulates global mods into additive/multiplicative accumulators,
-        /// skipping any mod whose classification mask does not match the entity.
+        /// Accumulates global mods, skipping any whose classification mask does not match the entity.
         /// </summary>
         private static void Accumulate(
             StatType statType,
             Classification entityMask,
             DynamicBuffer<GlobalStatModifier> mods,
-            ref float additive,
-            ref float multiplicative)
+            ref ModAccumulator acc)
         {
             for (int i = 0; i < mods.Length; i++)
             {
@@ -132,7 +164,7 @@ namespace _Game.Util
                 if (mod.Stat != statType) continue;
                 if (!IsMatch(entityMask, mod.Mask)) continue;
 
-                AddMod(mod.Type, mod.Value, ref additive, ref multiplicative);
+                acc.Add(mod.Type, mod.Value);
             }
         }
 
@@ -140,8 +172,7 @@ namespace _Game.Util
             StatType statType,
             Classification entityMask,
             DynamicBuffer<WaveStatModifier> mods,
-            ref float additive,
-            ref float multiplicative)
+            ref ModAccumulator acc)
         {
             for (int i = 0; i < mods.Length; i++)
             {
@@ -150,7 +181,7 @@ namespace _Game.Util
                 if (mod.Stat != statType) continue;
                 if (!IsMatch(entityMask, mod.Mask)) continue;
                 
-                AddMod(mod.Type, mod.Value, ref additive, ref multiplicative);
+                acc.Add(mod.Type, mod.Value);
             }
         }
         
@@ -162,8 +193,7 @@ namespace _Game.Util
             StatType statType,
             EnemyTier currentTier,
             ref BlobArray<TieredStatModifier> mods,
-            ref float additive,
-            ref float multiplicativeBonus)
+            ref ModAccumulator acc)
         {
             for (int i = 0; i < mods.Length; i++)
             {
@@ -172,19 +202,17 @@ namespace _Game.Util
                 if (mod.Modifier.Stat != statType) continue;
                 if (mod.Tier != currentTier && mod.Tier != EnemyTier.Normal) continue;
 
-                AddMod(mod.Modifier.Type, mod.Modifier.Value, ref additive, ref multiplicativeBonus);
+                acc.Add(mod.Modifier.Type, mod.Modifier.Value);
             }
         }
 
         /// <summary>
-        /// Accumulates local (per-entity) stat mods. Multiplicative values are stored
-        /// as percentages and divided by 100 here.
+        /// Accumulates local (per-entity) stat mods.
         /// </summary>
         private static void Accumulate(
-            StatType statType, 
-            DynamicBuffer<StatModifier> mods, 
-            ref float additive, 
-            ref float multiplicativeBonus)
+            StatType statType,
+            DynamicBuffer<StatModifier> mods,
+            ref ModAccumulator acc)
         {
             for (int i = 0; i < mods.Length; i++)
             {
@@ -192,38 +220,8 @@ namespace _Game.Util
                 
                 if (mod.Stat != statType) continue;
                 
-                AddMod(mod.Type, mod.Value, ref additive, ref multiplicativeBonus);
+                acc.Add(mod.Type, mod.Value);
             }
-        }
-
-        /// <summary>
-        /// Adds a single modifier value into the correct accumulator.
-        /// Multiplicative values are authored as percentages and converted to decimal here.
-        /// </summary>
-        private static void AddMod(ModifierType type, float value, ref float additive, ref float multiplicative)
-        {
-            switch (type)
-            {
-                case ModifierType.Additive:
-                    additive += value;
-                    break;
-                case ModifierType.Multiplicative:
-                    multiplicative += value / 100f;
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
-        }
-
-        /// <summary>
-        /// Final math: (Base + Flat) * (1 + %Bonus)
-        /// </summary>
-        private static float Apply(float baseValue, float additive, float multiplicativeBonus)
-        {
-            float flat = math.max(0f, baseValue + additive);
-            float mult = math.max(0f, 1f + multiplicativeBonus);
-            
-            return flat * mult;
         }
 
         /// <summary>
