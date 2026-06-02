@@ -18,6 +18,7 @@ namespace _Game.Components
     {
         Basic,
         Beam,
+        Scatter,
     }
 
     public struct WeaponTypeRef : IComponentData
@@ -69,4 +70,20 @@ namespace _Game.Components
         public WeaponType Type;
         public Entity Prefab;
     }
+
+    #region Scatter
+
+    public struct ShootScatter : IComponentData
+    {
+        public Entity ProjectilePrefab;
+    }
+    
+    public struct ScatterStats : IComponentData
+    {
+        public int ProjectileCount;
+        public float SpreadAngle;
+        public float SpeedVariation;
+    }
+
+    #endregion
 }
