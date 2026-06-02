@@ -12,7 +12,7 @@ namespace _Game.Authoring
         public GameObject projectilePrefab;
 
         [Header("Projectile Stats")] 
-        public float speed = 40f;
+        public float speed = 60f;
         public int pierce = 1;
 
         [Header("Scatter Stats")] 

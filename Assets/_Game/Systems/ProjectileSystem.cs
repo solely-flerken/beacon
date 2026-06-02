@@ -203,7 +203,7 @@ namespace _Game.Systems
                     
                     // Handle pierce 
                     pierce.Remaining--;
-                    if (pierce.Remaining <= 0)
+                    if (pierce.Remaining < 0)
                     {
                         ECB.DestroyEntity(sortKey, projectile);
                     }
