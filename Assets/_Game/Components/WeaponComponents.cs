@@ -19,6 +19,7 @@ namespace _Game.Components
         Basic,
         Beam,
         Scatter,
+        Mortar,
     }
 
     public struct WeaponTypeRef : IComponentData

@@ -1,0 +1,90 @@
+using _Game.Components;
+using Unity.Burst;
+using Unity.Entities;
+using Unity.Mathematics;
+using Unity.Transforms;
+
+namespace _Game.Systems
+{
+    [UpdateInGroup(typeof(SimulationSystemGroup))]
+    [UpdateAfter(typeof(WeaponTargetingSystem))]
+    public partial struct MortarLaunchSystem : ISystem
+    {
+        public void OnCreate(ref SystemState state)
+        {
+            state.RequireForUpdate<BeginSimulationEntityCommandBufferSystem.Singleton>();
+        }
+
+        [BurstCompile]
+        public void OnUpdate(ref SystemState state)
+        {
+            BeginSimulationEntityCommandBufferSystem.Singleton ecbSingleton = SystemAPI.GetSingleton<BeginSimulationEntityCommandBufferSystem.Singleton>();
+            EntityCommandBuffer.ParallelWriter ecb = ecbSingleton.CreateCommandBuffer(state.WorldUnmanaged).AsParallelWriter();
+            
+            state.Dependency = new MortarLaunchJob
+            {
+                ECB = ecb,
+            }.ScheduleParallel(state.Dependency);
+        }
+    }
+
+    [BurstCompile]
+    [WithAll(typeof(ReadyToFire))]
+    internal partial struct MortarLaunchJob : IJobEntity
+    {
+        public EntityCommandBuffer.ParallelWriter ECB;
+
+        private void Execute(
+            Entity entity,
+            [EntityIndexInQuery] int sortKey,
+            in MortarLaunchData mortarData,
+            in MortarStats mortarStats,
+            in ProjectileStats projStats,
+            in WeaponTargeting targeting,
+            in LocalToWorld transform,
+            in Classification classification)
+        {
+            if (!targeting.HasTarget) return;
+
+            float2 weaponPos = transform.Position.xy;
+            float2 targetPos = targeting.TargetPosition;
+            float2 delta = targetPos - weaponPos;
+
+            const float minDistSq = 1.7f * 1.7f;
+            if (math.lengthsq(delta) < minDistSq) return;
+
+            float dist = math.length(delta);
+            float duration = dist / projStats.Speed;
+            float3 spawnPos = new(weaponPos, 0f);
+
+            Entity shadow = ECB.Instantiate(sortKey, mortarData.ShadowPrefab);
+            ECB.SetComponent(sortKey, shadow, LocalTransform.FromPosition(spawnPos));
+
+            Entity shell = ECB.Instantiate(sortKey, mortarData.ShellPrefab);
+            ECB.SetComponent(sortKey, shell, LocalTransform.FromPosition(spawnPos));
+            ECB.AddComponent(sortKey, shell, new ProjectileWeapon { Value = entity });
+            ECB.SetComponent(sortKey, shell, new MortarTrajectory
+            {
+                StartPos = weaponPos,
+                TargetPos = targetPos,
+                Duration = duration,
+                Elapsed = 0f,
+                ArcHeight = mortarData.ArcHeight,
+                Shadow = shadow,
+                ExplosionPrefab = mortarData.ExplosionPrefab,
+            });
+
+            bool isPlayer = (classification.Faction & FactionMask.Player) != 0;
+            if (isPlayer)
+            {
+                ECB.AddComponent<PlayerProjectileTag>(sortKey, shell);
+            }
+            else
+            {
+                ECB.AddComponent<EnemyProjectileTag>(sortKey, shell);
+            }
+
+            ECB.SetComponentEnabled<ReadyToFire>(sortKey, entity, false);
+        }
+    }
+}
