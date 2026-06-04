@@ -14,6 +14,8 @@ namespace _Game.Systems
     {
         private ComponentLookup<EnemyTag> _enemyTagLookup;
         private ComponentLookup<LocalToWorld> _transformLookup;
+        private ComponentLookup<Health> _healthLookup;
+        private ComponentLookup<EnemyIncomingDamage> _incomingDamageLookup;
 
         [BurstCompile]
         public void OnCreate(ref SystemState state)
@@ -22,6 +24,8 @@ namespace _Game.Systems
 
             _enemyTagLookup = state.GetComponentLookup<EnemyTag>(isReadOnly: true);
             _transformLookup = state.GetComponentLookup<LocalToWorld>(isReadOnly: true);
+            _healthLookup = state.GetComponentLookup<Health>(isReadOnly: true);
+            _incomingDamageLookup = state.GetComponentLookup<EnemyIncomingDamage>(isReadOnly: true);
         }
 
         public void OnUpdate(ref SystemState state)
@@ -30,11 +34,15 @@ namespace _Game.Systems
 
             _enemyTagLookup.Update(ref state);
             _transformLookup.Update(ref state);
+            _healthLookup.Update(ref state);
+            _incomingDamageLookup.Update(ref state);
 
             state.Dependency = new WeaponTargetingJob
             {
                 EnemyTagLookup = _enemyTagLookup,
                 TransformLookup = _transformLookup,
+                HealthLookup = _healthLookup,
+                IncomingDamageLookup = _incomingDamageLookup,
                 EnemyPositions = EnemyDataShared.Positions,
                 EnemyEntities = EnemyDataShared.Entities,
                 AllyPositions = AllyDataShared.Positions,
@@ -57,6 +65,8 @@ namespace _Game.Systems
         [ReadOnly] public NativeArray<Entity> EnemyEntities;
         [ReadOnly] public NativeArray<float2> AllyPositions;
         [ReadOnly] public NativeArray<Entity> AllyEntities;
+        [ReadOnly] public ComponentLookup<Health> HealthLookup;
+        [ReadOnly] public ComponentLookup<EnemyIncomingDamage> IncomingDamageLookup;
         [ReadOnly] public NativeParallelMultiHashMap<int2, int> EnemyCellMap;
         [ReadOnly] public NativeParallelMultiHashMap<int2, int> AllyCellMap;
         public float CellSize;
@@ -85,6 +95,14 @@ namespace _Game.Systems
                         
                         if (math.distancesq(weaponPos, targetPos) <= weaponStats.TargetRange * weaponStats.TargetRange)
                         {
+                            // Drop sticky lock if enough damage is already inbound to kill the target
+                            if (!isEnemyWeapon && IsOverCommitted(targeting.CurrentTarget, HealthLookup, IncomingDamageLookup))
+                            {
+                                targeting.CurrentTarget = Entity.Null;
+                                targeting.HasTarget = false;
+                                return;
+                            }
+                            
                             targeting.TargetVelocity = (targetPos - targeting.TargetPosition) / DeltaTime;
                             targeting.HasTarget = true;
                             targeting.TargetPosition = targetPos;
@@ -113,22 +131,13 @@ namespace _Game.Systems
             targeting.HasTarget = false;
             targeting.CurrentTarget = Entity.Null;
 
-            bool foundTarget;
-            float2 foundTargetPos;
-            int foundTargetIdx;
+            bool checkIncoming = !isEnemyWeapon;
+            bool foundTarget = TryFindTarget(targeting.Strategy, weaponPos, positions, entities, cellMap, CellSize, weaponStats.TargetRange, HealthLookup, IncomingDamageLookup, checkIncoming, ref targeting.RandomSeed, out float2 foundTargetPos, out int foundTargetIdx);
 
-            switch (targeting.Strategy)
+            // Fallback: if all enemies are over-committed, fire anyway to avoid wasting fire rate
+            if (!foundTarget && checkIncoming)
             {
-                case TargetStrategy.Furthest:
-                    foundTarget = FindNearest(weaponPos, positions, cellMap, CellSize, weaponStats.TargetRange, out foundTargetPos, out foundTargetIdx, invert: true);
-                    break;
-                case TargetStrategy.Random:
-                    foundTarget = FindRandom(weaponPos, positions, cellMap, CellSize, weaponStats.TargetRange, ref targeting.RandomSeed, out foundTargetPos, out foundTargetIdx);
-                    break;
-                case TargetStrategy.Nearest:
-                default:
-                    foundTarget = FindNearest(weaponPos, positions, cellMap, CellSize, weaponStats.TargetRange, out foundTargetPos, out foundTargetIdx);
-                    break;
+                foundTarget = TryFindTarget(targeting.Strategy, weaponPos, positions, entities, cellMap, CellSize, weaponStats.TargetRange, HealthLookup, IncomingDamageLookup, false, ref targeting.RandomSeed, out foundTargetPos, out foundTargetIdx);
             }
 
             if (!foundTarget) return;
@@ -139,12 +148,43 @@ namespace _Game.Systems
             targeting.CurrentTarget = entities[foundTargetIdx];
         }
 
+        private static bool TryFindTarget(
+            TargetStrategy strategy,
+            float2 origin,
+            NativeArray<float2> positions,
+            NativeArray<Entity> entities,
+            NativeParallelMultiHashMap<int2, int> cellMap,
+            float cellSize,
+            float range,
+            ComponentLookup<Health> healthLookup,
+            ComponentLookup<EnemyIncomingDamage> incomingDamageLookup,
+            bool checkIncoming,
+            ref uint seed,
+            out float2 foundPos,
+            out int foundIdx)
+        {
+            switch (strategy)
+            {
+                case TargetStrategy.Furthest:
+                    return FindNearest(origin, positions, entities, cellMap, cellSize, range, healthLookup, incomingDamageLookup, checkIncoming, out foundPos, out foundIdx, invert: true);
+                case TargetStrategy.Random:
+                    return FindRandom(origin, positions, entities, cellMap, cellSize, range, healthLookup, incomingDamageLookup, checkIncoming, ref seed, out foundPos, out foundIdx);
+                case TargetStrategy.Nearest:
+                default:
+                    return FindNearest(origin, positions, entities, cellMap, cellSize, range, healthLookup, incomingDamageLookup, checkIncoming, out foundPos, out foundIdx);
+            }
+        }
+
         private static bool FindRandom(
             float2 origin,
             NativeArray<float2> positions,
+            NativeArray<Entity> entities,
             NativeParallelMultiHashMap<int2, int> cellMap,
             float cellSize,
             float maxRange,
+            ComponentLookup<Health> healthLookup,
+            ComponentLookup<EnemyIncomingDamage> incomingDamageLookup,
+            bool checkIncoming,
             ref uint seed,
             out float2 randomPos,
             out int randomIdx)
@@ -165,13 +205,12 @@ namespace _Game.Systems
                 {
                     int2 cell = centerCell + new int2(cx, cy);
 
-                    // Is an entity present in the current cell?
                     if (!cellMap.TryGetFirstValue(cell, out int idx, out NativeParallelMultiHashMapIterator<int2> it)) continue;
 
-                    // Check all entities in the current cell
                     do
                     {
                         if (math.distancesq(origin, positions[idx]) > maxRangeSq) continue;
+                        if (checkIncoming && IsOverCommitted(entities[idx], healthLookup, incomingDamageLookup)) continue;
 
                         count++;
                         if (rng.NextInt(0, count) != 0) continue;
@@ -188,9 +227,13 @@ namespace _Game.Systems
         private static bool FindNearest(
             float2 origin,
             NativeArray<float2> positions,
+            NativeArray<Entity> entities,
             NativeParallelMultiHashMap<int2, int> cellMap,
             float cellSize,
             float maxRange,
+            ComponentLookup<Health> healthLookup,
+            ComponentLookup<EnemyIncomingDamage> incomingDamageLookup,
+            bool checkIncoming,
             out float2 resultPos,
             out int resultIdx,
             bool invert = false)
@@ -220,7 +263,8 @@ namespace _Game.Systems
                         float distSq = math.distancesq(origin, positions[idx]);
                         bool betterTarget = invert ? distSq <= maxRangeSq && distSq > bestSq : distSq < bestSq;
                         if (!betterTarget) continue;
-                        
+                        if (checkIncoming && IsOverCommitted(entities[idx], healthLookup, incomingDamageLookup)) continue;
+
                         bestSq = distSq;
                         resultPos = positions[idx];
                         resultIdx = idx;
@@ -230,6 +274,18 @@ namespace _Game.Systems
             }
 
             return found;
+        }
+
+        /// <summary>
+        /// Returns true if the total damage already reserved by in-flight projectiles is enough to kill this enemy,
+        /// meaning firing another shot at it would be wasted. Weapons that return true here should pick a different target.
+        /// </summary>
+        private static bool IsOverCommitted(Entity entity, ComponentLookup<Health> healthLookup, ComponentLookup<EnemyIncomingDamage> incomingDamageLookup)
+        {
+            return incomingDamageLookup.TryGetComponent(entity, out EnemyIncomingDamage incoming)
+                   && incoming.Value > 0f
+                   && healthLookup.TryGetComponent(entity, out Health health)
+                   && incoming.Value >= health.Current;
         }
     }
 }

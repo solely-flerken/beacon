@@ -35,7 +35,8 @@ namespace _Game.Systems
             {
                 ECB = ecb,
                 TransformLookup = _transformLookup,
-                PlayerTagLookup = _playerTagLookup
+                PlayerTagLookup = _playerTagLookup,
+                ElapsedTime = SystemAPI.Time.ElapsedTime,
             }.ScheduleParallel(state.Dependency);
         }
     }
@@ -47,6 +48,7 @@ namespace _Game.Systems
         public EntityCommandBuffer.ParallelWriter ECB;
         [ReadOnly] public ComponentLookup<LocalTransform> TransformLookup;
         [ReadOnly] public ComponentLookup<PlayerTag> PlayerTagLookup;
+        public double ElapsedTime;
 
         private void Execute(
             Entity entity,
@@ -86,6 +88,17 @@ namespace _Game.Systems
             {
                 ECB.AddComponent<PlayerProjectileTag>(sortKey, projectile);
                 ECB.AddComponent(sortKey, projectile, new ProjectileWeapon { Value = entity });
+                
+                if (targeting.CurrentTarget != Entity.Null)
+                {
+                    float flightTime = math.length(delta) / projStats.Speed;
+                    
+                    ECB.AddComponent(sortKey, projectile, new ProjectileTarget
+                    {
+                        Value = targeting.CurrentTarget,
+                        ReservationExpiry = ElapsedTime + flightTime * 1.5,
+                    });
+                }
             }
             else
             {

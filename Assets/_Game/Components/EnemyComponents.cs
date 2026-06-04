@@ -73,6 +73,11 @@ namespace _Game.Components
         public Entity Value;
     }
 
+    public struct EnemyIncomingDamage : IComponentData
+    {
+        public float Value;
+    }
+
     public struct BasicEnemyTag : IComponentData { }
     public struct FastEnemyTag : IComponentData { }
     public struct TankEnemyTag : IComponentData { }

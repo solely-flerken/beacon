@@ -40,4 +40,13 @@ namespace _Game.Components
     {
         public Entity Value;
     }
+
+    /// <summary>
+    /// Tracks the intended target of a projectile for overkill prevention.
+    /// </summary>
+    public struct ProjectileTarget : IComponentData
+    {
+        public Entity Value;
+        public double ReservationExpiry;
+    }
 }
