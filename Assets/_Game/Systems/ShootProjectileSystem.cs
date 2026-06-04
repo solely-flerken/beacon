@@ -61,7 +61,7 @@ namespace _Game.Systems
             if (!targeting.HasTarget) return;
 
             float2 weaponPos = transform.Position.xy;
-            float2 targetPos = targeting.TargetPosition;
+            float2 targetPos = PredictIntercept(weaponPos, targeting.TargetPosition, targeting.TargetVelocity, projStats.Speed);
 
             const float minDistSq = 1.7f * 1.7f; // TODO: "MinShootDistance"
             float2 delta = targetPos - weaponPos;
@@ -93,6 +93,36 @@ namespace _Game.Systems
             }
 
             ECB.SetComponentEnabled<ReadyToFire>(sortKey, entity, false);
+        }
+
+        private static float2 PredictIntercept(float2 shooterPos, float2 targetPos, float2 targetVelocity, float projectileSpeed)
+        {
+            if (math.lengthsq(targetVelocity) < 0.01f) return targetPos;
+
+            float2 toTarget = targetPos - shooterPos;
+            float quadraticA = math.dot(targetVelocity, targetVelocity) - projectileSpeed * projectileSpeed;
+            float quadraticB = 2f * math.dot(toTarget, targetVelocity);
+            float quadraticC = math.dot(toTarget, toTarget);
+
+            float interceptTime;
+            if (math.abs(quadraticA) < 0.001f)
+            {
+                if (math.abs(quadraticB) < 0.001f) return targetPos;
+                
+                interceptTime = -quadraticC / quadraticB;
+            }
+            else
+            {
+                float discriminant = quadraticB * quadraticB - 4f * quadraticA * quadraticC;
+                if (discriminant < 0f) return targetPos;
+                
+                float sqrtDiscriminant = math.sqrt(discriminant);
+                float timeEarly = (-quadraticB - sqrtDiscriminant) / (2f * quadraticA);
+                float timeLate  = (-quadraticB + sqrtDiscriminant) / (2f * quadraticA);
+                interceptTime = timeEarly > 0f ? timeEarly : timeLate;
+            }
+
+            return interceptTime > 0f ? targetPos + targetVelocity * interceptTime : targetPos;
         }
     }
 }

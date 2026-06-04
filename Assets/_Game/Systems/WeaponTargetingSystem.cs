@@ -85,6 +85,7 @@ namespace _Game.Systems
                         
                         if (math.distancesq(weaponPos, targetPos) <= weaponStats.TargetRange * weaponStats.TargetRange)
                         {
+                            targeting.TargetVelocity = (targetPos - targeting.TargetPosition) / DeltaTime;
                             targeting.HasTarget = true;
                             targeting.TargetPosition = targetPos;
                             return;
@@ -104,6 +105,9 @@ namespace _Game.Systems
                     return;
                 }
             }
+
+            // Save previous target pos for velocity estimation
+            float2 prevTargetPos = targeting.TargetPosition;
 
             // Acquire target
             targeting.HasTarget = false;
@@ -129,6 +133,7 @@ namespace _Game.Systems
 
             if (!foundTarget) return;
 
+            targeting.TargetVelocity = (foundTargetPos - prevTargetPos) / DeltaTime;
             targeting.HasTarget = true;
             targeting.TargetPosition = foundTargetPos;
             targeting.CurrentTarget = entities[foundTargetIdx];

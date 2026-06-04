@@ -15,6 +15,7 @@ namespace _Game.Components
         public TargetStrategy Strategy;
         public Entity CurrentTarget;
         public float2 TargetPosition;
+        public float2 TargetVelocity;
         public bool HasTarget;
         public bool StickyLock;
         public float SwapCooldown;
