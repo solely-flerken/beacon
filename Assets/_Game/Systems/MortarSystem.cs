@@ -5,6 +5,7 @@ using _Game.Shared;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
+using Unity.Jobs;
 using Unity.Mathematics;
 using Unity.Transforms;
 
@@ -35,6 +36,8 @@ namespace _Game.Systems
 
             float deltaTime = math.min(SystemAPI.Time.DeltaTime, SimulationConfig.MaxDeltaTime);
 
+            state.Dependency = JobHandle.CombineDependencies(state.Dependency, DotsBridge.BridgeDependencies);
+
             EndSimulationEntityCommandBufferSystem.Singleton ecbSingleton = SystemAPI.GetSingleton<EndSimulationEntityCommandBufferSystem.Singleton>();
             EntityCommandBuffer.ParallelWriter ecb = ecbSingleton.CreateCommandBuffer(state.WorldUnmanaged).AsParallelWriter();
 
@@ -54,6 +57,8 @@ namespace _Game.Systems
                 
                 HitQueue = DotsBridge.HitQueue.IsCreated ? DotsBridge.HitQueue.AsParallelWriter() : default,
             }.ScheduleParallel(state.Dependency);
+
+            DotsBridge.BridgeDependencies = JobHandle.CombineDependencies(DotsBridge.BridgeDependencies, state.Dependency);
         }
 
         [BurstCompile]

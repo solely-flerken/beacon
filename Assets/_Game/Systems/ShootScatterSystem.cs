@@ -16,16 +16,16 @@ namespace _Game.Systems
         [BurstCompile]
         public void OnCreate(ref SystemState state)
         {
-            state.RequireForUpdate<BeginSimulationEntityCommandBufferSystem.Singleton>();
-            
+            state.RequireForUpdate<EndSimulationEntityCommandBufferSystem.Singleton>();
+
             _transformLookup = state.GetComponentLookup<LocalTransform>(isReadOnly: true);
         }
 
         public void OnUpdate(ref SystemState state)
         {
             _transformLookup.Update(ref state);
-            
-            BeginSimulationEntityCommandBufferSystem.Singleton ecbSingleton = SystemAPI.GetSingleton<BeginSimulationEntityCommandBufferSystem.Singleton>();
+
+            EndSimulationEntityCommandBufferSystem.Singleton ecbSingleton = SystemAPI.GetSingleton<EndSimulationEntityCommandBufferSystem.Singleton>();
             EntityCommandBuffer.ParallelWriter ecb = ecbSingleton.CreateCommandBuffer(state.WorldUnmanaged).AsParallelWriter();
 
             state.Dependency = new ShootScatterJob

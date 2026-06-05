@@ -16,7 +16,7 @@ namespace _Game.Systems
 
         public void OnCreate(ref SystemState state)
         {
-            state.RequireForUpdate<BeginSimulationEntityCommandBufferSystem.Singleton>();
+            state.RequireForUpdate<EndSimulationEntityCommandBufferSystem.Singleton>();
 
             _transformLookup = state.GetComponentLookup<LocalTransform>(isReadOnly: true);
             _playerTagLookup = state.GetComponentLookup<PlayerTag>(isReadOnly: true);
@@ -28,7 +28,7 @@ namespace _Game.Systems
             _transformLookup.Update(ref state);
             _playerTagLookup.Update(ref state);
 
-            BeginSimulationEntityCommandBufferSystem.Singleton ecbSingleton = SystemAPI.GetSingleton<BeginSimulationEntityCommandBufferSystem.Singleton>();
+            EndSimulationEntityCommandBufferSystem.Singleton ecbSingleton = SystemAPI.GetSingleton<EndSimulationEntityCommandBufferSystem.Singleton>();
             EntityCommandBuffer.ParallelWriter ecb = ecbSingleton.CreateCommandBuffer(state.WorldUnmanaged).AsParallelWriter();
 
             state.Dependency = new ShootProjectileJob
