@@ -11,7 +11,8 @@ namespace _Game.Systems
         {
             // Create a dedicated standalone entity for Wave State
             Entity waveStateEntity = state.EntityManager.CreateEntity();
-
+            
+            state.EntityManager.SetName(waveStateEntity, "WaveState");
             state.EntityManager.AddComponentData(waveStateEntity, new WaveStateSingleton
             {
                 IsActive = false,
