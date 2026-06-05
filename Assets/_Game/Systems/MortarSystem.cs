@@ -103,8 +103,8 @@ namespace _Game.Systems
                 Ecb.DestroyEntity(sortKey, flight.Shadow);
                 Ecb.DestroyEntity(sortKey, entity);
 
-                MortarStats mortarStats = PayloadLookup[weaponEntity];
-                WeaponStats baseStats = WeaponStatsLookup[weaponEntity];
+                if (!PayloadLookup.TryGetComponent(weaponEntity, out MortarStats mortarStats)) return;
+                if (!WeaponStatsLookup.TryGetComponent(weaponEntity, out WeaponStats baseStats)) return;
 
                 SpawnExplosion(sortKey, impactPos, mortarStats.ExplosionRadius, flight.ExplosionPrefab);
 
