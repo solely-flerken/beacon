@@ -1,4 +1,5 @@
-﻿using Unity.Entities;
+using Unity.Entities;
+using Unity.Mathematics;
 
 namespace _Game.Components
 {
@@ -9,19 +10,10 @@ namespace _Game.Components
     /// </summary>
     public struct SaturatedTag : IComponentData { }
     
-    public enum ExpOrbState : byte
-    {
-        Idle,
-        Merging,
-        Saturated
-    }
-
     public struct ExpOrbData : IComponentData
     {
         public float Value;
         public float MaxValue;
-        public float VisualScale;
-        public ExpOrbState State;
-        public Entity MergeTarget;
+        public float2 Position; // spawn position; never updated after spawn (saturated orbs move via LocalTransform only)
     }
 }

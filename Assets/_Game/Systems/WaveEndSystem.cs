@@ -22,11 +22,8 @@ namespace _Game.Systems
             EntityCommandBuffer ecb = new(state.WorldUpdateAllocator);
 
             // Mark all non-saturated orbs as saturated
-            foreach ((RefRW<ExpOrbData> dataRW, Entity entity) in SystemAPI.Query<RefRW<ExpOrbData>>().WithAll<ExpOrbTag>().WithNone<SaturatedTag>().WithEntityAccess())
+            foreach ((ExpOrbTag _, Entity entity) in SystemAPI.Query<ExpOrbTag>().WithNone<SaturatedTag>().WithEntityAccess())
             {
-                dataRW.ValueRW.State = ExpOrbState.Saturated;
-                dataRW.ValueRW.MergeTarget = Entity.Null;
-                
                 ecb.AddComponent<SaturatedTag>(entity);
             }
 

@@ -1,4 +1,4 @@
-﻿using _Game.Components;
+using _Game.Components;
 using Unity.Entities;
 using UnityEngine;
 
@@ -14,11 +14,12 @@ namespace _Game.Authoring
             [Header("Visual")] 
             public float baseSize = 0.15f;
             public float maxSize = 0.4f;
-            public float scaleLerpSpeed = 1f;
 
-            [Header("Merging")] 
+            [Header("Accumulation")]
+            [Tooltip("Radius within which a death accumulates into an existing orb instead of spawning a new one.")]
             public float mergeRadius = 2f;
-            public float mergeSpeed = 0.3f;
+            [Tooltip("Maximum simultaneous exp orbs in the world.")]
+            public int maxBuckets = 32;
 
             [Header("Movement")] 
             public float collectBaseSpeed = 5f;
@@ -37,9 +38,8 @@ namespace _Game.Authoring
                         MaxOrbValue = a.maxOrbValue,
                         BaseSize = a.baseSize,
                         MaxSize = a.maxSize,
-                        ScaleLerpSpeed = a.scaleLerpSpeed,
                         MergeRadius = a.mergeRadius,
-                        MergeSpeed = a.mergeSpeed,
+                        MaxBuckets = a.maxBuckets,
                         CollectBaseSpeed = a.collectBaseSpeed,
                         CollectMaxSpeed = a.collectMaxSpeed,
                         BeaconArrivalRadius = a.beaconArrivalRadius,

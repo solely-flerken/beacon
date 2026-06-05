@@ -1,4 +1,4 @@
-﻿using Unity.Entities;
+using Unity.Entities;
 
 namespace _Game.Components
 {
@@ -10,12 +10,13 @@ namespace _Game.Components
         // Visual
         public float BaseSize;
         public float MaxSize;
-        public float ScaleLerpSpeed;
-        
-        // Merging
+
+        // Accumulation — radius within which a death event merges into an existing orb
         public float MergeRadius;
-        public float MergeSpeed;
-        
+
+        // Maximum simultaneous exp orbs in the world
+        public int MaxBuckets;
+
         // Movement
         public float CollectBaseSpeed;
         public float CollectMaxSpeed;

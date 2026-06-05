@@ -7,7 +7,7 @@ using Unity.Transforms;
 namespace _Game.Systems
 {
     [UpdateInGroup(typeof(SimulationSystemGroup))]
-    [UpdateAfter(typeof(ExpOrbMergeSystem))]
+    [UpdateAfter(typeof(WaveEndCollectSystem))]
     public partial struct BeaconCollectExpSystem : ISystem
     {
         public void OnCreate(ref SystemState state)

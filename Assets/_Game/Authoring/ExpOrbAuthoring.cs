@@ -14,11 +14,7 @@ namespace _Game.Authoring
 
                 AddComponent<ExpOrbTag>(entity);
 
-                AddComponent(entity, new ExpOrbData
-                {
-                    State = ExpOrbState.Idle,
-                    MergeTarget = Entity.Null,
-                });
+                AddComponent(entity, new ExpOrbData());
             }
         }
     }
