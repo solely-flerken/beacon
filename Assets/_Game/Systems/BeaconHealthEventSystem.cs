@@ -4,15 +4,19 @@ using Unity.Entities;
 
 namespace _Game.Systems
 {
-    [UpdateInGroup(typeof(SimulationSystemGroup))]
-    [UpdateAfter(typeof(DamageAndDeathSystem))]
+    [UpdateInGroup(typeof(LateSimulationSystemGroup))]
     public partial struct BeaconHealthEventSystem : ISystem
     {
         private float _previousHealth;
 
+        public void OnCreate(ref SystemState state)
+        {
+            state.RequireForUpdate<BeaconStats>();
+        }
+
         public void OnUpdate(ref SystemState state)
         {
-            foreach ((RefRO<Health> health, BeaconStats _) in SystemAPI.Query<RefRO<Health>, BeaconStats>().WithChangeFilter<Health>())
+            foreach (RefRO<Health> health in SystemAPI.Query<RefRO<Health>>().WithAll<BeaconStats>().WithChangeFilter<Health>())
             {
                 float current = health.ValueRO.Current;
 

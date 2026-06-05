@@ -118,7 +118,11 @@ namespace _Game.Gameplay
         {
             BeaconStats beaconStats = default;
             Health beaconHealth = default;
-            
+
+            // This runs via a FireLevelUp event chain originating from BeaconCollectExpSystem mid-simulation,
+            // so ProcessDamageAndDeathJob may still be writing Health — complete it before reading.
+            _em.CompleteDependencyBeforeRO<Health>(); 
+
             using EntityQuery beaconQ = _em.CreateEntityQuery(typeof(BeaconStats), typeof(Health));
             if (!beaconQ.IsEmpty)
             {
