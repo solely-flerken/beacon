@@ -17,19 +17,34 @@ namespace _Game.Systems
             new(-1,  1), new(0,  1), new(1,  1),
         };
 
+        private ComponentLookup<ContactDamage> _contactDamageLookup;
+        private ComponentLookup<Health> _healthLookup;
+
+        public void OnCreate(ref SystemState state)
+        {
+            state.RequireForUpdate<BeaconStats>();
+            state.RequireForUpdate<EndSimulationEntityCommandBufferSystem.Singleton>();
+            
+            _contactDamageLookup = state.GetComponentLookup<ContactDamage>(isReadOnly: true);
+            _healthLookup = state.GetComponentLookup<Health>(isReadOnly: true);
+        }
+
         public void OnUpdate(ref SystemState state)
         {
             if (!SpatialGridShared.EnemyGridValid || !EnemyDataShared.IsValid) return;
 
+            _contactDamageLookup.Update(ref state);
+            _healthLookup.Update(ref state);
+
             NativeArray<float2> positions = EnemyDataShared.Positions;
             NativeArray<Entity> entities = EnemyDataShared.Entities;
-            
             NativeParallelMultiHashMap<int2, int> grid = SpatialGridShared.EnemyCellMap;
             float cellSize = SpatialGridShared.CellSize;
 
-            EntityCommandBuffer ecb = new(state.WorldUpdateAllocator);
+            EntityCommandBuffer ecb = SystemAPI.GetSingleton<EndSimulationEntityCommandBufferSystem.Singleton>().CreateCommandBuffer(state.WorldUnmanaged);
 
-            foreach ((RefRW<BeaconStats> stats, RefRW<Health> health, RefRO<LocalTransform> transform, Entity beaconEntity) in SystemAPI.Query<RefRW<BeaconStats>, RefRW<Health>, RefRO<LocalTransform>>().WithEntityAccess())
+            foreach ((RefRO<BeaconStats> stats, RefRO<Health> health, RefRO<LocalTransform> transform, Entity beaconEntity) in
+                SystemAPI.Query<RefRO<BeaconStats>, RefRO<Health>, RefRO<LocalTransform>>().WithEntityAccess())
             {
                 if (!health.ValueRO.IsAlive) continue;
 
@@ -47,9 +62,10 @@ namespace _Game.Systems
                         if (math.distancesq(positions[idx], beaconPos) > radiusSq) continue;
 
                         Entity enemy = entities[idx];
-                        if (!state.EntityManager.HasComponent<ContactDamage>(enemy)) continue;
-                        if (!state.EntityManager.GetComponentData<Health>(enemy).IsAlive) continue;
-                        totalDamage += state.EntityManager.GetComponentData<ContactDamage>(enemy).Value;
+                        if (!_contactDamageLookup.TryGetComponent(enemy, out ContactDamage contactDamage)) continue;
+                        if (!_healthLookup.TryGetComponent(enemy, out Health enemyHealth) || !enemyHealth.IsAlive) continue;
+
+                        totalDamage += contactDamage.Value;
 
                         // TODO: Destroy enemy on contact?
                         ecb.AppendToBuffer(enemy, new DamageBufferElement { Value = float.MaxValue });
@@ -59,8 +75,6 @@ namespace _Game.Systems
                 if (totalDamage <= 0f) continue;
                 ecb.AppendToBuffer(beaconEntity, new DamageBufferElement { Value = totalDamage });
             }
-
-            ecb.Playback(state.EntityManager);
         }
     }
 }
