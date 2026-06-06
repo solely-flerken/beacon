@@ -333,6 +333,7 @@ GameObject:
   - component: {fileID: 238055988}
   - component: {fileID: 238055992}
   - component: {fileID: 238055996}
+  - component: {fileID: 238055997}
   - component: {fileID: 238055993}
   - component: {fileID: 238055994}
   - component: {fileID: 238055995}
@@ -397,6 +398,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameManager
   runManager: {fileID: 238055996}
+  abilityManager: {fileID: 238055997}
 --- !u!114 &238055993
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -488,6 +490,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::_Game.Gameplay.RunManager
   runConfig: {fileID: 11400000, guid: f0192de111c9e2649acf34055a613608, type: 2}
   slotProvider: {fileID: 438619596}
+--- !u!114 &238055997
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 238055985}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9780e340a8dd8ba4992feafdf563be29, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::_Game.Gameplay.Abilities.AbilityManager
 --- !u!1 &438619592
 GameObject:
   m_ObjectHideFlags: 0

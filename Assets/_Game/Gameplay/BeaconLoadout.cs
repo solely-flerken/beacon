@@ -1,11 +1,16 @@
+using System;
 using System.Linq;
 using _Game.Components;
+using _Game.Gameplay.Abilities;
 
 namespace _Game.Gameplay
 {
     public class BeaconLoadout
     {
+        public const int AbilitySlotCount = 2;
+
         private WeaponType?[] _weaponSlots;
+        private readonly AbilityType?[] _abilitySlots = new AbilityType?[AbilitySlotCount];
 
         public int SlotCount => _weaponSlots?.Length ?? 0;
 
@@ -29,9 +34,28 @@ namespace _Game.Gameplay
             return _weaponSlots != null && _weaponSlots.Any(slot => slot == type);
         }
 
+        public void SetAbility(int slot, AbilityType type)
+        {
+            if (slot >= 0 && slot < AbilitySlotCount)
+            {
+                _abilitySlots[slot] = type;
+            }
+        }
+
+        public AbilityType? GetAbility(int slot)
+        {
+            if (slot >= 0 && slot < AbilitySlotCount)
+            {
+                return _abilitySlots[slot];
+            }
+
+            return null;
+        }
+
         public void Reset()
         {
             _weaponSlots = null;
+            Array.Clear(_abilitySlots, 0, _abilitySlots.Length);
         }
     }
 }

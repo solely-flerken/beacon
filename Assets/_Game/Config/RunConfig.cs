@@ -1,4 +1,5 @@
 using _Game.Components;
+using _Game.Gameplay.Abilities;
 using UnityEngine;
 
 namespace _Game.Config
@@ -7,5 +8,6 @@ namespace _Game.Config
     public class RunConfig : ScriptableObject
     {
         public WeaponType[] startingWeapons = { WeaponType.Basic };
+        public AbilityType[] startingAbilities = { AbilityType.Flare };
     }
 }

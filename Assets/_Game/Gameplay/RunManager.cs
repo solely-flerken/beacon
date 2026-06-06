@@ -3,6 +3,7 @@ using _Game.Authoring;
 using _Game.Components;
 using _Game.Config;
 using _Game.Core;
+using _Game.Gameplay.Abilities;
 using _Game.Gameplay.Waves;
 using Unity.Entities;
 using Unity.Mathematics;
@@ -64,6 +65,7 @@ namespace _Game.Gameplay
         {
             SpawnBeacon();
             SpawnWeapons();
+            InitializeAbilities();
             GameStateMachine.Instance.TransitionTo(GameState.WaveRunning);
         }
 
@@ -74,6 +76,7 @@ namespace _Game.Gameplay
 
             Loadout.Reset();
             slotProvider.ClearWeaponEntities();
+            AbilityManager.Instance?.Reset();
 
             WaveManager.Instance.ResetWaves();
             CardDraftManager.Instance.ResetHistory();
@@ -119,6 +122,17 @@ namespace _Game.Gameplay
                 _weaponEntities[i] = SpawnWeapon(type.Value, catalog, slotTransform.position, _beaconEntity);
                 slotProvider.SetWeaponEntity(i, _weaponEntities[i]);
             }
+        }
+
+        private void InitializeAbilities()
+        {
+            int count = Mathf.Min(runConfig.startingAbilities.Length, BeaconLoadout.AbilitySlotCount);
+            for (int i = 0; i < count; i++)
+            {
+                Loadout.SetAbility(i, runConfig.startingAbilities[i]);
+            }
+
+            AbilityManager.Instance?.SetupFromLoadout(Loadout);
         }
 
         private Entity SpawnWeapon(WeaponType type, DynamicBuffer<WeaponCatalogEntry> catalog, float3 position, Entity owner)

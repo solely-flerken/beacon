@@ -12,5 +12,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 783359ace7a31cf49bed9e399c5a57d1, type: 3}
   m_Name: Basic_RunConfig
   m_EditorClassIdentifier: Assembly-CSharp::_Game.Config.RunConfig
-  weaponSlotCount: 6
   startingWeapons: 00
+  startingAbilities: 00

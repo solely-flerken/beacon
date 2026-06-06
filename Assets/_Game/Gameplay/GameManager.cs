@@ -3,11 +3,10 @@ using _Game.Authoring;
 using _Game.Cards;
 using _Game.Components;
 using _Game.Core;
+using _Game.Gameplay.Abilities;
 using _Game.Gameplay.Waves;
 using Unity.Collections;
 using Unity.Entities;
-using Unity.Mathematics;
-using Unity.Transforms;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -16,6 +15,7 @@ namespace _Game.Gameplay
     public class GameManager : MonoBehaviour
     {
         [SerializeField] private RunManager runManager;
+        [SerializeField] private AbilityManager abilityManager;
 
         private EntityManager _entityManager;
         private EntityQuery _enemyCountQuery;
@@ -85,8 +85,10 @@ namespace _Game.Gameplay
                     break;
 
                 case GameState.WaveRunning:
-                    if (Keyboard.current.fKey.wasPressedThisFrame)
-                        SpawnFlare();
+                    if (Keyboard.current.qKey.wasPressedThisFrame)
+                        abilityManager.TryActivate(0);
+                    if (Keyboard.current.eKey.wasPressedThisFrame)
+                        abilityManager.TryActivate(1);
                     if (Keyboard.current.pKey.wasPressedThisFrame)
                         GameStateMachine.Instance.TransitionTo(GameState.Paused);
                     if (Keyboard.current.mKey.wasPressedThisFrame)
@@ -160,30 +162,6 @@ namespace _Game.Gameplay
             Debug.Log($"[GameManager] Applied 0.5x Speed modifier to EnemyType.{type}.");
         }
 
-        private void SpawnFlare()
-        {
-            using EntityQuery prefabQuery = _entityManager.CreateEntityQuery(typeof(PrefabRefs));
-            if (prefabQuery.IsEmpty) return;
-
-            PrefabRefs prefabs = prefabQuery.GetSingleton<PrefabRefs>();
-
-            // Calculate Spawn Position
-            float2 beaconPos = float2.zero; // TODO: Get beaconPosition here.
-            float2 randomOffset = (float2)UnityEngine.Random.insideUnitCircle * 10f;
-            float3 spawnPos = new(beaconPos + randomOffset, 0f);
-
-            Entity flare = _entityManager.Instantiate(prefabs.Flare);
-
-            LocalTransform existingTransform = _entityManager.GetComponentData<LocalTransform>(flare);
-            _entityManager.SetComponentData(flare, LocalTransform.FromPositionRotationScale(
-                spawnPos,
-                quaternion.identity,
-                existingTransform.Scale
-            ));
-
-            Debug.Log("Flare Deployed via Prefab!");
-        }
-
         private void OnGUI()
         {
             int enemyCount = _enemyCountQuery.CalculateEntityCount();
@@ -218,11 +196,34 @@ namespace _Game.Gameplay
                 }
             }
 
+            // Ability slots
+            if (AbilityManager.Instance)
+            {
+                const float slotW = 120f;
+                const float slotH = 25f;
+                const float gap = 5f;
+                const float totalW = BeaconLoadout.AbilitySlotCount * slotW + (BeaconLoadout.AbilitySlotCount - 1) * gap;
+                float startX = (Screen.width - totalW) * 0.5f;
+                float slotY = Screen.height - 65;
+
+                for (int i = 0; i < BeaconLoadout.AbilitySlotCount; i++)
+                {
+                    Ability slot = AbilityManager.Instance.GetSlot(i);
+                    if (slot == null) continue;
+
+                    string label = slot.Charges > 0
+                        ? $"Ability {i} - {slot.Charges}/{slot.EffectiveMaxCharges}"
+                        : $"Ability {i} - {slot.RechargeTimer:0.0}s";
+
+                    GUI.Box(new Rect(startX + i * (slotW + gap), slotY, slotW, slotH), label);
+                }
+            }
+
             // Controls hint
             string hint = GameStateMachine.Instance?.CurrentState switch
             {
                 GameState.MainMenu => "Any key to start",
-                GameState.WaveRunning => "Flare(F), Pause(P), Cards(Tab), Weapon Mod(M), Beacon Mod(B), Enemy Mod(N), Grant Exp(L)",
+                GameState.WaveRunning => "Ability1(Q), Ability2(E), Pause(P), Cards(Tab), Weapon Mod(M), Beacon Mod(B), Enemy Mod(N), Grant Exp(L)",
                 GameState.WaveEnd => "Next wave(Spc), Cards(Tab)",
                 GameState.RunEnd => "Restart(R)",
                 GameState.Paused => "Unpause(P)",
