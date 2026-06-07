@@ -69,6 +69,7 @@ namespace _Game.Gameplay.Abilities
                 _slots[i] = loadout.GetAbility(i) switch
                 {
                     AbilityType.Flare => new FlareAbility(),
+                    AbilityType.Stun => new StunAbility(),
                     _ => null,
                 };
                 

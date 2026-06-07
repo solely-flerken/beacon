@@ -8,6 +8,6 @@ namespace _Game.Config
     public class RunConfig : ScriptableObject
     {
         public WeaponType[] startingWeapons = { WeaponType.Basic };
-        public AbilityType[] startingAbilities = { AbilityType.Flare };
+        public AbilityType[] startingAbilities = { AbilityType.Flare, AbilityType.Stun };
     }
 }

@@ -10,10 +10,10 @@ namespace _Game.Gameplay.Abilities
 {
     public class FlareAbility : Ability
     {
-        private float BaseSpawnRadius => 10f;
+        private float BaseEffectRadius => 10f;
         private float BaseDuration => 5f;
 
-        public float EffectiveSpawnRadius => ManagedStatResolver.Resolve(AbilityStatType.SpawnRadius, BaseSpawnRadius, Modifiers);
+        public float EffectiveEffectRadius => ManagedStatResolver.Resolve(AbilityStatType.EffectRadius, BaseEffectRadius, Modifiers);
         public float EffectiveDuration => ManagedStatResolver.Resolve(AbilityStatType.Duration, BaseDuration, Modifiers);
 
         public FlareAbility() : base(baseCooldown: 15f, baseMaxCharges: 3) { }
@@ -23,7 +23,7 @@ namespace _Game.Gameplay.Abilities
             using NativeArray<LocalTransform> beaconTransforms = ctx.BeaconQuery.ToComponentDataArray<LocalTransform>(Allocator.Temp);
 
             float3 beaconPos = beaconTransforms.Length > 0 ? beaconTransforms[0].Position : float3.zero;
-            float2 randomOffset = (float2)UnityEngine.Random.insideUnitCircle * EffectiveSpawnRadius;
+            float2 randomOffset = (float2)UnityEngine.Random.insideUnitCircle * EffectiveEffectRadius;
             float3 position = new(beaconPos.xy + randomOffset, 0f);
 
             PrefabRefs prefabs = ctx.PrefabQuery.GetSingleton<PrefabRefs>();

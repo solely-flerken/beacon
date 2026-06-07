@@ -4,7 +4,7 @@
     {
         Cooldown,
         MaxCharges,
-        SpawnRadius,
+        EffectRadius,
         Duration
     }
 }

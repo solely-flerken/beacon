@@ -13,4 +13,4 @@ MonoBehaviour:
   m_Name: Basic_RunConfig
   m_EditorClassIdentifier: Assembly-CSharp::_Game.Config.RunConfig
   startingWeapons: 00
-  startingAbilities: 00
+  startingAbilities: 0001
