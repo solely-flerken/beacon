@@ -23,7 +23,7 @@ namespace _Game.Systems
         private int _gridWidth;
         private int _gridHeight;
         private EntityQuery _attractorQuery;
-        private int _lastAttractorCount;
+        private int _lastAttractorHash;
 
         public void OnCreate(ref SystemState state)
         {
@@ -46,6 +46,9 @@ namespace _Game.Systems
             FlowFieldShared.AttractorOwner = _attractorOwner;
             FlowFieldShared.Blocked = _blocked;
 
+            // Sentinel so the first OnUpdate always builds.
+            _lastAttractorHash = int.MinValue;
+
             Debug.Log($"[FlowFieldSystem] Initialized {_gridWidth}x{_gridHeight} grid");
         }
 
@@ -62,9 +65,23 @@ namespace _Game.Systems
         {
             int currentCount = _attractorQuery.CalculateEntityCount();
             if (currentCount == 0) return;
-            if (currentCount == _lastAttractorCount) return;
 
-            _lastAttractorCount = currentCount;
+            NativeArray<LocalTransform> transforms = _attractorQuery.ToComponentDataArray<LocalTransform>(state.WorldUpdateAllocator);
+
+            // Rebuild only when an attractor enters a new cell or the attractor count changes.
+            // A moving beacon keeps the same count, so cell tracking is what triggers re-pathing;
+            // while it stays within a cell the BFS is skipped entirely.
+            int attractorHash = currentCount;
+            for (int i = 0; i < transforms.Length; i++)
+            {
+                int2 cell = FlowFieldUtil.WorldToCell(transforms[i].Position.xy, ArenaConfig.FlowFieldCellSize, _gridWidth, _gridHeight);
+                attractorHash = (attractorHash * 397) ^ (cell.x * 73856093) ^ (cell.y * 19349663);
+            }
+
+            if (attractorHash == _lastAttractorHash) return;
+            _lastAttractorHash = attractorHash;
+
+            NativeArray<NavigationAttractor> attractors = _attractorQuery.ToComponentDataArray<NavigationAttractor>(state.WorldUpdateAllocator);
 
             for (int i = 0; i < _distances.Length; i++)
             {
@@ -73,13 +90,9 @@ namespace _Game.Systems
 
             _bfsQueue.Clear();
 
-            NativeArray<NavigationAttractor> attractors = _attractorQuery.ToComponentDataArray<NavigationAttractor>(state.WorldUpdateAllocator);
-            NativeArray<LocalTransform> transforms = _attractorQuery.ToComponentDataArray<LocalTransform>(state.WorldUpdateAllocator);
-
             for (int i = 0; i < attractors.Length; i++)
             {
-                int2 cell = FlowFieldUtil.WorldToCell(transforms[i].Position.xy, ArenaConfig.FlowFieldCellSize,
-                    _gridWidth, _gridHeight);
+                int2 cell = FlowFieldUtil.WorldToCell(transforms[i].Position.xy, ArenaConfig.FlowFieldCellSize, _gridWidth, _gridHeight);
                 cell = math.clamp(cell, int2.zero, new int2(_gridWidth - 1, _gridHeight - 1));
                 int idx = cell.y * _gridWidth + cell.x;
                 _distances[idx] = 0;
