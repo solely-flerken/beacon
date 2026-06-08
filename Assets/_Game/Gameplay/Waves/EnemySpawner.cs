@@ -13,6 +13,9 @@ namespace _Game.Gameplay.Waves
 {
     public static class EnemySpawner
     {
+        // Ring radius around the player at which enemies appear.
+        private const float SpawnRingRadius = 20f;
+
         public static void SpawnWave(EntityManager em, SpawnGroup group)
         {
             using EntityQuery catalogQuery = em.CreateEntityQuery(typeof(EnemyTypeCatalogEntry));
@@ -47,10 +50,21 @@ namespace _Game.Gameplay.Waves
             NativeArray<float2> positions = new(count, Allocator.TempJob);
             uint seed = (uint)UnityEngine.Random.Range(1, int.MaxValue);
 
+            float2 center = float2.zero; // = Player's position
+            using (EntityQuery beaconQuery = em.CreateEntityQuery(typeof(PlayerTag), typeof(LocalTransform)))
+            {
+                if (!beaconQuery.IsEmptyIgnoreFilter)
+                {
+                    center = beaconQuery.GetSingleton<LocalTransform>().Position.xy;
+                }
+            }
+
             new RandomSpawnPositionsJob
             {
                 Positions = positions,
-                SpawnRadius = ArenaConfig.Width * 0.5f - 1f,
+                Center = center,
+                SpawnRadius = SpawnRingRadius,
+                HalfExtents = new float2(ArenaConfig.Width * 0.5f - 1f, ArenaConfig.Height * 0.5f - 1f),
                 Seed = seed,
             }.Schedule(count, 64).Complete();
 
@@ -79,7 +93,9 @@ namespace _Game.Gameplay.Waves
     internal struct RandomSpawnPositionsJob : IJobParallelFor
     {
         [WriteOnly] public NativeArray<float2> Positions;
+        [ReadOnly] public float2 Center;
         [ReadOnly] public float SpawnRadius;
+        [ReadOnly] public float2 HalfExtents;
         [ReadOnly] public uint Seed;
 
         public void Execute(int i)
@@ -88,7 +104,8 @@ namespace _Game.Gameplay.Waves
             if (hashedSeed == 0) hashedSeed = 1;
             Random rng = new(hashedSeed);
             float angle = rng.NextFloat(0f, math.PI * 2f);
-            Positions[i] = new float2(math.cos(angle), math.sin(angle)) * SpawnRadius;
+            float2 pos = Center + new float2(math.cos(angle), math.sin(angle)) * SpawnRadius;
+            Positions[i] = math.clamp(pos, -HalfExtents, HalfExtents);
         }
     }
 }
