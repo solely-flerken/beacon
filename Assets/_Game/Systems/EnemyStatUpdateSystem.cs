@@ -60,7 +60,7 @@ namespace _Game.Systems
             private void Execute(
                 Entity entity,
                 [ChunkIndexInQuery] int chunkIndex,
-                ref EnemySpeed speed,
+                ref Speed speed,
                 ref Health health,
                 ref ContactDamage contactDamage,
                 in Classification mask,
@@ -89,7 +89,7 @@ namespace _Game.Systems
             [ReadOnly] public ComponentLookup<EnemyTypeBlobRef> BlobLookup;
 
             private void Execute(
-                ref EnemySpeed speed,
+                ref Speed speed,
                 ref Health health,
                 ref ContactDamage contactDamage,
                 EnabledRefRW<EnemyStatUpdateRequired> updateRequired,

@@ -39,6 +39,7 @@ namespace _Game.Systems
     }
 
     [BurstCompile]
+    [WithAll(typeof(EnemyTag))]
     internal partial struct MoveEnemyJob : IJobEntity
     {
         [ReadOnly] public NativeArray<float2> Positions;
@@ -56,7 +57,7 @@ namespace _Game.Systems
 
         [ReadOnly] public float DeltaTime;
 
-        private void Execute([EntityIndexInQuery] int index, ref LocalTransform transform, in EnemySpeed speed)
+        private void Execute([EntityIndexInQuery] int index, ref LocalTransform transform, in Speed speed)
         {
             float2 pos = Positions[index];
             float2 moveVec = FlowSteering(pos, speed.Value) + SeparationSteering(pos, index);

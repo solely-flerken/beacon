@@ -54,7 +54,7 @@ namespace _Game.Authoring
                 });
                 
                 // Basic enemy stats
-                AddComponent(entity, new EnemySpeed { BaseValue = authoring.speed, Value = authoring.speed });
+                AddComponent(entity, new Speed { BaseValue = authoring.speed, Value = authoring.speed });
                 AddComponent(entity, new EnemySpeedVariation { Value = authoring.speedVariation });
                 AddComponent(entity, new EnemyReward { ExpValue = authoring.exp });
                 AddComponent(entity, new ContactDamage { BaseValue = authoring.contactDamage, Value = authoring.contactDamage });

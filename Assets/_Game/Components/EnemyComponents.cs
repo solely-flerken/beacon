@@ -6,15 +6,6 @@ namespace _Game.Components
     public struct EnemyTag : IComponentData { }
 
     /// <summary>
-    /// Movement speed in world units per second.
-    /// </summary>
-    public struct EnemySpeed : IComponentData
-    {
-        public float BaseValue;
-        public float Value;
-    }
-
-    /// <summary>
     /// Damage dealt to the beacon on contact.
     /// Add to any entity that should deal damage when reaching the beacon - enemies, bosses, projectiles, etc.
     /// </summary>
