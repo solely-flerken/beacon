@@ -26,15 +26,31 @@ namespace _Game.Systems
         [ReadOnly] public int GridHeight;
         [ReadOnly] public float CellSize;
 
+        private const float DiagonalCost = 1.4142135f;
+        private const float CardinalCost = 1.0f;
+
         // Pre-defined offsets for neighbors
         private static readonly int2[] NeighborOffsets =
         {
             new(0, 1), new(0, -1), new(1, 0), new(-1, 0), // Cardinal
             new(1, 1), new(1, -1), new(-1, 1), new(-1, -1) // Diagonal
         };
+        
+        // Precomputed: -normalize(offset[i]) — direction from neighbor back toward current.
+        // Eliminates a sqrt per BFS neighbor update.
+        private static readonly float2[] NeighborDirections =
+        {
+            new(0f, -1f), new(0f, 1f), new(-1f, 0f), new(1f, 0f),
+            new(-0.7071068f, -0.7071068f), new(-0.7071068f, 0.7071068f),
+            new(0.7071068f, -0.7071068f), new(0.7071068f, 0.7071068f)
+        };
 
-        private const float DiagonalCost = 1.4142135f;
-        private const float CardinalCost = 1.0f;
+        // Precomputed: move cost per offset index — eliminates the diagonal branch.
+        private static readonly float[] NeighborCosts =
+        {
+            CardinalCost, CardinalCost, CardinalCost, CardinalCost,
+            DiagonalCost, DiagonalCost, DiagonalCost, DiagonalCost
+        };
 
         [BurstCompile]
         public void Execute()
@@ -56,23 +72,21 @@ namespace _Game.Systems
 
                 if (!hasGlobalAttractor && !IsWithinAttractionRange(current, currentDist)) continue;
 
-                foreach (int2 offset in NeighborOffsets)
+                for (int n = 0; n < 8; n++)
                 {
-                    int2 neighbor = current + offset;
+                    int2 neighbor = current + NeighborOffsets[n];
 
                     if (!FlowFieldUtil.IsInsideGrid(neighbor, GridWidth, GridHeight)) continue;
 
                     int neighborIndex = FlowFieldUtil.GetIndex(neighbor, GridWidth);
                     if (Blocked[neighborIndex]) continue;
 
-                    // Calculate move cost (Diagonal vs Cardinal)
-                    float moveCost = offset.x != 0 && offset.y != 0 ? DiagonalCost : CardinalCost;
-                    float newDist = currentDist + moveCost;
+                    float newDist = currentDist + NeighborCosts[n];
 
                     if (!(Distances[neighborIndex] > newDist)) continue;
 
                     Distances[neighborIndex] = newDist;
-                    Directions[neighborIndex] = math.normalize(new float2(current.x - neighbor.x, current.y - neighbor.y));
+                    Directions[neighborIndex] = NeighborDirections[n];
                     AttractorOwner[neighborIndex] = ownerPos;
                     
                     Queue.Enqueue(neighbor);
