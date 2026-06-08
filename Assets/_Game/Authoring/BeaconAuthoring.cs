@@ -41,6 +41,13 @@ namespace _Game.Authoring
                     Current = config.maxHp,
                     IsAlive = true
                 });
+
+                AddComponent(entity, new Speed
+                {
+                    BaseValue = config.moveSpeed,
+                    Value = config.moveSpeed,
+                });
+                AddComponent<PlayerMoveInput>(entity);
                 
                 // Attractor
                 AddComponent(entity, new NavigationAttractor { Range = 9999f });

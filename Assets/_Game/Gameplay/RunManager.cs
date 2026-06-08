@@ -71,8 +71,8 @@ namespace _Game.Gameplay
 
         public void Cleanup()
         {
-            DestroyEntity(ref _beaconEntity);
             DestroyEntity(_weaponEntities);
+            DestroyEntity(ref _beaconEntity);
 
             Loadout.Reset();
             slotProvider.ClearWeaponEntities();
@@ -143,7 +143,7 @@ namespace _Game.Gameplay
 
                 Entity entity = _entityManager.Instantiate(catalog[i].Prefab);
                 _entityManager.SetComponentData(entity, LocalTransform.FromPosition(position));
-                // _entityManager.AddComponentData(entity, new Parent { Value = owner });
+                _entityManager.AddComponentData(entity, new Parent { Value = owner });
                 _entityManager.SetComponentData(entity, new WeaponOwner { Value = owner });
 
                 Debug.Log($"[RunManager] Spawned weapon {type}.");

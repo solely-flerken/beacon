@@ -337,6 +337,7 @@ GameObject:
   - component: {fileID: 238055993}
   - component: {fileID: 238055994}
   - component: {fileID: 238055995}
+  - component: {fileID: 238055998}
   m_Layer: 0
   m_Name: _Core
   m_TagString: Untagged
@@ -502,6 +503,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9780e340a8dd8ba4992feafdf563be29, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::_Game.Gameplay.Abilities.AbilityManager
+--- !u!114 &238055998
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 238055985}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8670e608528a76741920a047e732d4ad, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::_Game.Gameplay.PlayerInputBridge
 --- !u!1 &438619592
 GameObject:
   m_ObjectHideFlags: 0
@@ -514,6 +527,7 @@ GameObject:
   - component: {fileID: 438619595}
   - component: {fileID: 438619594}
   - component: {fileID: 438619596}
+  - component: {fileID: 438619597}
   m_Layer: 0
   m_Name: BeaconVisual
   m_TagString: Untagged
@@ -627,6 +641,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9a8ed12ba7c546e4e87e8cd620a47e63, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::_Game.Gameplay.BeaconSlotProvider
+--- !u!114 &438619597
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 438619592}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1bb3ec2ba07df73499520ad088cb91a5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::_Game.Gameplay.View.PlayerEntityFollower
+  smoothTime: 0
+  offset: {x: 0, y: 0, z: 0}
+  keepOwnZ: 1
 --- !u!1 &519420028
 GameObject:
   m_ObjectHideFlags: 0
@@ -639,6 +668,7 @@ GameObject:
   - component: {fileID: 519420031}
   - component: {fileID: 519420029}
   - component: {fileID: 519420030}
+  - component: {fileID: 519420033}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -764,6 +794,21 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &519420033
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 519420028}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6171d45500a39144a9ab32f1096fa2ae, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::_Game.Gameplay.CameraFollow
+  smoothTime: 0.15
+  offset: {x: 0, y: 0, z: 0}
+  keepOwnZ: 1
 --- !u!1 &581267942
 GameObject:
   m_ObjectHideFlags: 0

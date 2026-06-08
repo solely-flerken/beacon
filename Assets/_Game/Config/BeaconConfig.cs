@@ -9,6 +9,9 @@ namespace _Game.Config
         public float maxHp = 100f;
         public float arrivalRadius = 1.2f;
 
+        [Header("Movement")]
+        public float moveSpeed = 10f;
+
         [Header("Visual")]
         public Color fullHpColor = Color.cyan;
         public Color lowHpColor = Color.red;
