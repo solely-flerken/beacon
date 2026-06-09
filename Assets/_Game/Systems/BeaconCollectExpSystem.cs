@@ -37,7 +37,9 @@ namespace _Game.Systems
 
             _arrivedExp.Clear();
 
-            state.Dependency = new MoveOrbsToBeaconJob
+            state.Dependency.Complete();
+
+            new MoveOrbsToBeaconJob
             {
                 BeaconPos = beaconPos,
                 ArrivalRadius = cfg.BeaconArrivalRadius,
@@ -46,10 +48,7 @@ namespace _Game.Systems
                 DeltaTime = SystemAPI.Time.DeltaTime,
                 ECB = ecb,
                 ArrivedExp = _arrivedExp.AsParallelWriter(),
-            }.ScheduleParallel(state.Dependency);
-
-            // Complete before firing managed events
-            state.Dependency.Complete();
+            }.Run();
 
             while (_arrivedExp.TryDequeue(out float exp))
             {
