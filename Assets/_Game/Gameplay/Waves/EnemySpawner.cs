@@ -15,16 +15,9 @@ namespace _Game.Gameplay.Waves
         // Ring radius around the player at which enemies appear.
         private const float SpawnRingRadius = 20f;
 
-        public static void SpawnWave(EntityManager em, SpawnGroup group)
+        public static void SpawnWave(EntityManager em, SpawnGroup group, Entity catalogEntity, float2 center, float2 halfExtents)
         {
-            using EntityQuery catalogQuery = em.CreateEntityQuery(typeof(EnemyTypeCatalogEntry));
-            if (catalogQuery.IsEmpty)
-            {
-                Debug.LogError("[EnemySpawner] EnemyTypeCatalogEntry not found. Add EnemyTypeCatalogAuthoring to your SubScene.");
-                return;
-            }
-
-            DynamicBuffer<EnemyTypeCatalogEntry> catalog = em.GetBuffer<EnemyTypeCatalogEntry>(catalogQuery.GetSingletonEntity());
+            DynamicBuffer<EnemyTypeCatalogEntry> catalog = em.GetBuffer<EnemyTypeCatalogEntry>(catalogEntity);
 
             Entity prefab = Entity.Null;
             Entity typeEntity = Entity.Null;
@@ -48,31 +41,6 @@ namespace _Game.Gameplay.Waves
 
             NativeArray<float2> positions = new(count, Allocator.TempJob);
             uint seed = (uint)UnityEngine.Random.Range(1, int.MaxValue);
-
-            float2 center = float2.zero; // = Player's position
-            using (EntityQuery beaconQuery = em.CreateEntityQuery(typeof(PlayerTag), typeof(LocalTransform)))
-            {
-                if (!beaconQuery.IsEmptyIgnoreFilter)
-                {
-                    center = beaconQuery.GetSingleton<LocalTransform>().Position.xy;
-                }
-            }
-
-            // TODO: Refactor?
-            float2 halfExtents;
-            using (EntityQuery boundsQuery = em.CreateEntityQuery(typeof(ArenaBounds)))
-            {
-                if (boundsQuery.IsEmpty)
-                {
-                    Debug.LogError("[EnemySpawner] ArenaBounds singleton not found. Ensure ArenaBoundsAuthoring is present in the SubScene.");
-                    entities.Dispose();
-                    positions.Dispose();
-                    return;
-                }
-                
-                ArenaBounds bounds = boundsQuery.GetSingleton<ArenaBounds>();
-                halfExtents = new float2(bounds.Width * 0.5f - 1f, bounds.Height * 0.5f - 1f);
-            }
 
             new RandomSpawnPositionsJob
             {

@@ -4,6 +4,8 @@ using System.Linq;
 using _Game.Components;
 using _Game.Core;
 using Unity.Entities;
+using Unity.Mathematics;
+using Unity.Transforms;
 using UnityEngine;
 
 namespace _Game.Gameplay.Waves
@@ -56,6 +58,9 @@ namespace _Game.Gameplay.Waves
 
         private EntityManager _entityManager;
         private EntityQuery _enemyQuery;
+        private EntityQuery _beaconQuery;
+        private EntityQuery _boundsQuery;
+        private EntityQuery _catalogQuery;
 
         private void Awake()
         {
@@ -72,6 +77,9 @@ namespace _Game.Gameplay.Waves
         {
             _entityManager = World.DefaultGameObjectInjectionWorld.EntityManager;
             _enemyQuery = _entityManager.CreateEntityQuery(typeof(EnemyTag));
+            _beaconQuery = _entityManager.CreateEntityQuery(typeof(PlayerTag), typeof(LocalTransform));
+            _boundsQuery = _entityManager.CreateEntityQuery(typeof(ArenaBounds));
+            _catalogQuery = _entityManager.CreateEntityQuery(typeof(EnemyTypeCatalogEntry));
 
             EventBus.OnGameStateChanged += OnGameStateChanged;
         }
@@ -79,6 +87,15 @@ namespace _Game.Gameplay.Waves
         private void OnDestroy()
         {
             EventBus.OnGameStateChanged -= OnGameStateChanged;
+
+            World world = World.DefaultGameObjectInjectionWorld;
+            if (world != null && world.IsCreated)
+            {
+                _enemyQuery.Dispose();
+                _beaconQuery.Dispose();
+                _boundsQuery.Dispose();
+                _catalogQuery.Dispose();
+            }
         }
 
         private void OnGameStateChanged(GameState from, GameState to)
@@ -149,9 +166,32 @@ namespace _Game.Gameplay.Waves
 
         private void SpawnWave(WaveDefinition definition)
         {
+            if (_catalogQuery.IsEmpty)
+            {
+                Debug.LogError("[WaveManager] EnemyTypeCatalog not found.");
+                return;
+            }
+
+            if (_boundsQuery.IsEmpty)
+            {
+                Debug.LogError("[WaveManager] ArenaBounds not found.");
+                return;
+            }
+
+            float2 center = float2.zero;
+            if (!_beaconQuery.IsEmptyIgnoreFilter)
+            {
+                center = _beaconQuery.GetSingleton<LocalTransform>().Position.xy;
+            }
+
+            ArenaBounds bounds = _boundsQuery.GetSingleton<ArenaBounds>();
+            float2 halfExtents = new(bounds.Width * 0.5f - 1f, bounds.Height * 0.5f - 1f);
+
+            Entity catalogEntity = _catalogQuery.GetSingletonEntity();
+
             foreach (SpawnGroup group in definition.SpawnGroups)
             {
-                EnemySpawner.SpawnWave(_entityManager, group);
+                EnemySpawner.SpawnWave(_entityManager, group, catalogEntity, center, halfExtents);
             }
         }
 
