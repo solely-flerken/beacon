@@ -19,14 +19,15 @@ namespace _Game.Systems
 
         private ComponentLookup<ContactDamage> _contactDamageLookup;
         private ComponentLookup<Health> _healthLookup;
+        private BufferLookup<DamageBufferElement> _damageLookup;
 
         public void OnCreate(ref SystemState state)
         {
             state.RequireForUpdate<BeaconStats>();
-            state.RequireForUpdate<EndSimulationEntityCommandBufferSystem.Singleton>();
-            
+
             _contactDamageLookup = state.GetComponentLookup<ContactDamage>(isReadOnly: true);
             _healthLookup = state.GetComponentLookup<Health>(isReadOnly: true);
+            _damageLookup = state.GetBufferLookup<DamageBufferElement>(isReadOnly: false);
         }
 
         public void OnUpdate(ref SystemState state)
@@ -35,13 +36,12 @@ namespace _Game.Systems
 
             _contactDamageLookup.Update(ref state);
             _healthLookup.Update(ref state);
+            _damageLookup.Update(ref state);
 
             NativeArray<float2> positions = EnemyDataShared.Positions;
             NativeArray<Entity> entities = EnemyDataShared.Entities;
             NativeParallelMultiHashMap<int2, int> grid = SpatialGridShared.EnemyCellMap;
             float cellSize = SpatialGridShared.CellSize;
-
-            EntityCommandBuffer ecb = SystemAPI.GetSingleton<EndSimulationEntityCommandBufferSystem.Singleton>().CreateCommandBuffer(state.WorldUnmanaged);
 
             foreach ((RefRO<BeaconStats> stats, RefRO<Health> health, RefRO<LocalTransform> transform, Entity beaconEntity) in
                 SystemAPI.Query<RefRO<BeaconStats>, RefRO<Health>, RefRO<LocalTransform>>().WithEntityAccess())
@@ -68,12 +68,12 @@ namespace _Game.Systems
                         totalDamage += contactDamage.Value;
 
                         // TODO: Destroy enemy on contact?
-                        ecb.AppendToBuffer(enemy, new DamageBufferElement { Value = float.MaxValue });
+                        _damageLookup[enemy].Add(new DamageBufferElement { Value = float.MaxValue });
                     } while (grid.TryGetNextValue(out idx, ref it));
                 }
 
                 if (totalDamage <= 0f) continue;
-                ecb.AppendToBuffer(beaconEntity, new DamageBufferElement { Value = totalDamage });
+                _damageLookup[beaconEntity].Add(new DamageBufferElement { Value = totalDamage });
             }
         }
     }
