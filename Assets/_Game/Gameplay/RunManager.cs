@@ -119,7 +119,7 @@ namespace _Game.Gameplay
                 if (type == null) continue;
 
                 if (!slotProvider.TryGetSlot(i, out Transform slotTransform)) continue;
-                _weaponEntities[i] = SpawnWeapon(type.Value, catalog, slotTransform.position, _beaconEntity);
+                _weaponEntities[i] = SpawnWeapon(type.Value, catalog, slotTransform.localPosition, _beaconEntity);
                 slotProvider.SetWeaponEntity(i, _weaponEntities[i]);
             }
         }
