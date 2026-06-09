@@ -1,5 +1,4 @@
 ﻿using _Game.Components;
-using _Game.Config;
 using _Game.Shared;
 using _Game.Util;
 using Unity.Collections;
@@ -27,42 +26,47 @@ namespace _Game.Systems
 
         public void OnCreate(ref SystemState state)
         {
+            state.RequireForUpdate<ArenaBounds>();
             _attractorQuery = state.GetEntityQuery(typeof(NavigationAttractor), typeof(LocalTransform));
+            _lastAttractorHash = int.MinValue;
+        }
 
-            _gridWidth = (int)math.ceil(ArenaConfig.Width / ArenaConfig.FlowFieldCellSize);
-            _gridHeight = (int)math.ceil(ArenaConfig.Height / ArenaConfig.FlowFieldCellSize);
+        public void OnDestroy(ref SystemState state)
+        {
+            if (_directions.IsCreated) _directions.Dispose();
+            if (_attractorOwner.IsCreated) _attractorOwner.Dispose();
+            if (_distances.IsCreated) _distances.Dispose();
+            if (_blocked.IsCreated) _blocked.Dispose();
+            if (_bfsQueue.IsCreated) _bfsQueue.Dispose();
+        }
 
+        private void Initialize(ref SystemState state)
+        {
+            ArenaBounds bounds = SystemAPI.GetSingleton<ArenaBounds>();
+            _gridWidth = (int)math.ceil(bounds.Width / bounds.FlowFieldCellSize);
+            _gridHeight = (int)math.ceil(bounds.Height / bounds.FlowFieldCellSize);
             int totalCellCount = _gridWidth * _gridHeight;
+
             _directions = new NativeArray<float2>(totalCellCount, Allocator.Persistent);
             _attractorOwner = new NativeArray<float2>(totalCellCount, Allocator.Persistent);
             _distances = new NativeArray<float>(totalCellCount, Allocator.Persistent);
             _blocked = new NativeArray<bool>(totalCellCount, Allocator.Persistent);
             _bfsQueue = new NativeQueue<int2>(Allocator.Persistent);
 
-            FlowFieldShared.CellSize = ArenaConfig.FlowFieldCellSize;
+            FlowFieldShared.CellSize = bounds.FlowFieldCellSize;
             FlowFieldShared.GridWidth = _gridWidth;
             FlowFieldShared.GridHeight = _gridHeight;
             FlowFieldShared.Directions = _directions;
             FlowFieldShared.AttractorOwner = _attractorOwner;
             FlowFieldShared.Blocked = _blocked;
 
-            // Sentinel so the first OnUpdate always builds.
-            _lastAttractorHash = int.MinValue;
-
             Debug.Log($"[FlowFieldSystem] Initialized {_gridWidth}x{_gridHeight} grid");
-        }
-
-        public void OnDestroy(ref SystemState state)
-        {
-            if (_directions.IsCreated) _directions.Dispose();
-            if (_attractorOwner.IsCreated)  _attractorOwner.Dispose();
-            if (_distances.IsCreated) _distances.Dispose();
-            if (_blocked.IsCreated) _blocked.Dispose();
-            if (_bfsQueue.IsCreated) _bfsQueue.Dispose();
         }
 
         public void OnUpdate(ref SystemState state)
         {
+            if (!_directions.IsCreated) Initialize(ref state);
+
             int currentCount = _attractorQuery.CalculateEntityCount();
             if (currentCount == 0) return;
 
@@ -74,7 +78,7 @@ namespace _Game.Systems
             int attractorHash = currentCount;
             for (int i = 0; i < transforms.Length; i++)
             {
-                int2 cell = FlowFieldUtil.WorldToCell(transforms[i].Position.xy, ArenaConfig.FlowFieldCellSize, _gridWidth, _gridHeight);
+                int2 cell = FlowFieldUtil.WorldToCell(transforms[i].Position.xy, FlowFieldShared.CellSize, _gridWidth, _gridHeight);
                 attractorHash = (attractorHash * 397) ^ (cell.x * 73856093) ^ (cell.y * 19349663);
             }
 
@@ -92,7 +96,7 @@ namespace _Game.Systems
 
             for (int i = 0; i < attractors.Length; i++)
             {
-                int2 cell = FlowFieldUtil.WorldToCell(transforms[i].Position.xy, ArenaConfig.FlowFieldCellSize, _gridWidth, _gridHeight);
+                int2 cell = FlowFieldUtil.WorldToCell(transforms[i].Position.xy, FlowFieldShared.CellSize, _gridWidth, _gridHeight);
                 cell = math.clamp(cell, int2.zero, new int2(_gridWidth - 1, _gridHeight - 1));
                 int idx = cell.y * _gridWidth + cell.x;
                 _distances[idx] = 0;
@@ -111,7 +115,7 @@ namespace _Game.Systems
                 GridHeight = _gridHeight,
                 Attractors = attractors,
                 AttractorTransforms = transforms,
-                CellSize = ArenaConfig.FlowFieldCellSize,
+                CellSize = FlowFieldShared.CellSize,
             }.Run();
         }
     }

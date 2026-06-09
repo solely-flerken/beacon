@@ -213,6 +213,54 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::_Game.Authoring.GlobalModAuthoring
   globalModifiers: []
+--- !u!1 &1457917861
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1457917862}
+  - component: {fileID: 1457917863}
+  m_Layer: 0
+  m_Name: ArenaConfig
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1457917862
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1457917861}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1457917863
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1457917861}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2b84f994fef9f274ab0d9748a56dc9d6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::_Game.Authoring.ArenaBoundsAuthoring
+  width: 60
+  height: 60
+  flowFieldCellSize: 1
+  spatialGridCellSize: 1
 --- !u!1 &1524630794
 GameObject:
   m_ObjectHideFlags: 0
@@ -293,9 +341,8 @@ MonoBehaviour:
   maxOrbValue: 5
   baseSize: 0.15
   maxSize: 0.4
-  scaleLerpSpeed: 1
   mergeRadius: 2
-  mergeSpeed: 0.3
+  maxBuckets: 32
   collectBaseSpeed: 5
   collectMaxSpeed: 20
   beaconArrivalRadius: 0.5
@@ -372,3 +419,4 @@ SceneRoots:
   - {fileID: 11991937}
   - {fileID: 1985131385}
   - {fileID: 923053396}
+  - {fileID: 1457917862}

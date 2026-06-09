@@ -14,11 +14,18 @@ namespace _Game.Systems
     [UpdateBefore(typeof(FlowFieldSystem))]
     public partial struct PlayerMovementSystem : ISystem
     {
+        public void OnCreate(ref SystemState state)
+        {
+            state.RequireForUpdate<ArenaBounds>();
+        }
+
         public void OnUpdate(ref SystemState state)
         {
             float deltaTime = math.min(SystemAPI.Time.DeltaTime, SimulationConfig.MaxDeltaTime);
-            float2 halfExtents = new(ArenaConfig.Width * 0.5f, ArenaConfig.Height * 0.5f);
 
+            ArenaBounds bounds = SystemAPI.GetSingleton<ArenaBounds>();
+            float2 halfExtents = new(bounds.Width * 0.5f, bounds.Height * 0.5f);
+            
             foreach ((RefRW<LocalTransform> transform, RefRO<PlayerMoveInput> input, RefRO<Speed> speed) in
                      SystemAPI.Query<RefRW<LocalTransform>, RefRO<PlayerMoveInput>, RefRO<Speed>>().WithAll<PlayerTag>())
             {

@@ -1,5 +1,4 @@
 using _Game.Components;
-using _Game.Config;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
@@ -59,12 +58,20 @@ namespace _Game.Gameplay.Waves
                 }
             }
 
+            // TODO: Refactor?
+            float2 halfExtents;
+            using (EntityQuery boundsQuery = em.CreateEntityQuery(typeof(ArenaBounds)))
+            {
+                ArenaBounds bounds = boundsQuery.GetSingleton<ArenaBounds>();
+                halfExtents = new float2(bounds.Width * 0.5f - 1f, bounds.Height * 0.5f - 1f);
+            }
+
             new RandomSpawnPositionsJob
             {
                 Positions = positions,
                 Center = center,
                 SpawnRadius = SpawnRingRadius,
-                HalfExtents = new float2(ArenaConfig.Width * 0.5f - 1f, ArenaConfig.Height * 0.5f - 1f),
+                HalfExtents = halfExtents,
                 Seed = seed,
             }.Schedule(count, 64).Complete();
 

@@ -1,4 +1,4 @@
-﻿using _Game.Config;
+﻿using _Game.Components;
 using _Game.Shared;
 using Unity.Burst;
 using Unity.Collections;
@@ -18,20 +18,7 @@ namespace _Game.Systems
 
         public void OnCreate(ref SystemState state)
         {
-            int gridWidth = (int)math.ceil(ArenaConfig.Width / ArenaConfig.SpatialGridCellSize);
-            int gridHeight = (int)math.ceil(ArenaConfig.Height / ArenaConfig.SpatialGridCellSize);
-            int capacity = gridWidth * gridHeight * 4;
-            
-            // Also limits count of enemies in each cell
-            _enemyCellMap = new NativeParallelMultiHashMap<int2, int>(capacity, Allocator.Persistent);
-            _allyCellMap = new NativeParallelMultiHashMap<int2, int>(capacity, Allocator.Persistent);
-
-            SpatialGridShared.CellSize = ArenaConfig.SpatialGridCellSize;
-            SpatialGridShared.GridWidth = gridWidth;
-            SpatialGridShared.GridHeight = gridHeight;
-            
-            SpatialGridShared.EnemyCellMap = _enemyCellMap;
-            SpatialGridShared.AllyCellMap = _allyCellMap;
+            state.RequireForUpdate<ArenaBounds>();
         }
 
         public void OnDestroy(ref SystemState state)
@@ -40,8 +27,29 @@ namespace _Game.Systems
             if (_allyCellMap.IsCreated) _allyCellMap.Dispose();
         }
 
+        private void Initialize(ref SystemState state)
+        {
+            ArenaBounds bounds = SystemAPI.GetSingleton<ArenaBounds>();
+            int gridWidth = (int)math.ceil(bounds.Width / bounds.SpatialGridCellSize);
+            int gridHeight = (int)math.ceil(bounds.Height / bounds.SpatialGridCellSize);
+            int capacity = gridWidth * gridHeight * 4;
+            
+            // Also limits count of enemies in each cell
+            _enemyCellMap = new NativeParallelMultiHashMap<int2, int>(capacity, Allocator.Persistent);
+            _allyCellMap = new NativeParallelMultiHashMap<int2, int>(capacity, Allocator.Persistent);
+
+            SpatialGridShared.CellSize = bounds.SpatialGridCellSize;
+            SpatialGridShared.EnemyCellMap = _enemyCellMap;
+            SpatialGridShared.AllyCellMap = _allyCellMap;
+        }
+
         public void OnUpdate(ref SystemState state)
         {
+            if (!_enemyCellMap.IsCreated)
+            {
+                Initialize(ref state);
+            }
+
             _enemyCellMap.Clear();
             _allyCellMap.Clear();
 
@@ -51,7 +59,7 @@ namespace _Game.Systems
                 enemyHandle = new RebuildGridJob
                 {
                     Positions = EnemyDataShared.Positions,
-                    CellSize = ArenaConfig.SpatialGridCellSize,
+                    CellSize = SpatialGridShared.CellSize,
                     Grid = _enemyCellMap.AsParallelWriter(),
                 }.Schedule(EnemyDataShared.Count, 64, state.Dependency);
             }
@@ -62,7 +70,7 @@ namespace _Game.Systems
                 allyHandle = new RebuildGridJob
                 {
                     Positions = AllyDataShared.Positions,
-                    CellSize = ArenaConfig.SpatialGridCellSize,
+                    CellSize = SpatialGridShared.CellSize,
                     Grid = _allyCellMap.AsParallelWriter(),
                 }.Schedule(AllyDataShared.Count, 64, state.Dependency);
             }

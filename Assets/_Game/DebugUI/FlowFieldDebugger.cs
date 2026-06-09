@@ -1,5 +1,4 @@
-﻿using _Game.Config;
-using _Game.Shared;
+﻿using _Game.Shared;
 using _Game.Util;
 using Unity.Mathematics;
 using UnityEngine;
@@ -12,8 +11,11 @@ namespace _Game.DebugUI
         {
             if (!Application.isPlaying || !FlowFieldShared.IsValid) return;
 
+            float arenaW = FlowFieldShared.GridWidth * FlowFieldShared.CellSize;
+            float arenaH = FlowFieldShared.GridHeight * FlowFieldShared.CellSize;
+            
             Gizmos.color = Color.white;
-            Gizmos.DrawWireCube(Vector3.zero, new Vector3(ArenaConfig.Width, ArenaConfig.Height, 0f));
+            Gizmos.DrawWireCube(Vector3.zero, new Vector3(arenaW, arenaH, 0f));
 
             float cellSize = FlowFieldShared.CellSize;
             int gridWidth = FlowFieldShared.GridWidth;
