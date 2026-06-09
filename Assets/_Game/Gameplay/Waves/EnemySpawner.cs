@@ -62,6 +62,14 @@ namespace _Game.Gameplay.Waves
             float2 halfExtents;
             using (EntityQuery boundsQuery = em.CreateEntityQuery(typeof(ArenaBounds)))
             {
+                if (boundsQuery.IsEmpty)
+                {
+                    Debug.LogError("[EnemySpawner] ArenaBounds singleton not found. Ensure ArenaBoundsAuthoring is present in the SubScene.");
+                    entities.Dispose();
+                    positions.Dispose();
+                    return;
+                }
+                
                 ArenaBounds bounds = boundsQuery.GetSingleton<ArenaBounds>();
                 halfExtents = new float2(bounds.Width * 0.5f - 1f, bounds.Height * 0.5f - 1f);
             }
