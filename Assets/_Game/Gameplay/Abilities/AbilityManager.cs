@@ -24,13 +24,13 @@ namespace _Game.Gameplay.Abilities
             }
 
             Instance = this;
+            
+            _slots = new Ability[BeaconLoadout.AbilitySlotCount];
         }
 
         private void Start()
         {
             EntityManager em = World.DefaultGameObjectInjectionWorld.EntityManager;
-
-            _slots = new Ability[BeaconLoadout.AbilitySlotCount];
             
             _ctx = new AbilityContext
             {
