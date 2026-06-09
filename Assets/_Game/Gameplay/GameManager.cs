@@ -86,9 +86,9 @@ namespace _Game.Gameplay
 
                 case GameState.WaveRunning:
                     if (Keyboard.current.qKey.wasPressedThisFrame)
-                        abilityManager.TryActivate(0);
+                        abilityManager?.TryActivate(0);
                     if (Keyboard.current.eKey.wasPressedThisFrame)
-                        abilityManager.TryActivate(1);
+                        abilityManager?.TryActivate(1);
                     if (Keyboard.current.pKey.wasPressedThisFrame)
                         GameStateMachine.Instance.TransitionTo(GameState.Paused);
                     if (Keyboard.current.mKey.wasPressedThisFrame)
