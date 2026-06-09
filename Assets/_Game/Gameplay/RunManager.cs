@@ -61,6 +61,16 @@ namespace _Game.Gameplay
             WarmupArchetypes();
         }
 
+        private void OnDestroy()
+        {
+            World world = World.DefaultGameObjectInjectionWorld;
+            if (world != null && world.IsCreated)
+            {
+                _prefabQuery.Dispose();
+                _weaponCatalogQuery.Dispose();
+            }
+        }
+
         public void StartRun()
         {
             SpawnBeacon();

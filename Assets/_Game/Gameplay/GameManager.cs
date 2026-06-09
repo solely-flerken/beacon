@@ -67,6 +67,13 @@ namespace _Game.Gameplay
         private void OnDestroy()
         {
             EventBus.ClearAllSubscriptions();
+
+            World world = World.DefaultGameObjectInjectionWorld;
+            if (world != null && world.IsCreated)
+            {
+                _enemyCountQuery.Dispose();
+                _projectileCountQuery.Dispose();
+            }
         }
 
         private void Update()
