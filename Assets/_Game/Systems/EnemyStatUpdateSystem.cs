@@ -3,6 +3,8 @@ using _Game.Util;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
+using Unity.Mathematics;
+using Random = Unity.Mathematics.Random;
 
 namespace _Game.Systems
 {
@@ -11,6 +13,7 @@ namespace _Game.Systems
     public partial struct EnemyStatUpdateSystem : ISystem
     {
         private ComponentLookup<EnemyTypeBlobRef> _blobLookup;
+        private uint _spawnSeed;
 
         [BurstCompile]
         public void OnCreate(ref SystemState state)
@@ -32,12 +35,15 @@ namespace _Game.Systems
             EndSimulationEntityCommandBufferSystem.Singleton ecbSingleton = SystemAPI.GetSingleton<EndSimulationEntityCommandBufferSystem.Singleton>();
             EntityCommandBuffer.ParallelWriter ecb = ecbSingleton.CreateCommandBuffer(state.WorldUnmanaged).AsParallelWriter();
 
+            _spawnSeed++;
+
             new SpawnInitJob
             {
                 GlobalMods = globalMods,
                 WaveMods = waveMods,
                 BlobLookup = _blobLookup,
-                Ecb = ecb
+                Ecb = ecb,
+                Seed = _spawnSeed,
             }.ScheduleParallel();
 
             new UpdateStatsJob
@@ -56,6 +62,7 @@ namespace _Game.Systems
             [ReadOnly] public DynamicBuffer<WaveStatModifier> WaveMods;
             [ReadOnly] public ComponentLookup<EnemyTypeBlobRef> BlobLookup;
             public EntityCommandBuffer.ParallelWriter Ecb;
+            public uint Seed;
 
             private void Execute(
                 Entity entity,
@@ -64,12 +71,18 @@ namespace _Game.Systems
                 ref Health health,
                 ref ContactDamage contactDamage,
                 ref EnemyReward reward,
+                in EnemySpeedVariation speedVariation,
                 in Classification mask,
                 in EnemyTypeRef typeRef,
                 in DynamicBuffer<StatModifier> entityMods)
             {
                 ref BlobArray<TieredStatModifier> blob = ref BlobLookup[typeRef.Value].Value.Value.ConfigModifiers;
                 EnemyTier tierEnum = TierMaskMap.Get(mask.Tier);
+
+                // Roll the per-enemy speed once and bake it into BaseValue, so modifiers include speed variations
+                Random rng = Random.CreateFromIndex((uint)entity.Index ^ (Seed * 0x9E3779B9u));
+                float variation = math.saturate(speedVariation.Value);
+                speed.BaseValue *= 1f + rng.NextFloat(-variation, variation);
 
                 speed.Value = StatResolver.ResolveEnemy(tierEnum, StatType.Speed, speed.BaseValue, mask, GlobalMods, WaveMods, entityMods, ref blob);
                 health.Max = StatResolver.ResolveEnemy(tierEnum, StatType.MaxHp, health.BaseMax, mask, GlobalMods, WaveMods, entityMods, ref blob);

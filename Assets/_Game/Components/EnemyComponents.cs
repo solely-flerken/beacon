@@ -29,6 +29,9 @@ namespace _Game.Components
         public float ExpValue;
     }
 
+    /// <summary>
+    /// Random per-enemy speed variation as a fraction: base speed * (1 ± Value), rolled once at spawn.
+    /// </summary>
     public struct EnemySpeedVariation : IComponentData
     {
         public float Value;

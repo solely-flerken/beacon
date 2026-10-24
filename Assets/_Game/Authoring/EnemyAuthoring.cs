@@ -14,7 +14,7 @@ namespace _Game.Authoring
         
         [Header("Stats")] 
         public float speed = 4f;
-        public float speedVariation = 0.5f;
+        [Range(0f, 1f)] public float speedVariation = 0.15f;
         [Tooltip("How fast the movement direction eases toward the flow field direction (per second). Higher = snappier.")]
         [Min(0.1f)] public float steeringResponsiveness = 8f;
 
