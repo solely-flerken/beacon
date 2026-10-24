@@ -32,6 +32,7 @@ namespace _Game.Systems
             new MoveEnemyJob
             {
                 Positions = EnemyDataShared.Positions,
+                Entities = EnemyDataShared.Entities,
                 FlowFieldDirections = FlowFieldShared.Directions,
                 FlowFieldCellSize = FlowFieldShared.CellSize,
                 FlowFieldGridWidth = FlowFieldShared.GridWidth,
@@ -52,6 +53,7 @@ namespace _Game.Systems
     internal partial struct MoveEnemyJob : IJobEntity
     {
         [ReadOnly] public NativeArray<float2> Positions;
+        [ReadOnly] public NativeArray<Entity> Entities;
 
         [ReadOnly] public NativeArray<float2> FlowFieldDirections;
         [ReadOnly] public float FlowFieldCellSize;
@@ -67,10 +69,10 @@ namespace _Game.Systems
         [ReadOnly] public float2 HalfExtents;
         [ReadOnly] public float DeltaTime;
 
-        private void Execute([EntityIndexInQuery] int index, ref LocalTransform transform, ref Steering steering, in Speed speed)
+        private void Execute(Entity entity, ref LocalTransform transform, ref Steering steering, in Speed speed)
         {
-            float2 pos = Positions[index];
-            float2 desired = FlowSteering(pos, speed.Value) + SeparationSteering(pos, index);
+            float2 pos = transform.Position.xy;
+            float2 desired = FlowSteering(pos, speed.Value) + SeparationSteering(pos, entity);
 
             if (speed.Value <= 0f)
             {
@@ -108,7 +110,7 @@ namespace _Game.Systems
             new(-1,  1), new(0,  1), new(1,  1),
         };
 
-        private float2 SeparationSteering(float2 pos, int index)
+        private float2 SeparationSteering(float2 pos, Entity self)
         {
             float2 separation = float2.zero;
             float radiusSq = SeparationRadius * SeparationRadius;
@@ -119,7 +121,7 @@ namespace _Game.Systems
                 if (!SpatialGrid.TryGetFirstValue(cell + offset, out int neighbourIdx, out NativeParallelMultiHashMapIterator<int2> it)) continue;
                 do
                 {
-                    if (neighbourIdx == index) continue;
+                    if (Entities[neighbourIdx] == self) continue;
 
                     float2 diff = pos - Positions[neighbourIdx];
                     float distSq = math.lengthsq(diff);

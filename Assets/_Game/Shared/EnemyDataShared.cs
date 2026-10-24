@@ -5,10 +5,12 @@ using Unity.Mathematics;
 namespace _Game.Shared
 {
     /// <summary>
-    /// Static shared data written by EnemyDataSystem once per frame.
+    /// Static shared data written by UnitDataSystem once per frame.
     ///
-    /// Do NOT write to this from outside EnemyDataSystem.
+    /// Do NOT write to this from outside UnitDataSystem.
     /// Do NOT store references to the arrays - read them fresh each frame.
+    /// Do NOT index the arrays with your own query's EntityIndexInQuery,
+    /// since the iteration order isn't guaranteed to match UnitDataSystem's.
     /// </summary>
     public static class EnemyDataShared
     {
@@ -18,7 +20,7 @@ namespace _Game.Shared
         public static NativeArray<float2> Positions;
 
         /// <summary>
-        /// ECS entities matching Positions by index.
+        /// ECS entities matching Positions by index - Positions[i] and Entities[i] are the same unit.
         /// </summary>
         public static NativeArray<Entity> Entities;
 

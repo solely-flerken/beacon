@@ -38,7 +38,7 @@ namespace _Game.Systems
             AllyDataShared.Positions = _allyPositions;
             AllyDataShared.Entities = _allyEntities;
 
-            _enemyQuery = SystemAPI.QueryBuilder().WithAll<EnemyTag, LocalTransform, Speed>().Build();
+            _enemyQuery = SystemAPI.QueryBuilder().WithAll<EnemyTag, LocalTransform>().Build();
             _allyQuery = SystemAPI.QueryBuilder().WithAll<PlayerTag, LocalTransform>().Build();
         }
 
