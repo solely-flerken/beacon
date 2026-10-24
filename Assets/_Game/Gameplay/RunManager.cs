@@ -5,6 +5,7 @@ using _Game.Config;
 using _Game.Core;
 using _Game.Gameplay.Abilities;
 using _Game.Gameplay.Waves;
+using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
@@ -146,7 +147,9 @@ namespace _Game.Gameplay
                 return;
             }
 
-            DynamicBuffer<WeaponCatalogEntry> catalog = _entityManager.GetBuffer<WeaponCatalogEntry>(_weaponCatalogQuery.GetSingletonEntity());
+            using NativeArray<WeaponCatalogEntry> catalog = _entityManager
+                .GetBuffer<WeaponCatalogEntry>(_weaponCatalogQuery.GetSingletonEntity(), true)
+                .ToNativeArray(Allocator.Temp);
 
             for (int i = 0; i < Loadout.SlotCount; i++)
             {
@@ -170,7 +173,7 @@ namespace _Game.Gameplay
             AbilityManager.Instance?.SetupFromLoadout(Loadout);
         }
 
-        private Entity SpawnWeapon(WeaponType type, DynamicBuffer<WeaponCatalogEntry> catalog, float3 position, Entity owner)
+        private Entity SpawnWeapon(WeaponType type, NativeArray<WeaponCatalogEntry> catalog, float3 position, Entity owner)
         {
             for (int i = 0; i < catalog.Length; i++)
             {
