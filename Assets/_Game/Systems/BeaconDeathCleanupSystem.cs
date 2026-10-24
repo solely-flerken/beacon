@@ -47,9 +47,9 @@ namespace _Game.Systems
                 ecb.DestroyEntity(entity);
             }
 
-            EventBus.FireBeaconDestroyed();
-
             ecb.Playback(state.EntityManager);
+
+            EventBus.FireBeaconDestroyed();
         }
     }
 }
