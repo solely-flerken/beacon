@@ -15,7 +15,9 @@ namespace _Game.Authoring
         [Header("Stats")] 
         public float speed = 4f;
         public float speedVariation = 0.5f;
-        
+        [Tooltip("How fast the movement direction eases toward the flow field direction (per second). Higher = snappier.")]
+        [Min(0.1f)] public float steeringResponsiveness = 8f;
+
         public float maxHealth = 10f;
         public float contactDamage = 1f;
         
@@ -56,6 +58,7 @@ namespace _Game.Authoring
                 // Basic enemy stats
                 AddComponent(entity, new Speed { BaseValue = authoring.speed, Value = authoring.speed });
                 AddComponent(entity, new EnemySpeedVariation { Value = authoring.speedVariation });
+                AddComponent(entity, new Steering { Responsiveness = authoring.steeringResponsiveness });
                 AddComponent(entity, new EnemyReward { ExpValue = authoring.exp });
                 AddComponent(entity, new ContactDamage { BaseValue = authoring.contactDamage, Value = authoring.contactDamage });
                 AddComponent(entity, new Health { BaseMax = authoring.maxHealth, Max = authoring.maxHealth, Current = authoring.maxHealth, IsAlive = true});

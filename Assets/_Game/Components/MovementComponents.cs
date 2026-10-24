@@ -20,4 +20,28 @@ namespace _Game.Components
         public float BaseValue;
         public float Value;
     }
+
+    /// <summary>
+    /// Smoothed steering state for any moving unit (enemies, allies, ...).
+    /// Velocity eases toward the desired steering each frame instead of snapping to it.
+    /// Responsiveness is the per-second ease rate: higher = snappier, lower = smoother turns.
+    /// </summary>
+    public struct Steering : IComponentData
+    {
+        public float2 Velocity;
+        public float Responsiveness;
+        
+        public void Ease(float2 desired, float deltaTime)
+        {
+            // 0 or unset responsiveness snaps instead of freezing the unit.
+            if (Responsiveness <= 0f)
+            {
+                Velocity = desired;
+                return;
+            }
+
+            float t = 1f - math.exp(-Responsiveness * deltaTime);
+            Velocity = math.lerp(Velocity, desired, t);
+        }
+    }
 }

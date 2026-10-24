@@ -67,11 +67,21 @@ namespace _Game.Systems
         [ReadOnly] public float2 HalfExtents;
         [ReadOnly] public float DeltaTime;
 
-        private void Execute([EntityIndexInQuery] int index, ref LocalTransform transform, in Speed speed)
+        private void Execute([EntityIndexInQuery] int index, ref LocalTransform transform, ref Steering steering, in Speed speed)
         {
             float2 pos = Positions[index];
-            float2 moveVec = FlowSteering(pos, speed.Value) + SeparationSteering(pos, index);
-            float2 nextPos = math.clamp(pos + moveVec * DeltaTime, -HalfExtents, HalfExtents);
+            float2 desired = FlowSteering(pos, speed.Value) + SeparationSteering(pos, index);
+
+            if (speed.Value <= 0f)
+            {
+                steering.Velocity = desired;
+            }
+            else
+            {
+                steering.Ease(desired, DeltaTime);
+            }
+
+            float2 nextPos = math.clamp(pos + steering.Velocity * DeltaTime, -HalfExtents, HalfExtents);
             transform.Position = new float3(nextPos, 0f);
         }
 
