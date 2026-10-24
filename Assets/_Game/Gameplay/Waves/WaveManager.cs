@@ -115,7 +115,7 @@ namespace _Game.Gameplay.Waves
         
         private void Update()
         {
-            if (!GameStateMachine.Instance.IsSimulationRunning) return;
+            if (!GameStateMachine.Instance.IsWaveRunning) return;
             if (!IsWaveActive) return;
             WaveElapsed += Time.deltaTime;
             if (!_enemyQuery.IsEmpty) return;

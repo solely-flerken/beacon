@@ -24,7 +24,7 @@ namespace _Game.Core
         /// <summary>
         /// Simulation runs in these states.
         /// </summary>
-        public bool IsSimulationRunning => CurrentState == GameState.WaveRunning;
+        public bool IsWaveRunning => CurrentState == GameState.WaveRunning;
         
         private static readonly Dictionary<GameState, GameState[]> ValidTransitions = new()
         {
@@ -79,7 +79,7 @@ namespace _Game.Core
             GameState previous = CurrentState;
             CurrentState = state;
             
-            Debug.LogWarning($"[GameStateMachine] Forced state: {state} (was {CurrentState})");
+            Debug.LogWarning($"[GameStateMachine] Forced state: {state} (was {previous})");
             EventBus.FireGameStateChanged(previous, CurrentState);
         }
 

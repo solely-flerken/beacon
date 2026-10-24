@@ -1,4 +1,5 @@
 ﻿using _Game.Components;
+using _Game.Config;
 using _Game.Shared;
 using _Game.Util;
 using Unity.Burst;
@@ -17,13 +18,21 @@ namespace _Game.Systems
     [UpdateAfter(typeof(SpatialGridSystem))]
     public partial struct EnemyMovementSystem : ISystem
     {
+        public void OnCreate(ref SystemState state)
+        {
+            state.RequireForUpdate<ArenaBounds>();
+        }
+
         public void OnUpdate(ref SystemState state)
         {
             if (!EnemyDataShared.IsValid || !SpatialGridShared.EnemyGridValid || !FlowFieldShared.IsValid) return;
 
+            ArenaBounds bounds = SystemAPI.GetSingleton<ArenaBounds>();
+
             new MoveEnemyJob
             {
                 Positions = EnemyDataShared.Positions,
+                Count = EnemyDataShared.Count,
                 FlowFieldDirections = FlowFieldShared.Directions,
                 FlowFieldCellSize = FlowFieldShared.CellSize,
                 FlowFieldGridWidth = FlowFieldShared.GridWidth,
@@ -33,7 +42,8 @@ namespace _Game.Systems
                 SpatialGridCellSize = SpatialGridShared.CellSize,
                 SeparationRadius = 1.0f,
                 SeparationStrength = 6.0f,
-                DeltaTime = SystemAPI.Time.DeltaTime,
+                HalfExtents = new float2(bounds.Width * 0.5f, bounds.Height * 0.5f),
+                DeltaTime = math.min(SystemAPI.Time.DeltaTime, SimulationConfig.MaxDeltaTime),
             }.ScheduleParallel();
         }
     }
@@ -43,7 +53,8 @@ namespace _Game.Systems
     internal partial struct MoveEnemyJob : IJobEntity
     {
         [ReadOnly] public NativeArray<float2> Positions;
-        
+        [ReadOnly] public int Count;
+
         [ReadOnly] public NativeArray<float2> FlowFieldDirections;
         [ReadOnly] public float FlowFieldCellSize;
         [ReadOnly] public int FlowFieldGridWidth;
@@ -55,13 +66,17 @@ namespace _Game.Systems
         [ReadOnly] public float SeparationRadius;
         [ReadOnly] public float SeparationStrength;
 
+        [ReadOnly] public float2 HalfExtents;
         [ReadOnly] public float DeltaTime;
 
         private void Execute([EntityIndexInQuery] int index, ref LocalTransform transform, in Speed speed)
         {
+            if (index >= Count) return;
+
             float2 pos = Positions[index];
             float2 moveVec = FlowSteering(pos, speed.Value) + SeparationSteering(pos, index);
-            transform.Position = new float3(pos + moveVec * DeltaTime, 0f);
+            float2 nextPos = math.clamp(pos + moveVec * DeltaTime, -HalfExtents, HalfExtents);
+            transform.Position = new float3(nextPos, 0f);
         }
 
         private float2 FlowSteering(float2 pos, float speed)

@@ -175,7 +175,9 @@ namespace _Game.Systems
                     }
                     else
                     {
-                        Debug.Log($"[ProjectileSystem] Entity {target.Index} is missing HitCooldown! Skipping hit."); // TODO: Development only. Remove later.
+#if UNITY_EDITOR
+                        Debug.Log($"[ProjectileSystem] Entity {target.Index} is missing HitCooldown! Skipping hit.");
+#endif
                     }
 
                     Entity weaponEntity = WeaponSourceLookup.HasComponent(projectile) ? WeaponSourceLookup[projectile].Value : Entity.Null;
@@ -187,7 +189,9 @@ namespace _Game.Systems
                     }
                     else
                     {
-                        Debug.Log($"[ProjectileSystem] Entity {target.Index} is missing DamageBuffer! Skipping hit."); // TODO: Development only. Remove later.
+#if UNITY_EDITOR
+                        Debug.Log($"[ProjectileSystem] Entity {target.Index} is missing DamageBuffer! Skipping hit.");
+#endif
                     }
 
                     // Send Hit Event to Bridge
