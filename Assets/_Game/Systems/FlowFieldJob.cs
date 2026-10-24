@@ -15,7 +15,7 @@ namespace _Game.Systems
         public NativeQueue<int2> Queue;
         public NativeArray<float> Distances;
         public NativeArray<float2> Directions;
-        public NativeArray<float2> AttractorOwner;
+        public NativeArray<float2> NearestAttractorPos;
         
         [ReadOnly] public NativeArray<bool> Blocked;
         [ReadOnly] public NativeArray<NavigationAttractor> Attractors;
@@ -68,7 +68,7 @@ namespace _Game.Systems
             {
                 int currentIdx = FlowFieldUtil.GetIndex(current, GridWidth);
                 float currentDist = Distances[currentIdx];
-                float2 ownerPos = AttractorOwner[currentIdx];
+                float2 ownerPos = NearestAttractorPos[currentIdx];
 
                 if (!hasGlobalAttractor && !IsWithinAttractionRange(current, currentDist)) continue;
 
@@ -87,7 +87,7 @@ namespace _Game.Systems
 
                     Distances[neighborIndex] = newDist;
                     Directions[neighborIndex] = NeighborDirections[n];
-                    AttractorOwner[neighborIndex] = ownerPos;
+                    NearestAttractorPos[neighborIndex] = ownerPos;
                     
                     Queue.Enqueue(neighbor);
                 }

@@ -28,7 +28,7 @@ namespace _Game.Systems
                 FlowFieldCellSize = FlowFieldShared.CellSize,
                 FlowFieldGridWidth = FlowFieldShared.GridWidth,
                 FlowFieldGridHeight = FlowFieldShared.GridHeight,
-                AttractorOwner = FlowFieldShared.AttractorOwner,
+                NearestAttractorPos = FlowFieldShared.NearestAttractorPos,
                 SpatialGrid = SpatialGridShared.EnemyCellMap,
                 SpatialGridCellSize = SpatialGridShared.CellSize,
                 SeparationRadius = 1.0f,
@@ -48,7 +48,7 @@ namespace _Game.Systems
         [ReadOnly] public float FlowFieldCellSize;
         [ReadOnly] public int FlowFieldGridWidth;
         [ReadOnly] public int FlowFieldGridHeight;
-        [ReadOnly] public NativeArray<float2> AttractorOwner;
+        [ReadOnly] public NativeArray<float2> NearestAttractorPos;
 
         [ReadOnly] public NativeParallelMultiHashMap<int2, int> SpatialGrid;
         [ReadOnly] public float SpatialGridCellSize;
@@ -74,7 +74,7 @@ namespace _Game.Systems
             int2 cell = FlowFieldUtil.WorldToCell(pos, FlowFieldCellSize, FlowFieldGridWidth, FlowFieldGridHeight);
             int idx = FlowFieldUtil.GetIndex(cell, FlowFieldGridWidth);
             
-            float2 ownerPos = AttractorOwner[idx];
+            float2 ownerPos = NearestAttractorPos[idx];
             float2 toOwner = ownerPos - pos;
             float dist = math.lengthsq(toOwner);
             return dist > 0.001f ? math.normalize(toOwner) * speed : float2.zero;

@@ -14,7 +14,7 @@ namespace _Game.Systems
     public partial struct FlowFieldSystem : ISystem
     {
         private NativeArray<float2> _directions;
-        private NativeArray<float2> _attractorOwner;
+        private NativeArray<float2> _nearestAttractorPos;
         private NativeArray<float> _distances;
         private NativeArray<bool> _blocked;
         private NativeQueue<int2> _bfsQueue;
@@ -34,7 +34,7 @@ namespace _Game.Systems
         public void OnDestroy(ref SystemState state)
         {
             if (_directions.IsCreated) _directions.Dispose();
-            if (_attractorOwner.IsCreated) _attractorOwner.Dispose();
+            if (_nearestAttractorPos.IsCreated) _nearestAttractorPos.Dispose();
             if (_distances.IsCreated) _distances.Dispose();
             if (_blocked.IsCreated) _blocked.Dispose();
             if (_bfsQueue.IsCreated) _bfsQueue.Dispose();
@@ -48,7 +48,7 @@ namespace _Game.Systems
             int totalCellCount = _gridWidth * _gridHeight;
 
             _directions = new NativeArray<float2>(totalCellCount, Allocator.Persistent);
-            _attractorOwner = new NativeArray<float2>(totalCellCount, Allocator.Persistent);
+            _nearestAttractorPos = new NativeArray<float2>(totalCellCount, Allocator.Persistent);
             _distances = new NativeArray<float>(totalCellCount, Allocator.Persistent);
             _blocked = new NativeArray<bool>(totalCellCount, Allocator.Persistent);
             _bfsQueue = new NativeQueue<int2>(Allocator.Persistent);
@@ -57,7 +57,7 @@ namespace _Game.Systems
             FlowFieldShared.GridWidth = _gridWidth;
             FlowFieldShared.GridHeight = _gridHeight;
             FlowFieldShared.Directions = _directions;
-            FlowFieldShared.AttractorOwner = _attractorOwner;
+            FlowFieldShared.NearestAttractorPos = _nearestAttractorPos;
             FlowFieldShared.Blocked = _blocked;
 
             Debug.Log($"[FlowFieldSystem] Initialized {_gridWidth}x{_gridHeight} grid");
@@ -78,8 +78,13 @@ namespace _Game.Systems
             int attractorHash = currentCount;
             for (int i = 0; i < transforms.Length; i++)
             {
-                int2 cell = FlowFieldUtil.WorldToCell(transforms[i].Position.xy, FlowFieldShared.CellSize, _gridWidth, _gridHeight);
-                attractorHash = (attractorHash * 397) ^ (cell.x * 73856093) ^ (cell.y * 19349663);
+                float2 attractorPos = transforms[i].Position.xy;
+                int2 attractorCell = FlowFieldUtil.WorldToCell(attractorPos, FlowFieldShared.CellSize, _gridWidth, _gridHeight);
+                attractorHash = (attractorHash * 397) ^ (attractorCell.x * 73856093) ^ (attractorCell.y * 19349663);
+
+                // The cell the attractor stands in has no flow direction, so enemies there steer straight at
+                // _nearestAttractorPos instead. Refresh it every frame so they chase the attractor's current position.
+                _nearestAttractorPos[FlowFieldUtil.GetIndex(attractorCell, _gridWidth)] = attractorPos;
             }
 
             if (attractorHash == _lastAttractorHash) return;
@@ -87,9 +92,12 @@ namespace _Game.Systems
 
             NativeArray<NavigationAttractor> attractors = _attractorQuery.ToComponentDataArray<NavigationAttractor>(state.WorldUpdateAllocator);
 
+            // Reset every cell.
             for (int i = 0; i < _distances.Length; i++)
             {
                 _distances[i] = float.MaxValue;
+                _directions[i] = float2.zero;
+                _nearestAttractorPos[i] = FlowFieldUtil.CellToWorld(new int2(i % _gridWidth, i / _gridWidth), FlowFieldShared.CellSize, _gridWidth, _gridHeight);
             }
 
             _bfsQueue.Clear();
@@ -100,7 +108,7 @@ namespace _Game.Systems
                 cell = math.clamp(cell, int2.zero, new int2(_gridWidth - 1, _gridHeight - 1));
                 int idx = cell.y * _gridWidth + cell.x;
                 _distances[idx] = 0;
-                _attractorOwner[idx] = transforms[i].Position.xy;
+                _nearestAttractorPos[idx] = transforms[i].Position.xy;
                 _bfsQueue.Enqueue(cell);
             }
 
@@ -110,7 +118,7 @@ namespace _Game.Systems
                 Distances = _distances,
                 Blocked = _blocked,
                 Directions = _directions,
-                AttractorOwner = _attractorOwner,
+                NearestAttractorPos = _nearestAttractorPos,
                 GridWidth = _gridWidth,
                 GridHeight = _gridHeight,
                 Attractors = attractors,

@@ -16,9 +16,9 @@ namespace _Game.Shared
 
         /// <summary>
         /// Per-cell nearest attractor world position.
-        /// When Directions[i] is zero, move directly toward AttractorOwner[i].
+        /// When Directions[i] is zero, move directly toward NearestAttractorPos[i].
         /// </summary>
-        public static NativeArray<float2> AttractorOwner;
+        public static NativeArray<float2> NearestAttractorPos;
         
         public static bool IsValid => Directions.IsCreated && Directions.Length > 0;
     }
