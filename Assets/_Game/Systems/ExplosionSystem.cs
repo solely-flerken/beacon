@@ -1,9 +1,10 @@
 using _Game.Components;
 using _Game.Config;
+using Unity.Burst;
 using Unity.Entities;
 using Unity.Mathematics;
+using Unity.Rendering;
 using Unity.Transforms;
-using UnityEngine;
 
 namespace _Game.Systems
 {
@@ -17,6 +18,7 @@ namespace _Game.Systems
             state.RequireForUpdate<EndSimulationEntityCommandBufferSystem.Singleton>();
         }
 
+        [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
             state.Dependency.Complete();
@@ -25,22 +27,15 @@ namespace _Game.Systems
 
             EntityCommandBuffer ecb = SystemAPI.GetSingleton<EndSimulationEntityCommandBufferSystem.Singleton>().CreateCommandBuffer(state.WorldUnmanaged);
 
-            foreach ((RefRW<LocalTransform> transform, RefRW<ExplosionState> explosionState, Entity entity) in
-                     SystemAPI.Query<RefRW<LocalTransform>, RefRW<ExplosionState>>().WithAll<ExplosionTag>().WithEntityAccess())
+            foreach ((RefRW<LocalTransform> transform, RefRW<ExplosionState> explosionState, RefRW<URPMaterialPropertyBaseColor> color, Entity entity) in
+                     SystemAPI.Query<RefRW<LocalTransform>, RefRW<ExplosionState>, RefRW<URPMaterialPropertyBaseColor>>().WithAll<ExplosionTag>().WithEntityAccess())
             {
                 explosionState.ValueRW.Elapsed += deltaTime;
                 float t = explosionState.ValueRO.Duration > 0f ? explosionState.ValueRO.Elapsed / explosionState.ValueRO.Duration : 1f;
 
-                float scale = explosionState.ValueRO.StartScale * math.max(0f, 1f - t);
-                transform.ValueRW.Scale = scale;
-
-                SpriteRenderer spriteRenderer = state.EntityManager.GetComponentObject<SpriteRenderer>(entity);
-                if (spriteRenderer != null)
-                {
-                    Color color = spriteRenderer.color;
-                    color.a = math.max(0f, 1f - t);
-                    spriteRenderer.color = color;
-                }
+                float fade = math.max(0f, 1f - t);
+                transform.ValueRW.Scale = explosionState.ValueRO.StartScale * fade;
+                color.ValueRW.Value.w = fade;
 
                 if (explosionState.ValueRO.Elapsed >= explosionState.ValueRO.Duration)
                 {
