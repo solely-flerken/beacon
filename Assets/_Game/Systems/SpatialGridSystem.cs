@@ -25,6 +25,9 @@ namespace _Game.Systems
         {
             if (_enemyCellMap.IsCreated) _enemyCellMap.Dispose();
             if (_allyCellMap.IsCreated) _allyCellMap.Dispose();
+
+            SpatialGridShared.EnemyCellMap = default;
+            SpatialGridShared.AllyCellMap = default;
         }
 
         private void Initialize(ref SystemState state)

@@ -38,6 +38,10 @@ namespace _Game.Systems
             if (_distances.IsCreated) _distances.Dispose();
             if (_blocked.IsCreated) _blocked.Dispose();
             if (_bfsQueue.IsCreated) _bfsQueue.Dispose();
+
+            FlowFieldShared.Directions = default;
+            FlowFieldShared.NearestAttractorPos = default;
+            FlowFieldShared.Blocked = default;
         }
 
         private void Initialize(ref SystemState state)

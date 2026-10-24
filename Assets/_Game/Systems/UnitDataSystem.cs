@@ -48,6 +48,13 @@ namespace _Game.Systems
             if (_enemyEntities.IsCreated) _enemyEntities.Dispose();
             if (_allyPositions.IsCreated) _allyPositions.Dispose();
             if (_allyEntities.IsCreated) _allyEntities.Dispose();
+
+            EnemyDataShared.Positions = default;
+            EnemyDataShared.Entities = default;
+            EnemyDataShared.Count = 0;
+            AllyDataShared.Positions = default;
+            AllyDataShared.Entities = default;
+            AllyDataShared.Count = 0;
         }
 
         public void OnUpdate(ref SystemState state)
@@ -87,7 +94,8 @@ namespace _Game.Systems
                 }.ScheduleParallel(_allyQuery, state.Dependency);
             }
 
-            JobHandle.CombineDependencies(enemyHandle, allyHandle).Complete();
+            state.Dependency = JobHandle.CombineDependencies(enemyHandle, allyHandle, state.Dependency);
+            state.Dependency.Complete();
         }
 
         /// <summary>
