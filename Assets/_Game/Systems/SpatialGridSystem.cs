@@ -53,6 +53,9 @@ namespace _Game.Systems
             _enemyCellMap.Clear();
             _allyCellMap.Clear();
 
+            if (_enemyCellMap.Capacity < EnemyDataShared.Count) _enemyCellMap.Capacity = EnemyDataShared.Count;
+            if (_allyCellMap.Capacity < AllyDataShared.Count) _allyCellMap.Capacity = AllyDataShared.Count;
+
             JobHandle enemyHandle = default;
             if (EnemyDataShared.IsValid)
             {

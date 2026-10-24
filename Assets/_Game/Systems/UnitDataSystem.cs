@@ -13,8 +13,9 @@ namespace _Game.Systems
     [UpdateBefore(typeof(SpatialGridSystem))]
     public partial struct UnitDataSystem : ISystem
     {
-        private const int MaxEnemies = 10000;
-        private const int MaxAllies = 1000;
+        // Starting capacities. Arrays grow on demand, so these are not limits.
+        private const int InitialEnemyCapacity = 10000;
+        private const int InitialAllyCapacity = 1000;
 
         private NativeArray<float2> _enemyPositions;
         private NativeArray<Entity> _enemyEntities;
@@ -27,17 +28,17 @@ namespace _Game.Systems
 
         public void OnCreate(ref SystemState state)
         {
-            _enemyPositions = new NativeArray<float2>(MaxEnemies, Allocator.Persistent);
-            _enemyEntities = new NativeArray<Entity>(MaxEnemies, Allocator.Persistent);
+            _enemyPositions = new NativeArray<float2>(InitialEnemyCapacity, Allocator.Persistent);
+            _enemyEntities = new NativeArray<Entity>(InitialEnemyCapacity, Allocator.Persistent);
             EnemyDataShared.Positions = _enemyPositions;
             EnemyDataShared.Entities = _enemyEntities;
 
-            _allyPositions = new NativeArray<float2>(MaxAllies, Allocator.Persistent);
-            _allyEntities = new NativeArray<Entity>(MaxAllies, Allocator.Persistent);
+            _allyPositions = new NativeArray<float2>(InitialAllyCapacity, Allocator.Persistent);
+            _allyEntities = new NativeArray<Entity>(InitialAllyCapacity, Allocator.Persistent);
             AllyDataShared.Positions = _allyPositions;
             AllyDataShared.Entities = _allyEntities;
 
-            _enemyQuery = SystemAPI.QueryBuilder().WithAll<EnemyTag, LocalTransform>().Build();
+            _enemyQuery = SystemAPI.QueryBuilder().WithAll<EnemyTag, LocalTransform, Speed>().Build();
             _allyQuery = SystemAPI.QueryBuilder().WithAll<PlayerTag, LocalTransform>().Build();
         }
 
@@ -53,6 +54,18 @@ namespace _Game.Systems
         {
             EnemyDataShared.Count = _enemyQuery.CalculateEntityCount();
             AllyDataShared.Count = _allyQuery.CalculateEntityCount();
+
+            if (EnsureCapacity(ref state, ref _enemyPositions, ref _enemyEntities, EnemyDataShared.Count))
+            {
+                EnemyDataShared.Positions = _enemyPositions;
+                EnemyDataShared.Entities = _enemyEntities;
+            }
+
+            if (EnsureCapacity(ref state, ref _allyPositions, ref _allyEntities, AllyDataShared.Count))
+            {
+                AllyDataShared.Positions = _allyPositions;
+                AllyDataShared.Entities = _allyEntities;
+            }
 
             JobHandle enemyHandle = default;
             if (EnemyDataShared.Count > 0)
@@ -75,6 +88,24 @@ namespace _Game.Systems
             }
 
             JobHandle.CombineDependencies(enemyHandle, allyHandle).Complete();
+        }
+
+        /// <summary>
+        /// Reallocates the arrays (doubling) when count exceeds their length. Returns true if they were replaced.
+        /// </summary>
+        private static bool EnsureCapacity(ref SystemState state, ref NativeArray<float2> positions, ref NativeArray<Entity> entities, int count)
+        {
+            if (count <= positions.Length) return false;
+
+            state.EntityManager.CompleteAllTrackedJobs();
+
+            int capacity = math.max(count, positions.Length * 2);
+            positions.Dispose();
+            entities.Dispose();
+            positions = new NativeArray<float2>(capacity, Allocator.Persistent);
+            entities = new NativeArray<Entity>(capacity, Allocator.Persistent);
+            
+            return true;
         }
     }
 

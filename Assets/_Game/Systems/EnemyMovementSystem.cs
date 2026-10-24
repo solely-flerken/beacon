@@ -32,7 +32,6 @@ namespace _Game.Systems
             new MoveEnemyJob
             {
                 Positions = EnemyDataShared.Positions,
-                Count = EnemyDataShared.Count,
                 FlowFieldDirections = FlowFieldShared.Directions,
                 FlowFieldCellSize = FlowFieldShared.CellSize,
                 FlowFieldGridWidth = FlowFieldShared.GridWidth,
@@ -53,7 +52,6 @@ namespace _Game.Systems
     internal partial struct MoveEnemyJob : IJobEntity
     {
         [ReadOnly] public NativeArray<float2> Positions;
-        [ReadOnly] public int Count;
 
         [ReadOnly] public NativeArray<float2> FlowFieldDirections;
         [ReadOnly] public float FlowFieldCellSize;
@@ -71,8 +69,6 @@ namespace _Game.Systems
 
         private void Execute([EntityIndexInQuery] int index, ref LocalTransform transform, in Speed speed)
         {
-            if (index >= Count) return;
-
             float2 pos = Positions[index];
             float2 moveVec = FlowSteering(pos, speed.Value) + SeparationSteering(pos, index);
             float2 nextPos = math.clamp(pos + moveVec * DeltaTime, -HalfExtents, HalfExtents);
