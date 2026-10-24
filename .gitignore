@@ -43,6 +43,7 @@ ExportedObj/
 *.csproj
 *.unityproj
 *.sln
+*.slnx
 *.suo
 *.tmp
 *.user
@@ -98,9 +99,16 @@ InitTestScene*.unity*
 # Auto-generated scenes by play mode tests
 /[Aa]ssets/[Ii]nit[Tt]est[Ss]cene*.unity*
 
+# UI Toolkit auto generated files
+/UIElementsSchema/
+
+# Auto-generated cache in Assets folder
+/[Aa]ssets/[Ss]ceneDependencyCache*
+
 # Customs excludes
 .idea
 
-# Scene Dependency Cache
-/Assets/SceneDependencyCache/
-/Assets/SceneDependencyCache.meta
+# Gen AI Skills etc.
+.claude
+.agents
+skills-lock.json
