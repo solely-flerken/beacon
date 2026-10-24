@@ -61,6 +61,7 @@ namespace _Game.Gameplay.Waves
         private EntityQuery _beaconQuery;
         private EntityQuery _boundsQuery;
         private EntityQuery _catalogQuery;
+        private EntityQuery _waveModQuery;
 
         private void Awake()
         {
@@ -80,6 +81,7 @@ namespace _Game.Gameplay.Waves
             _beaconQuery = _entityManager.CreateEntityQuery(typeof(PlayerTag), typeof(LocalTransform));
             _boundsQuery = _entityManager.CreateEntityQuery(typeof(ArenaBounds));
             _catalogQuery = _entityManager.CreateEntityQuery(typeof(EnemyTypeCatalogEntry));
+            _waveModQuery = _entityManager.CreateEntityQuery(typeof(GlobalModSingleton), typeof(WaveStatModifier));
 
             EventBus.OnGameStateChanged += OnGameStateChanged;
         }
@@ -95,6 +97,7 @@ namespace _Game.Gameplay.Waves
                 _beaconQuery.Dispose();
                 _boundsQuery.Dispose();
                 _catalogQuery.Dispose();
+                _waveModQuery.Dispose();
             }
         }
 
@@ -125,6 +128,8 @@ namespace _Game.Gameplay.Waves
             CurrentWave = 0;
             IsWaveActive = false;
             WaveElapsed = 0f;
+            
+            ClearWaveModifiers();
         }
         
         private void StartNextWave()
@@ -200,8 +205,7 @@ namespace _Game.Gameplay.Waves
             IsWaveActive = false;
             WaveElapsed = 0f;
 
-            using EntityQuery globalModQuery = _entityManager.CreateEntityQuery(typeof(GlobalModSingleton));
-            _entityManager.GetBuffer<WaveStatModifier>(globalModQuery.GetSingletonEntity()).Clear();
+            ClearWaveModifiers();
 
             EventBus.FireWaveCleared(CurrentWave);
             Debug.Log($"[WaveManager] Wave {CurrentWave} cleared.");
@@ -210,6 +214,17 @@ namespace _Game.Gameplay.Waves
 
             Entity e = _entityManager.CreateEntity();
             _entityManager.AddComponent<WaveEndTag>(e);
+        }
+
+        private void ClearWaveModifiers()
+        {
+            if (_waveModQuery.IsEmpty)
+            {
+                Debug.LogWarning("[WaveManager] GlobalModSingleton not found, wave modifiers not cleared.");
+                return;
+            }
+
+            _entityManager.GetBuffer<WaveStatModifier>(_waveModQuery.GetSingletonEntity()).Clear();
         }
     }
 }
