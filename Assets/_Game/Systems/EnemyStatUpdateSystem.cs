@@ -63,6 +63,7 @@ namespace _Game.Systems
                 ref Speed speed,
                 ref Health health,
                 ref ContactDamage contactDamage,
+                ref EnemyReward reward,
                 in Classification mask,
                 in EnemyTypeRef typeRef,
                 in DynamicBuffer<StatModifier> entityMods)
@@ -73,6 +74,7 @@ namespace _Game.Systems
                 speed.Value = StatResolver.ResolveEnemy(tierEnum, StatType.Speed, speed.BaseValue, mask, GlobalMods, WaveMods, entityMods, ref blob);
                 health.Max = StatResolver.ResolveEnemy(tierEnum, StatType.MaxHp, health.BaseMax, mask, GlobalMods, WaveMods, entityMods, ref blob);
                 contactDamage.Value = StatResolver.ResolveEnemy(tierEnum, StatType.ContactDamage, contactDamage.BaseValue, mask, GlobalMods, WaveMods, entityMods, ref blob);
+                reward.ExpValue = StatResolver.ResolveEnemy(tierEnum, StatType.Exp, reward.BaseExpValue, mask, GlobalMods, WaveMods, entityMods, ref blob);
 
                 health.Current = health.Max;
                 
@@ -92,6 +94,7 @@ namespace _Game.Systems
                 ref Speed speed,
                 ref Health health,
                 ref ContactDamage contactDamage,
+                ref EnemyReward reward,
                 EnabledRefRW<EnemyStatUpdateRequired> updateRequired,
                 in Classification mask,
                 in EnemyTypeRef typeRef,
@@ -103,6 +106,7 @@ namespace _Game.Systems
                 speed.Value = StatResolver.ResolveEnemy(tierEnum, StatType.Speed, speed.BaseValue, mask, GlobalMods, WaveMods, entityMods, ref blob);
                 health.Max = StatResolver.ResolveEnemy(tierEnum, StatType.MaxHp, health.BaseMax, mask, GlobalMods, WaveMods, entityMods, ref blob);
                 contactDamage.Value = StatResolver.ResolveEnemy(tierEnum, StatType.ContactDamage, contactDamage.BaseValue, mask, GlobalMods, WaveMods, entityMods, ref blob);
+                reward.ExpValue = StatResolver.ResolveEnemy(tierEnum, StatType.Exp, reward.BaseExpValue, mask, GlobalMods, WaveMods, entityMods, ref blob);
 
                 updateRequired.ValueRW = false;
             }

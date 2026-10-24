@@ -18,7 +18,9 @@ namespace _Game.Components
         ContactDamage,
         // Beam Weapon
         BeamRotationSpeed,
-        BeamWidth
+        BeamWidth,
+        // Enemy reward
+        Exp
     }
 
     public enum ModifierType : byte

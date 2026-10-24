@@ -26,6 +26,8 @@ enemy-type and enemy-weapon scaling.
 ```
 Weapon: Damage, FireRate, TargetRange, ProjectileSpeed, Pierce
 Beacon/Enemy: MaxHp, ArrivalRadius, Speed, ContactDamage
+Beam: BeamRotationSpeed, BeamWidth
+Enemy reward: Exp
 ```
 
 ### ModifierType Enum
@@ -118,7 +120,7 @@ Two jobs:
 | Job              | Filter                                                        | Purpose                                                                                           |
 |------------------|---------------------------------------------------------------|---------------------------------------------------------------------------------------------------|
 | `SpawnInitJob`   | `WithAll<Uninitialized>`                                      | First-time stat init for newly spawned enemies; sets `current = max`; removes `Uninitialized` tag |
-| `UpdateStatsJob` | `WithNone<Uninitialized>` + `EnemyStatUpdateRequired` enabled | Re-resolves Speed, MaxHp, ContactDamage; disables dirty flag                                      |
+| `UpdateStatsJob` | `WithNone<Uninitialized>` + `EnemyStatUpdateRequired` enabled | Re-resolves Speed, MaxHp, ContactDamage, Exp; disables dirty flag                                     |
 
 Both jobs use the blob `TieredStatModifier` from `EnemyTypeBlobRef`.
 

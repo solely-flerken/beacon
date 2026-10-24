@@ -59,7 +59,7 @@ namespace _Game.Authoring
                 AddComponent(entity, new Speed { BaseValue = authoring.speed, Value = authoring.speed });
                 AddComponent(entity, new EnemySpeedVariation { Value = authoring.speedVariation });
                 AddComponent(entity, new Steering { Responsiveness = authoring.steeringResponsiveness });
-                AddComponent(entity, new EnemyReward { ExpValue = authoring.exp });
+                AddComponent(entity, new EnemyReward { BaseExpValue = authoring.exp, ExpValue = authoring.exp });
                 AddComponent(entity, new ContactDamage { BaseValue = authoring.contactDamage, Value = authoring.contactDamage });
                 AddComponent(entity, new Health { BaseMax = authoring.maxHealth, Max = authoring.maxHealth, Current = authoring.maxHealth, IsAlive = true});
                 

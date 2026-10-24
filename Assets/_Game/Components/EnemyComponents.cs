@@ -25,6 +25,7 @@ namespace _Game.Components
     /// </summary>
     public struct EnemyReward : IComponentData
     {
+        public float BaseExpValue;
         public float ExpValue;
     }
 
