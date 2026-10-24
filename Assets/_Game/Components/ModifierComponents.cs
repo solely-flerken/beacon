@@ -46,6 +46,7 @@ namespace _Game.Components
         public Classification Mask;
         public ModifierType Type;
         public float Value;
+        public bool RunScoped;
     }
 
     public struct WaveStatModifier : IBufferElementData

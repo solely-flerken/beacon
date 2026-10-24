@@ -137,7 +137,8 @@ namespace _Game.Cards
                 Stat = effect.Stat,
                 Mask = new Classification { Faction = FactionMask.Enemy, Role = effect.EnemyType },
                 Type = effect.ModifierType,
-                Value = effect.Value
+                Value = effect.Value,
+                RunScoped = true
             });
         }
     }

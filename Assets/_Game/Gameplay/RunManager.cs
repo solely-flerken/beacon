@@ -25,7 +25,8 @@ namespace _Game.Gameplay
         
         private EntityQuery _prefabQuery;
         private EntityQuery _weaponCatalogQuery;
-        
+        private EntityQuery _globalModQuery;
+
         private PrefabRefs _prefabRefs;
         private Entity _beaconEntity;
         private Entity[] _weaponEntities = Array.Empty<Entity>();
@@ -47,6 +48,7 @@ namespace _Game.Gameplay
         {
             _prefabQuery = _entityManager.CreateEntityQuery(typeof(PrefabRefs));
             _weaponCatalogQuery = _entityManager.CreateEntityQuery(typeof(WeaponCatalogEntry));
+            _globalModQuery = _entityManager.CreateEntityQuery(typeof(GlobalModSingleton), typeof(GlobalStatModifier));
 
             if (_prefabQuery.IsEmpty)
             {
@@ -68,6 +70,7 @@ namespace _Game.Gameplay
             {
                 _prefabQuery.Dispose();
                 _weaponCatalogQuery.Dispose();
+                _globalModQuery.Dispose();
             }
         }
 
@@ -84,6 +87,8 @@ namespace _Game.Gameplay
             DestroyEntity(_weaponEntities);
             DestroyEntity(ref _beaconEntity);
 
+            RemoveRunScopedGlobalModifiers();
+
             Loadout.Reset();
             slotProvider.ClearWeaponEntities();
             AbilityManager.Instance?.Reset();
@@ -92,6 +97,26 @@ namespace _Game.Gameplay
             CardDraftManager.Instance.ResetHistory();
             ExpManager.Instance.Reset();
             RunStatsManager.Instance.ResetStats();
+        }
+
+        /// <summary>
+        /// Removes run-scoped global modifiers (e.g. enemy cards). Baked authoring entries are kept.
+        /// </summary>
+        private void RemoveRunScopedGlobalModifiers()
+        {
+            if (_globalModQuery.IsEmpty)
+            {
+                Debug.LogWarning("[RunManager] GlobalModSingleton not found, global modifiers won't be reset between runs.");
+                return;
+            }
+
+            DynamicBuffer<GlobalStatModifier> buffer = _entityManager.GetBuffer<GlobalStatModifier>(_globalModQuery.GetSingletonEntity());
+            for (int i = buffer.Length - 1; i >= 0; i--)
+            {
+                if (!buffer[i].RunScoped) continue;
+                
+                buffer.RemoveAt(i);
+            }
         }
 
         private void SpawnBeacon()
