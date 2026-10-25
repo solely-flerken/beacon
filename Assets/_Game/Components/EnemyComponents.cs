@@ -93,6 +93,20 @@ namespace _Game.Components
         public Entity TypeEntity;
     }
     
+    /// <summary>
+    /// Queued enemy group on the spawn queue singleton, consumed by EnemySpawnSystem.
+    /// Enemies appear on an arc of the spawn ring around the beacon's position at spawn time.
+    /// </summary>
+    [InternalBufferCapacity(0)]
+    public struct EnemySpawnRequest : IBufferElementData
+    {
+        public RoleMask Type;
+        public EnemyTier Tier;
+        public int Count;
+        public float ArcCenter; // Radians
+        public float ArcWidth; // Radians
+    }
+
     [InternalBufferCapacity(4)]
     public struct HitCooldown : IBufferElementData
     {

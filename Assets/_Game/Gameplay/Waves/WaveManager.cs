@@ -5,7 +5,6 @@ using _Game.Components;
 using _Game.Core;
 using Unity.Entities;
 using Unity.Mathematics;
-using Unity.Transforms;
 using UnityEngine;
 
 namespace _Game.Gameplay.Waves
@@ -93,9 +92,7 @@ namespace _Game.Gameplay.Waves
 
         private EntityManager _entityManager;
         private EntityQuery _enemyQuery;
-        private EntityQuery _beaconQuery;
-        private EntityQuery _boundsQuery;
-        private EntityQuery _catalogQuery;
+        private EntityQuery _spawnQueueQuery;
         private EntityQuery _waveModQuery;
 
         private WaveDefinition _wave;
@@ -118,9 +115,7 @@ namespace _Game.Gameplay.Waves
         {
             _entityManager = World.DefaultGameObjectInjectionWorld.EntityManager;
             _enemyQuery = _entityManager.CreateEntityQuery(typeof(EnemyTag));
-            _beaconQuery = _entityManager.CreateEntityQuery(typeof(PlayerTag), typeof(LocalTransform));
-            _boundsQuery = _entityManager.CreateEntityQuery(typeof(ArenaBounds));
-            _catalogQuery = _entityManager.CreateEntityQuery(typeof(EnemyTypeCatalogEntry));
+            _spawnQueueQuery = _entityManager.CreateEntityQuery(typeof(EnemySpawnRequest));
             _waveModQuery = _entityManager.CreateEntityQuery(typeof(GlobalModSingleton), typeof(WaveStatModifier));
 
             EventBus.OnGameStateChanged += OnGameStateChanged;
@@ -134,9 +129,7 @@ namespace _Game.Gameplay.Waves
             if (world != null && world.IsCreated)
             {
                 _enemyQuery.Dispose();
-                _beaconQuery.Dispose();
-                _boundsQuery.Dispose();
-                _catalogQuery.Dispose();
+                _spawnQueueQuery.Dispose();
                 _waveModQuery.Dispose();
             }
         }
@@ -151,6 +144,7 @@ namespace _Game.Gameplay.Waves
             {
                 IsWaveActive = false;
                 Phase = WavePhase.None;
+                ClearSpawnQueue();
             }
         }
         
@@ -178,7 +172,7 @@ namespace _Game.Gameplay.Waves
             _spawnClock += dt;
 
             // Field cleared early: pull the next pulse (or the end of the spawn phase) forward
-            if (_enemyQuery.IsEmpty)
+            if (_enemyQuery.IsEmpty && !HasPendingSpawns())
             {
                 float nextTime = _nextPulse < _wave.Pulses.Count ? _wave.Pulses[_nextPulse].Time : _wave.SpawnDuration;
                 _spawnClock = Mathf.Max(_spawnClock, nextTime);
@@ -202,7 +196,7 @@ namespace _Game.Gameplay.Waves
         {
             _graceRemaining -= dt;
 
-            if (!_enemyQuery.IsEmpty)
+            if (!_enemyQuery.IsEmpty || HasPendingSpawns())
             {
                 if (_graceRemaining > 0f) return;
                 
@@ -222,6 +216,7 @@ namespace _Game.Gameplay.Waves
             _wave = null;
 
             ClearWaveModifiers();
+            ClearSpawnQueue();
         }
         
         private void StartNextWave()
@@ -270,39 +265,45 @@ namespace _Game.Gameplay.Waves
 
         private void SpawnPulse(SpawnPulse pulse)
         {
-            if (_catalogQuery.IsEmpty)
+            if (_spawnQueueQuery.IsEmpty)
             {
-                Debug.LogError("[WaveManager] EnemyTypeCatalog not found.");
+                Debug.LogError("[WaveManager] Enemy spawn queue not found.");
                 return;
             }
 
-            if (_boundsQuery.IsEmpty)
-            {
-                Debug.LogError("[WaveManager] ArenaBounds not found.");
-                return;
-            }
-
-            float2 center = float2.zero;
-            if (!_beaconQuery.IsEmptyIgnoreFilter)
-            {
-                center = _beaconQuery.GetSingleton<LocalTransform>().Position.xy;
-            }
-
-            ArenaBounds bounds = _boundsQuery.GetSingleton<ArenaBounds>();
-            float2 halfExtents = new(bounds.Width * 0.5f - 1f, bounds.Height * 0.5f - 1f);
-
-            Entity catalogEntity = _catalogQuery.GetSingletonEntity();
+            DynamicBuffer<EnemySpawnRequest> queue = _spawnQueueQuery.GetSingletonBuffer<EnemySpawnRequest>();
             float arcWidth = math.radians(packArcDegrees);
 
+            // EnemySpawnSystem instantiates these over the next frames, capped per frame
             foreach (SpawnGroup group in pulse.Groups)
             {
-                EnemySpawner.Spawn(_entityManager, group, catalogEntity, center, halfExtents, pulse.Angle, arcWidth);
+                queue.Add(new EnemySpawnRequest
+                {
+                    Type = group.Type,
+                    Tier = group.Tier,
+                    Count = group.Count,
+                    ArcCenter = pulse.Angle,
+                    ArcWidth = arcWidth,
+                });
                 SpawnedCount += group.Count;
             }
         }
 
+        private bool HasPendingSpawns()
+        {
+            return !_spawnQueueQuery.IsEmpty && !_spawnQueueQuery.GetSingletonBuffer<EnemySpawnRequest>(isReadOnly: true).IsEmpty;
+        }
+
+        private void ClearSpawnQueue()
+        {
+            if (_spawnQueueQuery.IsEmpty) return;
+            _spawnQueueQuery.GetSingletonBuffer<EnemySpawnRequest>().Clear();
+        }
+
         private void DespawnRemainingEnemies()
         {
+            ClearSpawnQueue();
+
             int count = _enemyQuery.CalculateEntityCount();
             _entityManager.AddComponent<DespawnTag>(_enemyQuery);
             Debug.Log($"[WaveManager] Grace period over, despawned {count} enemies.");
