@@ -40,11 +40,17 @@ namespace _Game.Systems
                 ExpOrbQueue = expQueueWriter,
             }.ScheduleParallel(state.Dependency);
 
+            state.Dependency = new EnemyDespawnJob
+            {
+                ECB = ecb,
+            }.ScheduleParallel(state.Dependency);
+
             DotsBridge.BridgeDependencies = JobHandle.CombineDependencies(DotsBridge.BridgeDependencies, state.Dependency);
         }
 
         [BurstCompile]
         [WithAll(typeof(EnemyTag), typeof(IsDead))]
+        [WithNone(typeof(DespawnTag))]
         internal partial struct EnemyDeathJob : IJobEntity
         {
             public EntityCommandBuffer.ParallelWriter ECB;
@@ -70,6 +76,18 @@ namespace _Game.Systems
                 if (HasDeathQueue) DeathQueue.Enqueue(deathEvent);
                 if (HasExpQueue) ExpOrbQueue.Enqueue(deathEvent);
 
+                ECB.DestroyEntity(sortKey, entity);
+            }
+        }
+        
+        [BurstCompile]
+        [WithAll(typeof(EnemyTag), typeof(DespawnTag))]
+        internal partial struct EnemyDespawnJob : IJobEntity
+        {
+            public EntityCommandBuffer.ParallelWriter ECB;
+
+            private void Execute(Entity entity, [EntityIndexInQuery] int sortKey)
+            {
                 ECB.DestroyEntity(sortKey, entity);
             }
         }

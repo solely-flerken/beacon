@@ -6,6 +6,11 @@ namespace _Game.Components
     public struct EnemyTag : IComponentData { }
 
     /// <summary>
+    /// Removes the enemy via EnemyDeathSystem without rewards or death events.
+    /// </summary>
+    public struct DespawnTag : IComponentData { }
+
+    /// <summary>
     /// Damage dealt to the beacon on contact.
     /// Add to any entity that should deal damage when reaching the beacon - enemies, bosses, projectiles, etc.
     /// </summary>

@@ -17,6 +17,7 @@ namespace _Game.Gameplay.Waves.Editor
         private SerializedProperty _budgetBase;
         private SerializedProperty _budgetPerWave;
         private SerializedProperty _definitions;
+        private SerializedProperty[] _timingProps;
         private ReorderableList _defList;
         private readonly Dictionary<int, ReorderableList> _tierListCache = new();
 
@@ -25,6 +26,10 @@ namespace _Game.Gameplay.Waves.Editor
             _budgetBase = serializedObject.FindProperty("budgetBase");
             _budgetPerWave = serializedObject.FindProperty("budgetPerWave");
             _definitions = serializedObject.FindProperty("enemyTypeDefinitions");
+            
+            _timingProps = new[] { "spawnDurationBase", "spawnDurationPerWave", "pulseInterval", "intensityRamp", "gracePeriod", "packArcDegrees" }
+                .Select(serializedObject.FindProperty)
+                .ToArray();
 
             _defList = new ReorderableList(serializedObject, _definitions, true, true, true, true)
             {
@@ -43,6 +48,11 @@ namespace _Game.Gameplay.Waves.Editor
             EditorGUILayout.PropertyField(_budgetPerWave);
             _defList.displayAdd = _definitions.arraySize < AllTypes.Length;
             _defList.DoLayoutList();
+            
+            foreach (SerializedProperty prop in _timingProps)
+            {
+                EditorGUILayout.PropertyField(prop);
+            }
             serializedObject.ApplyModifiedProperties();
 
             if (_definitions.arraySize == 0)

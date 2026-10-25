@@ -40,7 +40,18 @@ namespace _Game.Gameplay.Waves
     {
         public int BudgetBase;
         public int BudgetPerWave;
+        public float SpawnDurationBase;
+        public float SpawnDurationPerWave;
+        public float PulseInterval;
+        public float IntensityRamp;
         public EnemyTypeEntry[] EnemyTypes;
+    }
+
+    public enum WavePhase
+    {
+        None,
+        Spawning, // Pulses spawn on schedule
+        Grace, // No more spawns, remaining enemies can still be killed
     }
 
     public class WaveManager : MonoBehaviour
@@ -50,11 +61,35 @@ namespace _Game.Gameplay.Waves
         public int CurrentWave { get; private set; }
         public bool IsWaveActive { get; private set; }
         public float WaveElapsed { get; private set; }
+        public WavePhase Phase { get; private set; }
+        public int SpawnedCount { get; private set; }
+        public int TotalEnemies => _wave?.TotalEnemies ?? 0;
+
+        public float PhaseTimeRemaining => Phase switch
+        {
+            WavePhase.Spawning => Mathf.Max(0f, _wave.SpawnDuration - _spawnClock),
+            WavePhase.Grace => Mathf.Max(0f, _graceRemaining),
+            _ => 0f
+        };
 
         [Header("Wave Budget")]
         [SerializeField] private int budgetBase = 30;
         [SerializeField] private int budgetPerWave = 5;
         [SerializeField] private List<EnemyTypeDefinition> enemyTypeDefinitions = new();
+
+        [Header("Wave Timing")]
+        [Tooltip("Length of the spawn phase on wave 1, in seconds.")]
+        [SerializeField, Min(1f)] private float spawnDurationBase = 30f;
+        [Tooltip("Seconds added to the spawn phase per wave after the first.")]
+        [SerializeField, Min(0f)] private float spawnDurationPerWave = 2f;
+        [Tooltip("Seconds between pulses.")]
+        [SerializeField, Min(0.1f)] private float pulseInterval = 2f;
+        [Tooltip("Size of the last pulse relative to the first.")]
+        [SerializeField, Min(0.1f)] private float intensityRamp = 2f;
+        [Tooltip("Seconds after the spawn phase to kill remaining enemies before they despawn.")]
+        [SerializeField, Min(0f)] private float gracePeriod = 8f;
+        [Tooltip("Width of the spawn ring arc each pulse spawns on, in degrees.")]
+        [SerializeField, Range(1f, 360f)] private float packArcDegrees = 60f;
 
         private EntityManager _entityManager;
         private EntityQuery _enemyQuery;
@@ -62,6 +97,11 @@ namespace _Game.Gameplay.Waves
         private EntityQuery _boundsQuery;
         private EntityQuery _catalogQuery;
         private EntityQuery _waveModQuery;
+
+        private WaveDefinition _wave;
+        private int _nextPulse;
+        private float _spawnClock;
+        private float _graceRemaining;
 
         private void Awake()
         {
@@ -110,6 +150,7 @@ namespace _Game.Gameplay.Waves
             else if (to == GameState.RunEnd)
             {
                 IsWaveActive = false;
+                Phase = WavePhase.None;
             }
         }
         
@@ -117,9 +158,57 @@ namespace _Game.Gameplay.Waves
         {
             if (!GameStateMachine.Instance.IsWaveRunning) return;
             if (!IsWaveActive) return;
-            WaveElapsed += Time.deltaTime;
-            if (!_enemyQuery.IsEmpty) return;
+
+            float dt = Time.deltaTime;
+            WaveElapsed += dt;
+
+            switch (Phase)
+            {
+                case WavePhase.Spawning:
+                    TickSpawning(dt);
+                    break;
+                case WavePhase.Grace:
+                    TickGrace(dt);
+                    break;
+            }
+        }
+
+        private void TickSpawning(float dt)
+        {
+            _spawnClock += dt;
+
+            // Field cleared early: pull the next pulse (or the end of the spawn phase) forward
+            if (_enemyQuery.IsEmpty)
+            {
+                float nextTime = _nextPulse < _wave.Pulses.Count ? _wave.Pulses[_nextPulse].Time : _wave.SpawnDuration;
+                _spawnClock = Mathf.Max(_spawnClock, nextTime);
+            }
+
+            while (_nextPulse < _wave.Pulses.Count && _wave.Pulses[_nextPulse].Time <= _spawnClock)
+            {
+                SpawnPulse(_wave.Pulses[_nextPulse]);
+                _nextPulse++;
+            }
+
+            if (_nextPulse < _wave.Pulses.Count || _spawnClock < _wave.SpawnDuration) return;
+
+            Phase = WavePhase.Grace;
+            _graceRemaining = gracePeriod;
             
+            Debug.Log($"[WaveManager] Wave {CurrentWave} spawning finished, {gracePeriod}s grace period.");
+        }
+
+        private void TickGrace(float dt)
+        {
+            _graceRemaining -= dt;
+
+            if (!_enemyQuery.IsEmpty)
+            {
+                if (_graceRemaining > 0f) return;
+                
+                DespawnRemainingEnemies();
+            }
+
             WaveCleared();
         }
 
@@ -128,7 +217,10 @@ namespace _Game.Gameplay.Waves
             CurrentWave = 0;
             IsWaveActive = false;
             WaveElapsed = 0f;
-            
+            Phase = WavePhase.None;
+            SpawnedCount = 0;
+            _wave = null;
+
             ClearWaveModifiers();
         }
         
@@ -136,18 +228,25 @@ namespace _Game.Gameplay.Waves
         {
             CurrentWave++;
             WaveElapsed = 0f;
-            
-            Debug.Log($"[WaveManager] Wave {CurrentWave} started.");
 
             WaveGeneratorConfig config = new()
             {
                 BudgetBase = budgetBase,
                 BudgetPerWave = budgetPerWave,
+                SpawnDurationBase = spawnDurationBase,
+                SpawnDurationPerWave = spawnDurationPerWave,
+                PulseInterval = pulseInterval,
+                IntensityRamp = intensityRamp,
                 EnemyTypes = FlattenEnemyTypes(),
             };
 
-            WaveDefinition definition = WaveGenerator.Generate(CurrentWave, config);
-            SpawnWave(definition);
+            _wave = WaveGenerator.Generate(CurrentWave, config);
+            _nextPulse = 0;
+            _spawnClock = 0f;
+            SpawnedCount = 0;
+            Phase = WavePhase.Spawning;
+
+            Debug.Log($"[WaveManager] Wave {CurrentWave} started: {_wave.TotalEnemies} enemies in {_wave.Pulses.Count} pulses over {_wave.SpawnDuration}s.");
 
             IsWaveActive = true;
             EventBus.FireWaveStarted(CurrentWave);
@@ -169,7 +268,7 @@ namespace _Game.Gameplay.Waves
             return enemyTypeEntry.ToArray();
         }
 
-        private void SpawnWave(WaveDefinition definition)
+        private void SpawnPulse(SpawnPulse pulse)
         {
             if (_catalogQuery.IsEmpty)
             {
@@ -193,17 +292,27 @@ namespace _Game.Gameplay.Waves
             float2 halfExtents = new(bounds.Width * 0.5f - 1f, bounds.Height * 0.5f - 1f);
 
             Entity catalogEntity = _catalogQuery.GetSingletonEntity();
+            float arcWidth = math.radians(packArcDegrees);
 
-            foreach (SpawnGroup group in definition.SpawnGroups)
+            foreach (SpawnGroup group in pulse.Groups)
             {
-                EnemySpawner.SpawnWave(_entityManager, group, catalogEntity, center, halfExtents);
+                EnemySpawner.Spawn(_entityManager, group, catalogEntity, center, halfExtents, pulse.Angle, arcWidth);
+                SpawnedCount += group.Count;
             }
+        }
+
+        private void DespawnRemainingEnemies()
+        {
+            int count = _enemyQuery.CalculateEntityCount();
+            _entityManager.AddComponent<DespawnTag>(_enemyQuery);
+            Debug.Log($"[WaveManager] Grace period over, despawned {count} enemies.");
         }
 
         private void WaveCleared()
         {
             IsWaveActive = false;
             WaveElapsed = 0f;
+            Phase = WavePhase.None;
 
             ClearWaveModifiers();
 

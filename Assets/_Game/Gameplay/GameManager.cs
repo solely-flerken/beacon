@@ -173,10 +173,14 @@ namespace _Game.Gameplay
         {
             int enemyCount = _enemyCountQuery.CalculateEntityCount();
             int projectileCount = _projectileCountQuery.CalculateEntityCount();
-            int waveNumber = WaveManager.Instance.CurrentWave;
+            WaveManager waves = WaveManager.Instance;
             GUI.Box(new Rect(10, 10, 150, 25), $"Enemies: {enemyCount}");
             GUI.Box(new Rect(10, 40, 150, 25), $"Projectiles: {projectileCount}");
-            GUI.Box(new Rect(10, 70, 150, 25), $"Wave {waveNumber}");
+
+            string waveLabel = waves.Phase == WavePhase.None
+                ? $"Wave {waves.CurrentWave}"
+                : $"Wave {waves.CurrentWave} - {waves.Phase} {waves.PhaseTimeRemaining:0.0}s - {waves.SpawnedCount}/{waves.TotalEnemies}";
+            GUI.Box(new Rect(10, 70, 300, 25), waveLabel);
             
             if (ExpManager.Instance != null)
             {
