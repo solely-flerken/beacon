@@ -199,6 +199,23 @@ namespace _Game.Systems
             Random rng = new(seed);
             int count = 0;
 
+            if (ShouldScanLinearly(positions.Length, cellRange))
+            {
+                for (int idx = 0; idx < positions.Length; idx++)
+                {
+                    if (math.distancesq(origin, positions[idx]) > maxRangeSq) continue;
+                    if (checkIncoming && IsOverCommitted(entities[idx], healthLookup, incomingDamageLookup)) continue;
+
+                    count++;
+                    if (rng.NextInt(0, count) != 0) continue;
+                    randomPos = positions[idx];
+                    randomIdx = idx;
+                }
+
+                seed = rng.state;
+                return randomIdx != -1;
+            }
+
             for (int cx = -cellRange; cx <= cellRange; cx++)
             {
                 for (int cy = -cellRange; cy <= cellRange; cy++)
@@ -248,6 +265,24 @@ namespace _Game.Systems
             int2 centerCell = new((int)math.floor(origin.x / cellSize), (int)math.floor(origin.y / cellSize));
             int cellRange = (int)math.ceil(maxRange / cellSize);
 
+            if (ShouldScanLinearly(positions.Length, cellRange))
+            {
+                for (int idx = 0; idx < positions.Length; idx++)
+                {
+                    float distSq = math.distancesq(origin, positions[idx]);
+                    bool betterTarget = invert ? distSq <= maxRangeSq && distSq > bestSq : distSq < bestSq;
+                    if (!betterTarget) continue;
+                    if (checkIncoming && IsOverCommitted(entities[idx], healthLookup, incomingDamageLookup)) continue;
+
+                    bestSq = distSq;
+                    resultPos = positions[idx];
+                    resultIdx = idx;
+                    found = true;
+                }
+
+                return found;
+            }
+
             for (int cx = -cellRange; cx <= cellRange; cx++)
             {
                 for (int cy = -cellRange; cy <= cellRange; cy++)
@@ -274,6 +309,15 @@ namespace _Game.Systems
             }
 
             return found;
+        }
+
+        /// <summary>
+        /// Returns true if iterating all candidates is cheaper than probing the (2 * cellRange + 1)^2 grid cells in range.
+        /// </summary>
+        private static bool ShouldScanLinearly(int candidateCount, int cellRange)
+        {
+            int side = 2 * cellRange + 1;
+            return candidateCount <= side * side;
         }
 
         /// <summary>
