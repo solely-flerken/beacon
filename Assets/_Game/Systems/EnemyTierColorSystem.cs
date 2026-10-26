@@ -12,6 +12,7 @@ namespace _Game.Systems
     /// Tints freshly spawned non-Normal enemies by tier.
     /// </summary>
     [UpdateInGroup(typeof(SimulationSystemGroup))]
+    [UpdateBefore(typeof(EnemyStatUpdateSystem))]
     public partial struct EnemyTierColorSystem : ISystem
     {
         private float4 _eliteColor;

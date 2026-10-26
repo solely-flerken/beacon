@@ -20,7 +20,6 @@ namespace _Game.Systems
         {
             _blobLookup = state.GetComponentLookup<EnemyTypeBlobRef>(isReadOnly: true);
 
-            state.RequireForUpdate<EndSimulationEntityCommandBufferSystem.Singleton>();
             state.RequireForUpdate<GlobalModSingleton>();
         }
 
@@ -32,9 +31,6 @@ namespace _Game.Systems
             DynamicBuffer<GlobalStatModifier> globalMods = SystemAPI.GetSingletonBuffer<GlobalStatModifier>(isReadOnly: true);
             DynamicBuffer<WaveStatModifier> waveMods = SystemAPI.GetSingletonBuffer<WaveStatModifier>(isReadOnly: true);
 
-            EndSimulationEntityCommandBufferSystem.Singleton ecbSingleton = SystemAPI.GetSingleton<EndSimulationEntityCommandBufferSystem.Singleton>();
-            EntityCommandBuffer.ParallelWriter ecb = ecbSingleton.CreateCommandBuffer(state.WorldUnmanaged).AsParallelWriter();
-
             _spawnSeed++;
 
             new SpawnInitJob
@@ -42,7 +38,6 @@ namespace _Game.Systems
                 GlobalMods = globalMods,
                 WaveMods = waveMods,
                 BlobLookup = _blobLookup,
-                Ecb = ecb,
                 Seed = _spawnSeed,
             }.ScheduleParallel();
 
@@ -55,18 +50,16 @@ namespace _Game.Systems
         }
 
         [BurstCompile]
-        [WithAll(typeof(Uninitialized))]
         public partial struct SpawnInitJob : IJobEntity
         {
             [ReadOnly] public DynamicBuffer<GlobalStatModifier> GlobalMods;
             [ReadOnly] public DynamicBuffer<WaveStatModifier> WaveMods;
             [ReadOnly] public ComponentLookup<EnemyTypeBlobRef> BlobLookup;
-            public EntityCommandBuffer.ParallelWriter Ecb;
             public uint Seed;
 
             private void Execute(
                 Entity entity,
-                [ChunkIndexInQuery] int chunkIndex,
+                EnabledRefRW<Uninitialized> uninitialized,
                 ref Speed speed,
                 ref Health health,
                 ref ContactDamage contactDamage,
@@ -90,8 +83,8 @@ namespace _Game.Systems
                 reward.ExpValue = StatResolver.ResolveEnemy(tierEnum, StatType.Exp, reward.BaseExpValue, mask, GlobalMods, WaveMods, entityMods, ref blob);
 
                 health.Current = health.Max;
-                
-                Ecb.RemoveComponent<Uninitialized>(chunkIndex, entity);
+
+                uninitialized.ValueRW = false;
             }
         }
 
