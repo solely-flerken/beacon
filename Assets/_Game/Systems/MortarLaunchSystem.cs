@@ -57,11 +57,15 @@ namespace _Game.Systems
             float duration = dist / projStats.Speed;
             float3 spawnPos = new(weaponPos, 0f);
 
+            LocalToWorld spawnMatrix = new() { Value = float4x4.Translate(spawnPos) };
+
             Entity shadow = ECB.Instantiate(sortKey, mortarData.ShadowPrefab);
             ECB.SetComponent(sortKey, shadow, LocalTransform.FromPosition(spawnPos));
+            ECB.SetComponent(sortKey, shadow, spawnMatrix);
 
             Entity shell = ECB.Instantiate(sortKey, mortarData.ShellPrefab);
             ECB.SetComponent(sortKey, shell, LocalTransform.FromPosition(spawnPos));
+            ECB.SetComponent(sortKey, shell, spawnMatrix);
             ECB.AddComponent(sortKey, shell, new ProjectileWeapon { Value = entity });
             ECB.SetComponent(sortKey, shell, new MortarTrajectory
             {

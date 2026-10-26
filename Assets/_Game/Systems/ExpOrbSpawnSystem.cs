@@ -142,13 +142,10 @@ namespace _Game.Systems
             {
                 ExpOrbData data = spawnData[i];
                 Entity orb = ecb.Instantiate(prefabs.ExpOrb);
-                
-                ecb.SetComponent(orb, new LocalTransform
-                {
-                    Position = new float3(spawnPositions[i], 0f),
-                    Rotation = quaternion.identity,
-                    Scale = ValueToScale(data.Value, config),
-                });
+                LocalTransform spawnTransform = LocalTransform.FromPositionRotationScale(new float3(spawnPositions[i], 0f), quaternion.identity, ValueToScale(data.Value, config));
+
+                ecb.SetComponent(orb, spawnTransform);
+                ecb.SetComponent(orb, new LocalToWorld { Value = spawnTransform.ToMatrix() });
                 ecb.SetComponent(orb, data);
 
                 if (data.Value >= data.MaxValue)

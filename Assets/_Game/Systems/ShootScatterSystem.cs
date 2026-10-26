@@ -86,8 +86,10 @@ namespace _Game.Systems
                 float3 spawnPos = new(weaponPos + dir * 1.2f, 0f);
 
                 // Spawn projectile
+                LocalTransform spawnTransform = LocalTransform.FromPositionRotationScale(spawnPos, quaternion.identity, scale);
                 Entity projectile = ECB.Instantiate(sortKey, prefab);
-                ECB.SetComponent(sortKey, projectile, LocalTransform.FromPositionRotationScale(spawnPos, quaternion.identity, scale));
+                ECB.SetComponent(sortKey, projectile, spawnTransform);
+                ECB.SetComponent(sortKey, projectile, new LocalToWorld { Value = spawnTransform.ToMatrix() });
                 ECB.SetComponent(sortKey, projectile, new ProjectileVelocity { Value = dir * (projStats.Speed * speedMul) });
                 ECB.SetComponent(sortKey, projectile, new ProjectileDamage { Value = weaponStats.Damage });
                 ECB.SetComponent(sortKey, projectile, new ProjectilePierce { Remaining = projStats.Pierce });

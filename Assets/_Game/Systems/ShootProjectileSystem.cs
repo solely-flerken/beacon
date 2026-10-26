@@ -77,8 +77,10 @@ namespace _Game.Systems
             float scale = TransformLookup.HasComponent(prefab) ? TransformLookup[prefab].Scale : 1f;
 
             // Spawn projectile
+            LocalTransform spawnTransform = LocalTransform.FromPositionRotationScale(spawnPos, quaternion.identity, scale);
             Entity projectile = ECB.Instantiate(sortKey, prefab);
-            ECB.SetComponent(sortKey, projectile, LocalTransform.FromPositionRotationScale(spawnPos, quaternion.identity, scale));
+            ECB.SetComponent(sortKey, projectile, spawnTransform);
+            ECB.SetComponent(sortKey, projectile, new LocalToWorld { Value = spawnTransform.ToMatrix() });
             ECB.SetComponent(sortKey, projectile, new ProjectileVelocity { Value = baseDir * projStats.Speed });
             ECB.SetComponent(sortKey, projectile, new ProjectileDamage { Value = stats.Damage });
             ECB.SetComponent(sortKey, projectile, new ProjectilePierce { Remaining = projStats.Pierce });

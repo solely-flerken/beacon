@@ -123,8 +123,10 @@ namespace _Game.Systems
             {
                 float scale = radius * 2f;
                 
+                LocalTransform spawnTransform = LocalTransform.FromPositionRotationScale(new float3(pos, 0f), quaternion.identity, scale);
                 Entity explosion = Ecb.Instantiate(sortKey, prefab);
-                Ecb.SetComponent(sortKey, explosion, LocalTransform.FromPositionRotationScale(new float3(pos, 0f), quaternion.identity, scale));
+                Ecb.SetComponent(sortKey, explosion, spawnTransform);
+                Ecb.SetComponent(sortKey, explosion, new LocalToWorld { Value = spawnTransform.ToMatrix() });
                 Ecb.SetComponent(sortKey, explosion, new ExplosionState
                 {
                     Duration = 0.4f,
