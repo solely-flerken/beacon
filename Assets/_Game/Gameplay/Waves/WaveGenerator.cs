@@ -31,11 +31,12 @@ namespace _Game.Gameplay.Waves
         private static List<(RoleMask, EnemyTier)> FillBudget(int budget, WaveGeneratorConfig config, int waveNumber)
         {
             List<(RoleMask, EnemyTier)> picks = new();
+            List<EnemyTypeEntry> eligible = EligibleEntries(config.EnemyTypes, waveNumber);
 
             int remaining = budget;
             while (remaining > 0)
             {
-                EnemyTypeEntry? picked = WeightedPick(config.EnemyTypes, remaining, waveNumber);
+                EnemyTypeEntry? picked = WeightedPick(eligible, remaining);
                 if (picked == null)
                 {
                     Debug.LogWarning($"[WaveGenerator] No affordable entry found with {remaining} budget remaining on wave {waveNumber}. Stopping early.");
@@ -124,28 +125,46 @@ namespace _Game.Gameplay.Waves
         }
 
         /// <summary>
+        /// Returns the entries with a positive spawn weight at this wave.
+        /// </summary>
+        private static List<EnemyTypeEntry> EligibleEntries(EnemyTypeEntry[] types, int wave)
+        {
+            List<EnemyTypeEntry> eligible = new(types.Length);
+            eligible.AddRange(types.Where(entry => EffectiveWeight(entry, wave) > 0f));
+
+            return eligible;
+        }
+
+        /// <summary>
         /// Picks one enemy type by weight, excluding types that cost more than the remaining budget.
         /// </summary>
-        private static EnemyTypeEntry? WeightedPick(EnemyTypeEntry[] types, int remainingBudget, int wave)
+        private static EnemyTypeEntry? WeightedPick(List<EnemyTypeEntry> eligible, int remainingBudget)
         {
-            float totalWeight = types.Where(entry => entry.Cost <= remainingBudget).Sum(entry => EffectiveWeight(entry, wave));
+            float totalWeight = 0f;
+            for (int i = 0; i < eligible.Count; i++)
+            {
+                if (eligible[i].Cost > remainingBudget) continue;
+                totalWeight += eligible[i].Weight;
+            }
 
             if (totalWeight <= 0f) return null;
 
             float roll = Random.Range(0f, totalWeight);
             float cumulative = 0f;
 
-            foreach (EnemyTypeEntry entry in types)
+            foreach (EnemyTypeEntry entry in eligible)
             {
                 if (entry.Cost > remainingBudget) continue;
-                
-                cumulative += EffectiveWeight(entry, wave);
-                if (roll >= cumulative) continue;
-                    
-                return entry;
+
+                cumulative += entry.Weight;
+
+                if (roll <= cumulative)
+                {
+                    return entry;
+                }
             }
 
-            return null;
+            return null; // Unreachable
         }
 
         /// <summary>
