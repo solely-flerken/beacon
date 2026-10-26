@@ -8,6 +8,7 @@ using Unity.Transforms;
 namespace _Game.Systems
 {
     [UpdateInGroup(typeof(SimulationSystemGroup))]
+    [UpdateAfter(typeof(SpatialGridSystem))]
     public partial struct BeaconArrivalSystem : ISystem // TODO: Extend this to not only be used for the beacon but also for other destroyable entities.
     {
         private static readonly int2[] NeighbourOffsets =
