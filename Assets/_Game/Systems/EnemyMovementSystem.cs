@@ -31,15 +31,12 @@ namespace _Game.Systems
 
             new MoveEnemyJob
             {
-                Positions = EnemyDataShared.Positions,
-                Entities = EnemyDataShared.Entities,
                 FlowFieldDirections = FlowFieldShared.Directions,
                 FlowFieldCellSize = FlowFieldShared.CellSize,
                 FlowFieldGridWidth = FlowFieldShared.GridWidth,
                 FlowFieldGridHeight = FlowFieldShared.GridHeight,
                 NearestAttractorPos = FlowFieldShared.NearestAttractorPos,
-                SpatialGrid = SpatialGridShared.EnemyCellMap,
-                SpatialGridCellSize = SpatialGridShared.CellSize,
+                SpatialGrid = SpatialGridShared.EnemyGrid,
                 SeparationRadius = 1.0f,
                 SeparationStrength = 6.0f,
                 HalfExtents = new float2(bounds.Width * 0.5f, bounds.Height * 0.5f),
@@ -52,27 +49,23 @@ namespace _Game.Systems
     [WithAll(typeof(EnemyTag))]
     internal partial struct MoveEnemyJob : IJobEntity
     {
-        [ReadOnly] public NativeArray<float2> Positions;
-        [ReadOnly] public NativeArray<Entity> Entities;
-
         [ReadOnly] public NativeArray<float2> FlowFieldDirections;
         [ReadOnly] public float FlowFieldCellSize;
         [ReadOnly] public int FlowFieldGridWidth;
         [ReadOnly] public int FlowFieldGridHeight;
         [ReadOnly] public NativeArray<float2> NearestAttractorPos;
 
-        [ReadOnly] public NativeParallelMultiHashMap<int2, int> SpatialGrid;
-        [ReadOnly] public float SpatialGridCellSize;
+        [ReadOnly] public SpatialGrid SpatialGrid;
         [ReadOnly] public float SeparationRadius;
         [ReadOnly] public float SeparationStrength;
 
         [ReadOnly] public float2 HalfExtents;
         [ReadOnly] public float DeltaTime;
 
-        private void Execute(Entity entity, ref LocalTransform transform, ref Steering steering, in Speed speed)
+        private void Execute(ref LocalTransform transform, ref Steering steering, in Speed speed)
         {
             float2 pos = transform.Position.xy;
-            float2 desired = FlowSteering(pos, speed.Value) + SeparationSteering(pos, entity);
+            float2 desired = FlowSteering(pos, speed.Value) + SeparationSteering(pos);
 
             if (speed.Value <= 0f)
             {
@@ -103,34 +96,20 @@ namespace _Game.Systems
             return dist > 0.001f ? math.normalize(toOwner) * speed : float2.zero;
         }
 
-        private static readonly int2[] NeighbourCells =
-        {
-            new(-1, -1), new(0, -1), new(1, -1),
-            new(-1,  0), new(0,  0), new(1,  0),
-            new(-1,  1), new(0,  1), new(1,  1),
-        };
-
-        private float2 SeparationSteering(float2 pos, Entity self)
+        private float2 SeparationSteering(float2 pos)
         {
             float2 separation = float2.zero;
             float radiusSq = SeparationRadius * SeparationRadius;
-            int2 cell = new((int)math.floor(pos.x / SpatialGridCellSize), (int)math.floor(pos.y / SpatialGridCellSize));
 
-            foreach (int2 offset in NeighbourCells)
+            foreach (int i in SpatialGrid.QueryNeighbors(pos, 1))
             {
-                if (!SpatialGrid.TryGetFirstValue(cell + offset, out int neighbourIdx, out NativeParallelMultiHashMapIterator<int2> it)) continue;
-                do
-                {
-                    if (Entities[neighbourIdx] == self) continue;
+                float2 diff = pos - SpatialGrid.Positions[i];
+                float distSq = math.lengthsq(diff);
+                
+                if (distSq < 0.0001f || distSq >= radiusSq) continue;
 
-                    float2 diff = pos - Positions[neighbourIdx];
-                    float distSq = math.lengthsq(diff);
-
-                    if (distSq < 0.0001f || distSq >= radiusSq) continue;
-
-                    float dist = math.sqrt(distSq);
-                    separation += (diff / dist) * (1f - dist / SeparationRadius);
-                } while (SpatialGrid.TryGetNextValue(out neighbourIdx, ref it));
+                float dist = math.sqrt(distSq);
+                separation += (diff / dist) * (1f - dist / SeparationRadius);
             }
 
             return separation * SeparationStrength;

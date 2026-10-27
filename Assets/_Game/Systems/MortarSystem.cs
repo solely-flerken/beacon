@@ -2,6 +2,7 @@ using _Game.Components;
 using _Game.Config;
 using _Game.Core;
 using _Game.Shared;
+using _Game.Util;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
@@ -50,10 +51,7 @@ namespace _Game.Systems
                 WeaponStatsLookup = _weaponStatsLookup,
                 
                 EnemyGridValid = SpatialGridShared.EnemyGridValid,
-                EnemyCellMap = SpatialGridShared.EnemyCellMap,
-                EnemyPositions = EnemyDataShared.Positions,
-                EnemyEntities = EnemyDataShared.Entities,
-                CellSize = SpatialGridShared.CellSize,
+                EnemyGrid = SpatialGridShared.EnemyGrid,
                 
                 HitQueue = DotsBridge.HitQueue.IsCreated ? DotsBridge.HitQueue.AsParallelWriter() : default,
             }.ScheduleParallel(state.Dependency);
@@ -71,10 +69,7 @@ namespace _Game.Systems
             [ReadOnly] public ComponentLookup<WeaponStats> WeaponStatsLookup;
 
             [ReadOnly] public bool EnemyGridValid;
-            [ReadOnly] public NativeParallelMultiHashMap<int2, int> EnemyCellMap;
-            [ReadOnly] public NativeArray<float2> EnemyPositions;
-            [ReadOnly] public NativeArray<Entity> EnemyEntities;
-            [ReadOnly] public float CellSize;
+            [ReadOnly] public SpatialGrid EnemyGrid;
 
             public NativeQueue<HitEvent>.ParallelWriter HitQueue;
 
@@ -139,36 +134,21 @@ namespace _Game.Systems
             {
                 float radiusSq = radius * radius;
                 
-                int2 minCell = new((int)math.floor((center.x - radius) / CellSize), (int)math.floor((center.y - radius) / CellSize));
-                int2 maxCell = new((int)math.ceil((center.x + radius) / CellSize), (int)math.ceil((center.y + radius) / CellSize));
 
-                NativeHashSet<int> hitSet = new(16, Allocator.Temp);
-
-                for (int cx = minCell.x; cx <= maxCell.x; cx++)
+                foreach (int i in EnemyGrid.Query(center - radius, center + radius))
                 {
-                    for (int cy = minCell.y; cy <= maxCell.y; cy++)
+                    if (math.distancesq(EnemyGrid.Positions[i], center) > radiusSq) continue;
+
+                    // Apply Damage
+                    Ecb.AppendToBuffer(sortKey, EnemyGrid.Entities[i], new DamageBufferElement { Value = damage });
+
+                    HitQueue.Enqueue(new HitEvent
                     {
-                        if (!EnemyCellMap.TryGetFirstValue(new int2(cx, cy), out int idx, out NativeParallelMultiHashMapIterator<int2> it)) continue;
-                        do
-                        {
-                            if (hitSet.Contains(idx)) continue;
-                            if (math.distancesq(EnemyPositions[idx], center) > radiusSq) continue;
-                            hitSet.Add(idx);
-
-                            // Apply Damage
-                            Ecb.AppendToBuffer(sortKey, EnemyEntities[idx], new DamageBufferElement { Value = damage });
-
-                            HitQueue.Enqueue(new HitEvent
-                            {
-                                Position = new float3(center, 0f),
-                                Damage = damage,
-                                WeaponEntity = weaponEntity,
-                            });
-                        } while (EnemyCellMap.TryGetNextValue(out idx, ref it));
-                    }
+                        Position = new float3(center, 0f),
+                        Damage = damage,
+                        WeaponEntity = weaponEntity,
+                    });
                 }
-
-                hitSet.Dispose();
             }
         }
     }

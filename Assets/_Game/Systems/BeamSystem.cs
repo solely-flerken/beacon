@@ -2,6 +2,7 @@
 using _Game.Config;
 using _Game.Core;
 using _Game.Shared;
+using _Game.Util;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
@@ -67,10 +68,7 @@ namespace _Game.Systems
 
             state.Dependency = new BeamDamageJob
             {
-                TargetPositions = EnemyDataShared.Positions,
-                TargetEntities = EnemyDataShared.Entities,
-                SpatialGrid = SpatialGridShared.EnemyCellMap,
-                SpatialGridCellSize = SpatialGridShared.CellSize,
+                SpatialGrid = SpatialGridShared.EnemyGrid,
                 EnemyHitRadius = 0.5f,
                 HitCooldowns = SystemAPI.GetBufferLookup<HitCooldown>(true),
                 ECB = ecb,
@@ -98,17 +96,7 @@ namespace _Game.Systems
     [WithAll(typeof(BeamActive))]
     internal partial struct BeamDamageJob : IJobEntity
     {
-        private static readonly int2[] NeighbourOffsets =
-        {
-            new(-1, -1), new(0, -1), new(1, -1),
-            new(-1, 0), new(0, 0), new(1, 0),
-            new(-1, 1), new(0, 1), new(1, 1),
-        };
-
-        [ReadOnly] public NativeArray<float2> TargetPositions;
-        [ReadOnly] public NativeArray<Entity> TargetEntities;
-        [ReadOnly] public NativeParallelMultiHashMap<int2, int> SpatialGrid;
-        [ReadOnly] public float SpatialGridCellSize;
+        [ReadOnly] public SpatialGrid SpatialGrid;
         [ReadOnly] public float EnemyHitRadius;
         [ReadOnly] public BufferLookup<HitCooldown> HitCooldowns;
 
@@ -140,7 +128,7 @@ namespace _Game.Systems
             float hitThresholdSq = hitThreshold * hitThreshold;
             float tickInterval = 1f / stats.FireRate;
 
-            float stepSize = SpatialGridCellSize * 0.5f;
+            float stepSize = SpatialGrid.CellSize * 0.5f;
             int numSteps = (int)math.ceil(range / stepSize) + 1;
 
             NativeHashSet<int> hitSet = new(16, Allocator.Temp);
@@ -148,36 +136,30 @@ namespace _Game.Systems
             for (int step = 0; step <= numSteps; step++)
             {
                 float2 sample = start + dir * math.min(step * stepSize, range);
-                int2 cell = new((int)math.floor(sample.x / SpatialGridCellSize), (int)math.floor(sample.y / SpatialGridCellSize));
 
-                foreach (int2 offset in NeighbourOffsets)
+                foreach (int i in SpatialGrid.QueryNeighbors(sample, 1))
                 {
-                    if (!SpatialGrid.TryGetFirstValue(cell + offset, out int idx, out NativeParallelMultiHashMapIterator<int2> it)) continue;
+                    float2 pos = SpatialGrid.Positions[i];
+                    if (DistToSegmentSq(pos, start, end) > hitThresholdSq && DistToSegmentSq(pos, start, prevEnd) > hitThresholdSq) continue;
+                    if (hitSet.Contains(i)) continue;
 
-                    do
+                    Entity target = SpatialGrid.Entities[i];
+                    if (IsOnCooldown(target, beamEntity)) continue;
+
+                    hitSet.Add(i);
+
+                    ECB.AppendToBuffer(sortKey, target, new HitCooldown { Source = beamEntity, Expiry = CurrentTime + tickInterval });
+                    ECB.AppendToBuffer(sortKey, target, new DamageBufferElement { Value = stats.Damage });
+
+                    if (HasHitQueue)
                     {
-                        Entity target = TargetEntities[idx];
-                        
-                        if (hitSet.Contains(idx)) continue;
-                        float2 pos = TargetPositions[idx];
-                        if (DistToSegmentSq(pos, start, end) > hitThresholdSq && DistToSegmentSq(pos, start, prevEnd) > hitThresholdSq) continue;
-                        if (IsOnCooldown(target, beamEntity)) continue;
-
-                        hitSet.Add(idx);
-
-                        ECB.AppendToBuffer(sortKey, target, new HitCooldown { Source = beamEntity, Expiry = CurrentTime + tickInterval });
-                        ECB.AppendToBuffer(sortKey, target, new DamageBufferElement { Value = stats.Damage });
-
-                        if (HasHitQueue)
+                        HitQueue.Enqueue(new HitEvent
                         {
-                            HitQueue.Enqueue(new HitEvent
-                            {
-                                Position = new float3(TargetPositions[idx], 0f),
-                                Damage = stats.Damage,
-                                WeaponEntity = beamEntity,
-                            });
-                        }
-                    } while (SpatialGrid.TryGetNextValue(out idx, ref it));
+                            Position = new float3(pos, 0f),
+                            Damage = stats.Damage,
+                            WeaponEntity = beamEntity,
+                        });
+                    }
                 }
             }
 

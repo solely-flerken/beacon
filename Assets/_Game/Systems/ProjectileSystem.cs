@@ -1,6 +1,7 @@
 ﻿using _Game.Components;
 using _Game.Core;
 using _Game.Shared;
+using _Game.Util;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
@@ -62,10 +63,7 @@ namespace _Game.Systems
                 
                 state.Dependency = new CollisionJob
                 {
-                    TargetPositions = EnemyDataShared.Positions,
-                    TargetEntities = EnemyDataShared.Entities,
-                    SpatialGrid = SpatialGridShared.EnemyCellMap,
-                    SpatialGridCellSize = SpatialGridShared.CellSize,
+                    SpatialGrid = SpatialGridShared.EnemyGrid,
                     HitRadius = 0.5f,
                     ECB = ecb,
                     HasHitQueue = hasHitQueue,
@@ -83,10 +81,7 @@ namespace _Game.Systems
                 
                 state.Dependency = new CollisionJob
                 {
-                    TargetPositions = AllyDataShared.Positions,
-                    TargetEntities = AllyDataShared.Entities,
-                    SpatialGrid = SpatialGridShared.AllyCellMap,
-                    SpatialGridCellSize = SpatialGridShared.CellSize,
+                    SpatialGrid = SpatialGridShared.AllyGrid,
                     HitRadius = 0.5f,
                     ECB = ecb,
                     HasHitQueue = false, // TODO: enemy -> beacon hits don't count as player weapon stats. Need to create a dedicated HitQueue
@@ -116,17 +111,7 @@ namespace _Game.Systems
     [BurstCompile]
     internal partial struct CollisionJob : IJobEntity
     {
-        private static readonly int2[] NeighbourOffsets =
-        {
-            new(-1, -1), new(0, -1), new(1, -1),
-            new(-1, 0), new(0, 0), new(1, 0),
-            new(-1, 1), new(0, 1), new(1, 1),
-        };
-
-        [ReadOnly] public NativeArray<float2> TargetPositions;
-        [ReadOnly] public NativeArray<Entity> TargetEntities;
-        [ReadOnly] public NativeParallelMultiHashMap<int2, int> SpatialGrid;
-        [ReadOnly] public float SpatialGridCellSize;
+        [ReadOnly] public SpatialGrid SpatialGrid;
         [ReadOnly] public float HitRadius;
         
         public EntityCommandBuffer.ParallelWriter ECB;
@@ -142,77 +127,71 @@ namespace _Game.Systems
         {
             float2 pos = new(transform.Position.x, transform.Position.y);
             float hitRadiusSq = HitRadius * HitRadius;
-            int2 cell = new((int)math.floor(pos.x / SpatialGridCellSize), (int)math.floor(pos.y / SpatialGridCellSize));
 
-            foreach (int2 offset in NeighbourOffsets)
+            foreach (int i in SpatialGrid.QueryNeighbors(pos, 1))
             {
-                if (!SpatialGrid.TryGetFirstValue(cell + offset, out int enemyIdx, out NativeParallelMultiHashMapIterator<int2> it)) continue;
+                if (math.distancesq(pos, SpatialGrid.Positions[i]) > hitRadiusSq) continue;
 
-                do
+                Entity target = SpatialGrid.Entities[i];
+
+                // Check if projectile can damage the current entity
+                if (HitCooldowns.HasBuffer(target))
                 {
-                    if (math.distancesq(pos, TargetPositions[enemyIdx]) > hitRadiusSq) continue;
+                    bool onCooldown = false;
+                    DynamicBuffer<HitCooldown> cds = HitCooldowns[target];
 
-                    Entity target = TargetEntities[enemyIdx];
-
-                    // Check if projectile can damage the current entity
-                    if (HitCooldowns.HasBuffer(target))
+                    for (int c = 0; c < cds.Length; c++)
                     {
-                        bool onCooldown = false;
-                        DynamicBuffer<HitCooldown> cds = HitCooldowns[target];
-                        
-                        for (int i = 0; i < cds.Length; i++)
-                        {
-                            if (cds[i].Source != projectile) continue;
-                            
-                            onCooldown = true;
-                            break;
-                        }
-                        
-                        // Projectile can't hit the entity - continue with next
-                        if (onCooldown) continue;
-                        
-                        ECB.AppendToBuffer(sortKey, target, new HitCooldown { Source = projectile, Expiry = float.PositiveInfinity });
+                        if (cds[c].Source != projectile) continue;
+
+                        onCooldown = true;
+                        break;
                     }
-                    else
-                    {
+
+                    // Projectile can't hit the entity - continue with next
+                    if (onCooldown) continue;
+
+                    ECB.AppendToBuffer(sortKey, target, new HitCooldown { Source = projectile, Expiry = float.PositiveInfinity });
+                }
+                else
+                {
 #if UNITY_EDITOR
-                        Debug.Log($"[ProjectileSystem] Entity {target.Index} is missing HitCooldown! Skipping hit.");
+                    Debug.Log($"[ProjectileSystem] Entity {target.Index} is missing HitCooldown! Skipping hit.");
 #endif
-                    }
+                }
 
-                    Entity weaponEntity = WeaponSourceLookup.HasComponent(projectile) ? WeaponSourceLookup[projectile].Value : Entity.Null;
+                Entity weaponEntity = WeaponSourceLookup.HasComponent(projectile) ? WeaponSourceLookup[projectile].Value : Entity.Null;
 
-                    // Append damage
-                    if (DamageBuffer.HasBuffer(target))
-                    {
-                        ECB.AppendToBuffer(sortKey, target, new DamageBufferElement { Value = damage.Value });
-                    }
-                    else
-                    {
+                // Append damage
+                if (DamageBuffer.HasBuffer(target))
+                {
+                    ECB.AppendToBuffer(sortKey, target, new DamageBufferElement { Value = damage.Value });
+                }
+                else
+                {
 #if UNITY_EDITOR
-                        Debug.Log($"[ProjectileSystem] Entity {target.Index} is missing DamageBuffer! Skipping hit.");
+                    Debug.Log($"[ProjectileSystem] Entity {target.Index} is missing DamageBuffer! Skipping hit.");
 #endif
-                    }
+                }
 
-                    // Send Hit Event to Bridge
-                    if (HasHitQueue)
+                // Send Hit Event to Bridge
+                if (HasHitQueue)
+                {
+                    HitQueue.Enqueue(new HitEvent
                     {
-                        HitQueue.Enqueue(new HitEvent
-                        {
-                            Position = transform.Position,
-                            Damage = damage.Value,
-                            WeaponEntity = weaponEntity,
-                        });
-                    }
-                    
-                    // Handle pierce 
-                    pierce.Remaining--;
-                    if (pierce.Remaining < 0)
-                    {
-                        ECB.DestroyEntity(sortKey, projectile);
-                    }
-                    return;
-                } while (SpatialGrid.TryGetNextValue(out enemyIdx, ref it));
+                        Position = transform.Position,
+                        Damage = damage.Value,
+                        WeaponEntity = weaponEntity,
+                    });
+                }
+
+                // Handle pierce
+                pierce.Remaining--;
+                if (pierce.Remaining < 0)
+                {
+                    ECB.DestroyEntity(sortKey, projectile);
+                }
+                return;
             }
         }
     }

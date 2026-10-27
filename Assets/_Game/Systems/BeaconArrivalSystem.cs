@@ -1,6 +1,6 @@
 ﻿using _Game.Components;
 using _Game.Shared;
-using Unity.Collections;
+using _Game.Util;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
@@ -11,13 +11,6 @@ namespace _Game.Systems
     [UpdateAfter(typeof(SpatialGridSystem))]
     public partial struct BeaconArrivalSystem : ISystem // TODO: Extend this to not only be used for the beacon but also for other destroyable entities.
     {
-        private static readonly int2[] NeighbourOffsets =
-        {
-            new(-1, -1), new(0, -1), new(1, -1),
-            new(-1,  0), new(0,  0), new(1,  0),
-            new(-1,  1), new(0,  1), new(1,  1),
-        };
-
         private ComponentLookup<ContactDamage> _contactDamageLookup;
         private ComponentLookup<Health> _healthLookup;
         private BufferLookup<DamageBufferElement> _damageLookup;
@@ -39,10 +32,7 @@ namespace _Game.Systems
             _healthLookup.Update(ref state);
             _damageLookup.Update(ref state);
 
-            NativeArray<float2> positions = EnemyDataShared.Positions;
-            NativeArray<Entity> entities = EnemyDataShared.Entities;
-            NativeParallelMultiHashMap<int2, int> grid = SpatialGridShared.EnemyCellMap;
-            float cellSize = SpatialGridShared.CellSize;
+            SpatialGrid grid = SpatialGridShared.EnemyGrid;
 
             foreach ((RefRO<BeaconStats> stats, RefRO<Health> health, RefRO<LocalTransform> transform, Entity beaconEntity) in
                 SystemAPI.Query<RefRO<BeaconStats>, RefRO<Health>, RefRO<LocalTransform>>().WithEntityAccess())
@@ -51,26 +41,20 @@ namespace _Game.Systems
 
                 float2 beaconPos = transform.ValueRO.Position.xy;
                 float radiusSq = stats.ValueRO.ArrivalRadius * stats.ValueRO.ArrivalRadius;
-                int2 cell = new((int)math.floor(beaconPos.x / cellSize), (int)math.floor(beaconPos.y / cellSize));
                 float totalDamage = 0f;
 
-                foreach (int2 offset in NeighbourOffsets)
+                foreach (int i in grid.QueryNeighbors(beaconPos, 1))
                 {
-                    if (!grid.TryGetFirstValue(cell + offset, out int idx, out NativeParallelMultiHashMapIterator<int2> it)) continue;
+                    if (math.distancesq(grid.Positions[i], beaconPos) > radiusSq) continue;
 
-                    do
-                    {
-                        if (math.distancesq(positions[idx], beaconPos) > radiusSq) continue;
+                    Entity enemy = grid.Entities[i];
+                    if (!_contactDamageLookup.TryGetComponent(enemy, out ContactDamage contactDamage)) continue;
+                    if (!_healthLookup.TryGetComponent(enemy, out Health enemyHealth) || !enemyHealth.IsAlive) continue;
 
-                        Entity enemy = entities[idx];
-                        if (!_contactDamageLookup.TryGetComponent(enemy, out ContactDamage contactDamage)) continue;
-                        if (!_healthLookup.TryGetComponent(enemy, out Health enemyHealth) || !enemyHealth.IsAlive) continue;
+                    totalDamage += contactDamage.Value;
 
-                        totalDamage += contactDamage.Value;
-
-                        // TODO: Destroy enemy on contact?
-                        _damageLookup[enemy].Add(new DamageBufferElement { Value = float.MaxValue });
-                    } while (grid.TryGetNextValue(out idx, ref it));
+                    // TODO: Destroy enemy on contact?
+                    _damageLookup[enemy].Add(new DamageBufferElement { Value = float.MaxValue });
                 }
 
                 if (totalDamage <= 0f) continue;
