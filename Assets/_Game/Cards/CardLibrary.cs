@@ -99,7 +99,7 @@ namespace _Game.Cards
             title: "Overcharged Barrels",
             description: "All weapons deal 50% more damage. Requires Rapid Fire.",
             effects: new[] { WeaponFx(StatType.Damage, ModifierType.Multiplicative, 50f) },
-            constraints: new[] { HasCard(101) }
+            constraints: new[] { HasCard(RapidFire.CardId) }
         );
 
         public static readonly CardData DeepMagazine = new(
