@@ -17,6 +17,7 @@ namespace _Game.Systems
         private ComponentLookup<LocalToWorld> _transformLookup;
         private ComponentLookup<Health> _healthLookup;
         private ComponentLookup<EnemyIncomingDamage> _incomingDamageLookup;
+        private ComponentLookup<Steering> _steeringLookup;
 
         [BurstCompile]
         public void OnCreate(ref SystemState state)
@@ -27,6 +28,7 @@ namespace _Game.Systems
             _transformLookup = state.GetComponentLookup<LocalToWorld>(isReadOnly: true);
             _healthLookup = state.GetComponentLookup<Health>(isReadOnly: true);
             _incomingDamageLookup = state.GetComponentLookup<EnemyIncomingDamage>(isReadOnly: true);
+            _steeringLookup = state.GetComponentLookup<Steering>(isReadOnly: true);
         }
 
         public void OnUpdate(ref SystemState state)
@@ -37,6 +39,7 @@ namespace _Game.Systems
             _transformLookup.Update(ref state);
             _healthLookup.Update(ref state);
             _incomingDamageLookup.Update(ref state);
+            _steeringLookup.Update(ref state);
 
             state.Dependency = new WeaponTargetingJob
             {
@@ -44,6 +47,7 @@ namespace _Game.Systems
                 TransformLookup = _transformLookup,
                 HealthLookup = _healthLookup,
                 IncomingDamageLookup = _incomingDamageLookup,
+                SteeringLookup = _steeringLookup,
                 EnemyGrid = SpatialGridShared.EnemyGrid,
                 AllyGrid = SpatialGridShared.AllyGrid,
                 DeltaTime = SystemAPI.Time.DeltaTime,
@@ -59,6 +63,7 @@ namespace _Game.Systems
 
         [ReadOnly] public ComponentLookup<Health> HealthLookup;
         [ReadOnly] public ComponentLookup<EnemyIncomingDamage> IncomingDamageLookup;
+        [ReadOnly] public ComponentLookup<Steering> SteeringLookup;
         [ReadOnly] public SpatialGrid EnemyGrid;
         [ReadOnly] public SpatialGrid AllyGrid;
         public float DeltaTime;
@@ -92,7 +97,7 @@ namespace _Game.Systems
                                 return;
                             }
                             
-                            targeting.TargetVelocity = (targetPos - targeting.TargetPosition) / DeltaTime;
+                            targeting.TargetVelocity = EstimateVelocity(targeting.CurrentTarget, targetPos, targeting.CurrentTarget, targeting.TargetPosition);
                             targeting.HasTarget = true;
                             targeting.TargetPosition = targetPos;
                             return;
@@ -113,7 +118,8 @@ namespace _Game.Systems
                 }
             }
 
-            // Save previous target pos for velocity estimation
+            // Save previous target for velocity estimation
+            Entity prevTarget = targeting.CurrentTarget;
             float2 prevTargetPos = targeting.TargetPosition;
 
             // Acquire target
@@ -132,10 +138,21 @@ namespace _Game.Systems
             if (!foundTarget) return;
 
             float2 foundTargetPos = grid.Positions[foundIndex];
-            targeting.TargetVelocity = (foundTargetPos - prevTargetPos) / DeltaTime;
+            Entity foundTargetEntity = grid.Entities[foundIndex];
+            targeting.TargetVelocity = EstimateVelocity(foundTargetEntity, foundTargetPos, prevTarget, prevTargetPos);
             targeting.HasTarget = true;
             targeting.TargetPosition = foundTargetPos;
-            targeting.CurrentTarget = grid.Entities[foundIndex];
+            targeting.CurrentTarget = foundTargetEntity;
+        }
+
+        /// <summary>
+        /// Velocity for intercept prediction. Units with steering report it directly; otherwise derived from the last known position.
+        /// </summary>
+        private float2 EstimateVelocity(Entity target, float2 targetPos, Entity prevTarget, float2 prevTargetPos)
+        {
+            if (SteeringLookup.TryGetComponent(target, out Steering steering)) return steering.Velocity;
+            if (target != prevTarget || DeltaTime <= 0f) return float2.zero;
+            return (targetPos - prevTargetPos) / DeltaTime;
         }
 
         private static bool TryFindTarget(
