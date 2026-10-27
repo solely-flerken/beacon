@@ -18,9 +18,10 @@ namespace _Game.Systems
         public void OnCreate(ref SystemState state)
         {
             state.RequireForUpdate<BeaconStats>();
+            state.RequireForUpdate<EndSimulationEntityCommandBufferSystem.Singleton>();
 
             _contactDamageLookup = state.GetComponentLookup<ContactDamage>(isReadOnly: true);
-            _healthLookup = state.GetComponentLookup<Health>(isReadOnly: true);
+            _healthLookup = state.GetComponentLookup<Health>(isReadOnly: false);
             _damageLookup = state.GetBufferLookup<DamageBufferElement>(isReadOnly: false);
         }
 
@@ -33,6 +34,7 @@ namespace _Game.Systems
             _damageLookup.Update(ref state);
 
             SpatialGrid grid = SpatialGridShared.EnemyGrid;
+            EntityCommandBuffer ecb = SystemAPI.GetSingleton<EndSimulationEntityCommandBufferSystem.Singleton>().CreateCommandBuffer(state.WorldUnmanaged);
 
             foreach ((RefRO<BeaconStats> stats, RefRO<Health> health, RefRO<LocalTransform> transform, Entity beaconEntity) in
                 SystemAPI.Query<RefRO<BeaconStats>, RefRO<Health>, RefRO<LocalTransform>>().WithEntityAccess())
@@ -53,8 +55,9 @@ namespace _Game.Systems
 
                     totalDamage += contactDamage.Value;
 
-                    // TODO: Destroy enemy on contact?
-                    _damageLookup[enemy].Add(new DamageBufferElement { Value = float.MaxValue });
+                    enemyHealth.IsAlive = false;
+                    _healthLookup[enemy] = enemyHealth;
+                    ecb.AddComponent<DespawnTag>(enemy);
                 }
 
                 if (totalDamage <= 0f) continue;
