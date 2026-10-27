@@ -35,6 +35,7 @@ namespace _Game.Components
     ///
     /// <value name="Value">Percentage as whole number (0-100)</value>
     /// </summary>
+    [InternalBufferCapacity(0)]
     public struct StatModifier : IBufferElementData
     {
         public StatType Stat;

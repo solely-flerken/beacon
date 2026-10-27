@@ -10,7 +10,7 @@ namespace _Game.Components
         public bool IsAlive;
     }
     
-    [InternalBufferCapacity(64)]
+    [InternalBufferCapacity(4)]
     public struct DamageBufferElement : IBufferElementData
     {
         public float Value;
