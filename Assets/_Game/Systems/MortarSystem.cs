@@ -37,7 +37,7 @@ namespace _Game.Systems
 
             float deltaTime = math.min(SystemAPI.Time.DeltaTime, SimulationConfig.MaxDeltaTime);
 
-            state.Dependency = JobHandle.CombineDependencies(state.Dependency, DotsBridge.BridgeDependencies);
+            state.Dependency = JobHandle.CombineDependencies(state.Dependency, DotsBridge.BridgeDependencies, DamageShared.Writers);
 
             EndSimulationEntityCommandBufferSystem.Singleton ecbSingleton = SystemAPI.GetSingleton<EndSimulationEntityCommandBufferSystem.Singleton>();
             EntityCommandBuffer.ParallelWriter ecb = ecbSingleton.CreateCommandBuffer(state.WorldUnmanaged).AsParallelWriter();
@@ -54,9 +54,11 @@ namespace _Game.Systems
                 EnemyGrid = SpatialGridShared.EnemyGrid,
                 
                 HitQueue = DotsBridge.HitQueue.IsCreated ? DotsBridge.HitQueue.AsParallelWriter() : default,
+                DamageQueue = DamageShared.Queue.AsParallelWriter(),
             }.ScheduleParallel(state.Dependency);
 
             DotsBridge.BridgeDependencies = JobHandle.CombineDependencies(DotsBridge.BridgeDependencies, state.Dependency);
+            DamageShared.Writers = state.Dependency;
         }
 
         [BurstCompile]
@@ -72,6 +74,7 @@ namespace _Game.Systems
             [ReadOnly] public SpatialGrid EnemyGrid;
 
             public NativeQueue<HitEvent>.ParallelWriter HitQueue;
+            [WriteOnly] public NativeQueue<DamageEvent>.ParallelWriter DamageQueue;
 
             public void Execute(Entity entity, [EntityIndexInQuery] int sortKey, ref LocalTransform transform, ref MortarTrajectory flight, in ProjectileWeapon weapon)
             {
@@ -110,7 +113,7 @@ namespace _Game.Systems
 
                 if (EnemyGridValid)
                 {
-                    ApplyRadiusDamage(sortKey, impactPos, baseStats.Damage, mortarStats.ExplosionRadius, weaponEntity);
+                    ApplyRadiusDamage(impactPos, baseStats.Damage, mortarStats.ExplosionRadius, weaponEntity);
                 }
             }
 
@@ -130,17 +133,16 @@ namespace _Game.Systems
                 });
             }
 
-            private void ApplyRadiusDamage(int sortKey, float2 center, float damage, float radius, Entity weaponEntity)
+            private void ApplyRadiusDamage(float2 center, float damage, float radius, Entity weaponEntity)
             {
                 float radiusSq = radius * radius;
                 
-
                 foreach (int i in EnemyGrid.Query(center - radius, center + radius))
                 {
                     if (math.distancesq(EnemyGrid.Positions[i], center) > radiusSq) continue;
 
                     // Apply Damage
-                    Ecb.AppendToBuffer(sortKey, EnemyGrid.Entities[i], new DamageBufferElement { Value = damage });
+                    DamageQueue.Enqueue(new DamageEvent { Target = EnemyGrid.Entities[i], Value = damage });
 
                     HitQueue.Enqueue(new HitEvent
                     {

@@ -13,7 +13,6 @@ namespace _Game.Systems
     {
         private ComponentLookup<ContactDamage> _contactDamageLookup;
         private ComponentLookup<Health> _healthLookup;
-        private BufferLookup<DamageBufferElement> _damageLookup;
 
         public void OnCreate(ref SystemState state)
         {
@@ -22,7 +21,6 @@ namespace _Game.Systems
 
             _contactDamageLookup = state.GetComponentLookup<ContactDamage>(isReadOnly: true);
             _healthLookup = state.GetComponentLookup<Health>(isReadOnly: false);
-            _damageLookup = state.GetBufferLookup<DamageBufferElement>(isReadOnly: false);
         }
 
         public void OnUpdate(ref SystemState state)
@@ -31,7 +29,6 @@ namespace _Game.Systems
 
             _contactDamageLookup.Update(ref state);
             _healthLookup.Update(ref state);
-            _damageLookup.Update(ref state);
 
             SpatialGrid grid = SpatialGridShared.EnemyGrid;
             EntityCommandBuffer ecb = SystemAPI.GetSingleton<EndSimulationEntityCommandBufferSystem.Singleton>().CreateCommandBuffer(state.WorldUnmanaged);
@@ -61,7 +58,9 @@ namespace _Game.Systems
                 }
 
                 if (totalDamage <= 0f) continue;
-                _damageLookup[beaconEntity].Add(new DamageBufferElement { Value = totalDamage });
+
+                DamageShared.Writers.Complete();
+                DamageShared.Queue.Enqueue(new DamageEvent { Target = beaconEntity, Value = totalDamage });
             }
         }
     }

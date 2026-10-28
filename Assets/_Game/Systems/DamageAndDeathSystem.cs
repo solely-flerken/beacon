@@ -1,6 +1,7 @@
 using _Game.Components;
-using _Game.Core;
+using _Game.Shared;
 using Unity.Burst;
+using Unity.Collections;
 using Unity.Entities;
 using Unity.Jobs;
 
@@ -8,50 +9,74 @@ namespace _Game.Systems
 {
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     [UpdateAfter(typeof(ProjectileSystem))]
+    [UpdateAfter(typeof(BeamSystem))]
+    [UpdateAfter(typeof(MortarSystem))]
     [UpdateAfter(typeof(BeaconArrivalSystem))]
     public partial struct DamageAndDeathSystem : ISystem
     {
+        private ComponentLookup<Health> _healthLookup;
+        private ComponentLookup<IsDead> _isDeadLookup;
+
         public void OnCreate(ref SystemState state)
         {
-            state.RequireForUpdate<EndSimulationEntityCommandBufferSystem.Singleton>();
+            DamageShared.Queue = new NativeQueue<DamageEvent>(Allocator.Persistent);
+            DamageShared.Writers = default;
+
+            _healthLookup = state.GetComponentLookup<Health>(isReadOnly: false);
+            _isDeadLookup = state.GetComponentLookup<IsDead>(isReadOnly: false);
+        }
+
+        public void OnDestroy(ref SystemState state)
+        {
+            DamageShared.Writers.Complete();
+            if (DamageShared.Queue.IsCreated) DamageShared.Queue.Dispose();
+
+            DamageShared.Queue = default;
+            DamageShared.Writers = default;
         }
 
         public void OnUpdate(ref SystemState state)
         {
-            EndSimulationEntityCommandBufferSystem.Singleton ecbSingleton = SystemAPI.GetSingleton<EndSimulationEntityCommandBufferSystem.Singleton>();
-            EntityCommandBuffer.ParallelWriter ecb = ecbSingleton.CreateCommandBuffer(state.WorldUnmanaged).AsParallelWriter();
+            _healthLookup.Update(ref state);
+            _isDeadLookup.Update(ref state);
 
-            state.Dependency = new ProcessDamageAndDeathJob
+            state.Dependency = new ApplyDamageJob
             {
-                ECB = ecb,
-            }.ScheduleParallel(state.Dependency);
+                Queue = DamageShared.Queue,
+                HealthLookup = _healthLookup,
+                IsDeadLookup = _isDeadLookup,
+            }.Schedule(JobHandle.CombineDependencies(state.Dependency, DamageShared.Writers));
 
-            DotsBridge.BridgeDependencies = JobHandle.CombineDependencies(DotsBridge.BridgeDependencies, state.Dependency);
+            DamageShared.Writers = state.Dependency;
         }
 
         [BurstCompile]
-        [WithChangeFilter(typeof(DamageBufferElement))]
-        internal partial struct ProcessDamageAndDeathJob : IJobEntity
+        private struct ApplyDamageJob : IJob
         {
-            public EntityCommandBuffer.ParallelWriter ECB;
+            public NativeQueue<DamageEvent> Queue;
+            public ComponentLookup<Health> HealthLookup;
+            public ComponentLookup<IsDead> IsDeadLookup;
 
-            private void Execute(
-                Entity entity,
-                [EntityIndexInQuery] int sortKey,
-                ref Health health,
-                ref DynamicBuffer<DamageBufferElement> damageBuffer)
+            public void Execute()
             {
-                if (damageBuffer.IsEmpty) return;
+                while (Queue.TryDequeue(out DamageEvent damage))
+                {
+                    if (!HealthLookup.HasComponent(damage.Target)) continue;
 
-                foreach (DamageBufferElement damage in damageBuffer)
+                    ref Health health = ref HealthLookup.GetRefRW(damage.Target).ValueRW;
+
+                    // Already dead or despawning: no second death, no rewards
+                    if (!health.IsAlive) continue;
+
                     health.Current -= damage.Value;
+                    if (health.Current > 0f) continue;
 
-                damageBuffer.Clear();
-
-                if (health.Current > 0f) return;
-
-                health.IsAlive = false;
-                ECB.SetComponentEnabled<IsDead>(sortKey, entity, true);
+                    health.IsAlive = false;
+                    if (IsDeadLookup.HasComponent(damage.Target))
+                    {
+                        IsDeadLookup.SetComponentEnabled(damage.Target, true);
+                    }
+                }
             }
         }
     }

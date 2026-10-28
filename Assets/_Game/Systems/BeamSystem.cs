@@ -74,10 +74,12 @@ namespace _Game.Systems
                 ECB = ecb,
                 CurrentTime = (float)SystemAPI.Time.ElapsedTime,
                 HasHitQueue = hasHitQueue,
-                HitQueue = hitQueueWriter
-            }.ScheduleParallel(state.Dependency);
+                HitQueue = hitQueueWriter,
+                DamageQueue = DamageShared.Queue.AsParallelWriter(),
+            }.ScheduleParallel(JobHandle.CombineDependencies(state.Dependency, DamageShared.Writers));
 
             DotsBridge.BridgeDependencies = JobHandle.CombineDependencies(DotsBridge.BridgeDependencies, state.Dependency);
+            DamageShared.Writers = state.Dependency;
         }
 
         private static float2 RotateToward(float2 current, float2 target, float maxRadians)
@@ -105,7 +107,8 @@ namespace _Game.Systems
 
         public bool HasHitQueue;
         [WriteOnly] public NativeQueue<HitEvent>.ParallelWriter HitQueue;
-        
+        [WriteOnly] public NativeQueue<DamageEvent>.ParallelWriter DamageQueue;
+
         private void Execute(
             Entity beamEntity,
             [EntityIndexInQuery] int sortKey,
@@ -149,7 +152,7 @@ namespace _Game.Systems
                     hitSet.Add(i);
 
                     ECB.AppendToBuffer(sortKey, target, new HitCooldown { Source = beamEntity, Expiry = CurrentTime + tickInterval });
-                    ECB.AppendToBuffer(sortKey, target, new DamageBufferElement { Value = stats.Damage });
+                    DamageQueue.Enqueue(new DamageEvent { Target = target, Value = stats.Damage });
 
                     if (HasHitQueue)
                     {

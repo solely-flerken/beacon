@@ -43,15 +43,15 @@ namespace _Game.Systems
 
             EndSimulationEntityCommandBufferSystem.Singleton ecbSingleton = SystemAPI.GetSingleton<EndSimulationEntityCommandBufferSystem.Singleton>();
 
-            // Depend on any prior HitQueue writers (e.g. BeamDamageJob) before scheduling collision jobs
-            state.Dependency = JobHandle.CombineDependencies(state.Dependency, DotsBridge.BridgeDependencies);
+            // Depend on any prior HitQueue / DamageQueue writers (e.g. BeamDamageJob) before scheduling collision jobs
+            state.Dependency = JobHandle.CombineDependencies(state.Dependency, DotsBridge.BridgeDependencies, DamageShared.Writers);
 
             // Check collisions
             bool hasHitQueue = DotsBridge.HitQueue.IsCreated;
             NativeQueue<HitEvent>.ParallelWriter hitQueueWriter = default;
             if (hasHitQueue) hitQueueWriter = DotsBridge.HitQueue.AsParallelWriter();
 
-            BufferLookup<DamageBufferElement> damageBufferLookup = SystemAPI.GetBufferLookup<DamageBufferElement>(true);
+            NativeQueue<DamageEvent>.ParallelWriter damageQueueWriter = DamageShared.Queue.AsParallelWriter();
             BufferLookup<HitCooldown> hitCooldownLookup = SystemAPI.GetBufferLookup<HitCooldown>(true);
             
             ComponentLookup<ProjectileWeapon> weaponSourceLookup = SystemAPI.GetComponentLookup<ProjectileWeapon>(true);
@@ -68,7 +68,7 @@ namespace _Game.Systems
                     ECB = ecb,
                     HasHitQueue = hasHitQueue,
                     HitQueue = hitQueueWriter,
-                    DamageBuffer = damageBufferLookup,
+                    DamageQueue = damageQueueWriter,
                     HitCooldowns = hitCooldownLookup,
                     WeaponSourceLookup = weaponSourceLookup,
                 }.ScheduleParallel(_playerProjectiles, state.Dependency);
@@ -86,13 +86,14 @@ namespace _Game.Systems
                     ECB = ecb,
                     HasHitQueue = false, // TODO: enemy -> beacon hits don't count as player weapon stats. Need to create a dedicated HitQueue
                     HitQueue = hitQueueWriter,
-                    DamageBuffer = damageBufferLookup,
+                    DamageQueue = damageQueueWriter,
                     HitCooldowns = hitCooldownLookup,
                     WeaponSourceLookup = weaponSourceLookup,
                 }.ScheduleParallel(_enemyProjectiles, state.Dependency);
             }
             
             DotsBridge.BridgeDependencies = JobHandle.CombineDependencies(DotsBridge.BridgeDependencies, state.Dependency);
+            DamageShared.Writers = state.Dependency;
         }
     }
 
@@ -119,7 +120,7 @@ namespace _Game.Systems
         public bool HasHitQueue;
         [WriteOnly] public NativeQueue<HitEvent>.ParallelWriter HitQueue;
         
-        [ReadOnly] public BufferLookup<DamageBufferElement> DamageBuffer;
+        [WriteOnly] public NativeQueue<DamageEvent>.ParallelWriter DamageQueue;
         [ReadOnly] public BufferLookup<HitCooldown> HitCooldowns;
         [ReadOnly] public ComponentLookup<ProjectileWeapon> WeaponSourceLookup;
 
@@ -162,17 +163,7 @@ namespace _Game.Systems
 
                 Entity weaponEntity = WeaponSourceLookup.HasComponent(projectile) ? WeaponSourceLookup[projectile].Value : Entity.Null;
 
-                // Append damage
-                if (DamageBuffer.HasBuffer(target))
-                {
-                    ECB.AppendToBuffer(sortKey, target, new DamageBufferElement { Value = damage.Value });
-                }
-                else
-                {
-#if UNITY_EDITOR
-                    Debug.Log($"[ProjectileSystem] Entity {target.Index} is missing DamageBuffer! Skipping hit.");
-#endif
-                }
+                DamageQueue.Enqueue(new DamageEvent { Target = target, Value = damage.Value });
 
                 // Send Hit Event to Bridge
                 if (HasHitQueue)

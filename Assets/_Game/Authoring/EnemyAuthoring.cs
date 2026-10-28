@@ -69,7 +69,6 @@ namespace _Game.Authoring
                 // Damage
                 AddComponent<EnemyIncomingDamage>(entity);
                 AddBuffer<HitCooldown>(entity);
-                AddBuffer<DamageBufferElement>(entity);
                 AddComponent<IsDead>(entity);
                 SetComponentEnabled<IsDead>(entity, false);
                 
