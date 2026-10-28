@@ -30,6 +30,9 @@ namespace _Game.Components
     public struct WeaponState : IComponentData
     {
         public float Timer;
+
+        // False until WeaponCooldownSystem gives the weapon a random cooldown phase, so weapons spawned together don't fire together.
+        public bool Seeded;
     }
     
     public struct WeaponStats : IComponentData
