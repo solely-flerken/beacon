@@ -23,6 +23,7 @@ namespace _Game.Systems
         public void OnCreate(ref SystemState state)
         {
             state.RequireForUpdate<WeaponTargeting>();
+            state.RequireForUpdate<SpatialGrids>();
 
             _enemyTagLookup = state.GetComponentLookup<EnemyTag>(isReadOnly: true);
             _transformLookup = state.GetComponentLookup<LocalToWorld>(isReadOnly: true);
@@ -33,7 +34,8 @@ namespace _Game.Systems
 
         public void OnUpdate(ref SystemState state)
         {
-            if (!SpatialGridShared.EnemyGridValid && !SpatialGridShared.AllyGridValid) return;
+            SpatialGrids grids = SystemAPI.GetSingleton<SpatialGrids>();
+            if (!grids.EnemiesValid && !grids.AlliesValid) return;
 
             _enemyTagLookup.Update(ref state);
             _transformLookup.Update(ref state);
@@ -48,8 +50,8 @@ namespace _Game.Systems
                 HealthLookup = _healthLookup,
                 IncomingDamageLookup = _incomingDamageLookup,
                 SteeringLookup = _steeringLookup,
-                EnemyGrid = SpatialGridShared.EnemyGrid,
-                AllyGrid = SpatialGridShared.AllyGrid,
+                EnemyGrid = grids.Enemies,
+                AllyGrid = grids.Allies,
                 DeltaTime = SystemAPI.Time.DeltaTime,
             }.ScheduleParallel(state.Dependency);
         }

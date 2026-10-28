@@ -30,16 +30,14 @@ namespace _Game.Systems
         {
             _enemyPositions = new NativeArray<float2>(InitialEnemyCapacity, Allocator.Persistent);
             _enemyEntities = new NativeArray<Entity>(InitialEnemyCapacity, Allocator.Persistent);
-            EnemyDataShared.Positions = _enemyPositions;
-            EnemyDataShared.Entities = _enemyEntities;
 
             _allyPositions = new NativeArray<float2>(InitialAllyCapacity, Allocator.Persistent);
             _allyEntities = new NativeArray<Entity>(InitialAllyCapacity, Allocator.Persistent);
-            AllyDataShared.Positions = _allyPositions;
-            AllyDataShared.Entities = _allyEntities;
 
             _enemyQuery = SystemAPI.QueryBuilder().WithAll<EnemyTag, LocalTransform>().Build();
             _allyQuery = SystemAPI.QueryBuilder().WithAll<PlayerTag, LocalTransform>().Build();
+
+            state.EntityManager.CreateSingleton(new UnitData());
         }
 
         public void OnDestroy(ref SystemState state)
@@ -48,34 +46,18 @@ namespace _Game.Systems
             if (_enemyEntities.IsCreated) _enemyEntities.Dispose();
             if (_allyPositions.IsCreated) _allyPositions.Dispose();
             if (_allyEntities.IsCreated) _allyEntities.Dispose();
-
-            EnemyDataShared.Positions = default;
-            EnemyDataShared.Entities = default;
-            EnemyDataShared.Count = 0;
-            AllyDataShared.Positions = default;
-            AllyDataShared.Entities = default;
-            AllyDataShared.Count = 0;
         }
 
         public void OnUpdate(ref SystemState state)
         {
-            EnemyDataShared.Count = _enemyQuery.CalculateEntityCount();
-            AllyDataShared.Count = _allyQuery.CalculateEntityCount();
+            int enemyCount = _enemyQuery.CalculateEntityCount();
+            int allyCount = _allyQuery.CalculateEntityCount();
 
-            if (EnsureCapacity(ref state, ref _enemyPositions, ref _enemyEntities, EnemyDataShared.Count))
-            {
-                EnemyDataShared.Positions = _enemyPositions;
-                EnemyDataShared.Entities = _enemyEntities;
-            }
+            EnsureCapacity(ref state, ref _enemyPositions, ref _enemyEntities, enemyCount);
+            EnsureCapacity(ref state, ref _allyPositions, ref _allyEntities, allyCount);
 
-            if (EnsureCapacity(ref state, ref _allyPositions, ref _allyEntities, AllyDataShared.Count))
-            {
-                AllyDataShared.Positions = _allyPositions;
-                AllyDataShared.Entities = _allyEntities;
-            }
-
-            JobHandle enemyHandle = default;
-            if (EnemyDataShared.Count > 0)
+            JobHandle enemyHandle = state.Dependency;
+            if (enemyCount > 0)
             {
                 enemyHandle = new CopyUnitDataJob
                 {
@@ -84,8 +66,8 @@ namespace _Game.Systems
                 }.ScheduleParallel(_enemyQuery, state.Dependency);
             }
 
-            JobHandle allyHandle = default;
-            if (AllyDataShared.Count > 0)
+            JobHandle allyHandle = state.Dependency;
+            if (allyCount > 0)
             {
                 allyHandle = new CopyUnitDataJob
                 {
@@ -94,16 +76,22 @@ namespace _Game.Systems
                 }.ScheduleParallel(_allyQuery, state.Dependency);
             }
 
-            state.Dependency = JobHandle.CombineDependencies(enemyHandle, allyHandle, state.Dependency);
-            state.Dependency.Complete();
+            state.Dependency = JobHandle.CombineDependencies(enemyHandle, allyHandle);
+
+            // Registers this system as the writer, so systems reading UnitData wait for the copy jobs
+            SystemAPI.GetSingletonRW<UnitData>().ValueRW = new UnitData
+            {
+                Enemies = new UnitSnapshot { Positions = _enemyPositions, Entities = _enemyEntities, Count = enemyCount },
+                Allies = new UnitSnapshot { Positions = _allyPositions, Entities = _allyEntities, Count = allyCount },
+            };
         }
 
         /// <summary>
-        /// Reallocates the arrays (doubling) when count exceeds their length. Returns true if they were replaced.
+        /// Reallocates the arrays (doubling) when count exceeds their length.
         /// </summary>
-        private static bool EnsureCapacity(ref SystemState state, ref NativeArray<float2> positions, ref NativeArray<Entity> entities, int count)
+        private static void EnsureCapacity(ref SystemState state, ref NativeArray<float2> positions, ref NativeArray<Entity> entities, int count)
         {
-            if (count <= positions.Length) return false;
+            if (count <= positions.Length) return;
 
             state.EntityManager.CompleteAllTrackedJobs();
 
@@ -112,8 +100,6 @@ namespace _Game.Systems
             entities.Dispose();
             positions = new NativeArray<float2>(capacity, Allocator.Persistent);
             entities = new NativeArray<Entity>(capacity, Allocator.Persistent);
-            
-            return true;
         }
     }
 

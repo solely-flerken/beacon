@@ -1,4 +1,5 @@
 using _Game.Components;
+using _Game.Core;
 using _Game.Shared;
 using Unity.Burst;
 using Unity.Collections;
@@ -14,13 +15,15 @@ namespace _Game.Systems
     [UpdateAfter(typeof(BeaconArrivalSystem))]
     public partial struct DamageAndDeathSystem : ISystem
     {
+        private NativeQueue<DamageEvent> _queue;
+        
         private ComponentLookup<Health> _healthLookup;
         private ComponentLookup<IsDead> _isDeadLookup;
 
         public void OnCreate(ref SystemState state)
         {
-            DamageShared.Queue = new NativeQueue<DamageEvent>(Allocator.Persistent);
-            DamageShared.Writers = default;
+            _queue = new NativeQueue<DamageEvent>(Allocator.Persistent);
+            state.EntityManager.CreateSingleton(new DamageEvents { Queue = _queue });
 
             _healthLookup = state.GetComponentLookup<Health>(isReadOnly: false);
             _isDeadLookup = state.GetComponentLookup<IsDead>(isReadOnly: false);
@@ -28,11 +31,9 @@ namespace _Game.Systems
 
         public void OnDestroy(ref SystemState state)
         {
-            DamageShared.Writers.Complete();
-            if (DamageShared.Queue.IsCreated) DamageShared.Queue.Dispose();
-
-            DamageShared.Queue = default;
-            DamageShared.Writers = default;
+            state.EntityManager.CompleteAllTrackedJobs();
+            
+            if (_queue.IsCreated) _queue.Dispose();
         }
 
         public void OnUpdate(ref SystemState state)
@@ -40,14 +41,20 @@ namespace _Game.Systems
             _healthLookup.Update(ref state);
             _isDeadLookup.Update(ref state);
 
+            SystemAPI.GetSingletonRW<DamageEvents>();
+
+            bool hasHitQueue = DotsBridge.HitQueue.IsCreated;
+
             state.Dependency = new ApplyDamageJob
             {
-                Queue = DamageShared.Queue,
+                Queue = _queue,
                 HealthLookup = _healthLookup,
                 IsDeadLookup = _isDeadLookup,
-            }.Schedule(JobHandle.CombineDependencies(state.Dependency, DamageShared.Writers));
+                HasHitQueue = hasHitQueue,
+                HitQueue = hasHitQueue ? DotsBridge.HitQueue.AsParallelWriter() : default,
+            }.Schedule(JobHandle.CombineDependencies(state.Dependency, DotsBridge.BridgeDependencies));
 
-            DamageShared.Writers = state.Dependency;
+            DotsBridge.BridgeDependencies = JobHandle.CombineDependencies(DotsBridge.BridgeDependencies, state.Dependency);
         }
 
         [BurstCompile]
@@ -57,6 +64,9 @@ namespace _Game.Systems
             public ComponentLookup<Health> HealthLookup;
             public ComponentLookup<IsDead> IsDeadLookup;
 
+            public bool HasHitQueue;
+            [WriteOnly] public NativeQueue<HitEvent>.ParallelWriter HitQueue;
+
             public void Execute()
             {
                 while (Queue.TryDequeue(out DamageEvent damage))
@@ -65,8 +75,19 @@ namespace _Game.Systems
 
                     ref Health health = ref HealthLookup.GetRefRW(damage.Target).ValueRW;
 
-                    // Already dead or despawning: no second death, no rewards
+                    // Already dead or despawning: no second death, no rewards, no hit stats
                     if (!health.IsAlive) continue;
+
+                    // TODO: Capture damage by enemies (or enemy type), e.g. contact damage or with weapons.
+                    if (HasHitQueue && damage.Weapon != Entity.Null)
+                    {
+                        HitQueue.Enqueue(new HitEvent
+                        {
+                            Position = damage.Position,
+                            Damage = damage.Value,
+                            WeaponEntity = damage.Weapon,
+                        });
+                    }
 
                     health.Current -= damage.Value;
                     if (health.Current > 0f) continue;

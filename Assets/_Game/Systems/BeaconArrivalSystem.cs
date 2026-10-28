@@ -1,6 +1,8 @@
 ﻿using _Game.Components;
 using _Game.Shared;
 using _Game.Util;
+using Unity.Burst;
+using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
@@ -18,6 +20,8 @@ namespace _Game.Systems
         {
             state.RequireForUpdate<BeaconStats>();
             state.RequireForUpdate<EndSimulationEntityCommandBufferSystem.Singleton>();
+            state.RequireForUpdate<SpatialGrids>();
+            state.RequireForUpdate<DamageEvents>();
 
             _contactDamageLookup = state.GetComponentLookup<ContactDamage>(isReadOnly: true);
             _healthLookup = state.GetComponentLookup<Health>(isReadOnly: false);
@@ -25,43 +29,62 @@ namespace _Game.Systems
 
         public void OnUpdate(ref SystemState state)
         {
-            if (!SpatialGridShared.EnemyGridValid || !EnemyDataShared.IsValid) return;
+            SpatialGrids grids = SystemAPI.GetSingleton<SpatialGrids>();
+            NativeQueue<DamageEvent> damageQueue = SystemAPI.GetSingletonRW<DamageEvents>().ValueRO.Queue;
+            if (!grids.EnemiesValid) return;
 
             _contactDamageLookup.Update(ref state);
             _healthLookup.Update(ref state);
 
-            SpatialGrid grid = SpatialGridShared.EnemyGrid;
-            EntityCommandBuffer ecb = SystemAPI.GetSingleton<EndSimulationEntityCommandBufferSystem.Singleton>().CreateCommandBuffer(state.WorldUnmanaged);
-
-            foreach ((RefRO<BeaconStats> stats, RefRO<Health> health, RefRO<LocalTransform> transform, Entity beaconEntity) in
-                SystemAPI.Query<RefRO<BeaconStats>, RefRO<Health>, RefRO<LocalTransform>>().WithEntityAccess())
+            state.Dependency = new BeaconArrivalJob
             {
-                if (!health.ValueRO.IsAlive) continue;
+                Grid = grids.Enemies,
+                ContactDamageLookup = _contactDamageLookup,
+                HealthLookup = _healthLookup,
+                ECB = SystemAPI.GetSingleton<EndSimulationEntityCommandBufferSystem.Singleton>().CreateCommandBuffer(state.WorldUnmanaged),
+                DamageQueue = damageQueue,
+            }.Schedule(state.Dependency);
+        }
+    }
 
-                float2 beaconPos = transform.ValueRO.Position.xy;
-                float radiusSq = stats.ValueRO.ArrivalRadius * stats.ValueRO.ArrivalRadius;
-                float totalDamage = 0f;
+    /// <summary>
+    /// Despawns enemies that reach a beacon and queues their contact damage against it.
+    /// </summary>
+    [BurstCompile]
+    internal partial struct BeaconArrivalJob : IJobEntity
+    {
+        [ReadOnly] public SpatialGrid Grid;
+        [ReadOnly] public ComponentLookup<ContactDamage> ContactDamageLookup;
+        public ComponentLookup<Health> HealthLookup;
+        public EntityCommandBuffer ECB;
+        public NativeQueue<DamageEvent> DamageQueue;
 
-                foreach (int i in grid.QueryNeighbors(beaconPos, 1))
-                {
-                    if (math.distancesq(grid.Positions[i], beaconPos) > radiusSq) continue;
+        private void Execute(Entity beaconEntity, in BeaconStats stats, in LocalTransform transform)
+        {
+            if (!HealthLookup.TryGetComponent(beaconEntity, out Health health) || !health.IsAlive) return;
 
-                    Entity enemy = grid.Entities[i];
-                    if (!_contactDamageLookup.TryGetComponent(enemy, out ContactDamage contactDamage)) continue;
-                    if (!_healthLookup.TryGetComponent(enemy, out Health enemyHealth) || !enemyHealth.IsAlive) continue;
+            float2 beaconPos = transform.Position.xy;
+            float radiusSq = stats.ArrivalRadius * stats.ArrivalRadius;
+            float totalDamage = 0f;
 
-                    totalDamage += contactDamage.Value;
+            foreach (int i in Grid.QueryNeighbors(beaconPos, 1))
+            {
+                if (math.distancesq(Grid.Positions[i], beaconPos) > radiusSq) continue;
 
-                    enemyHealth.IsAlive = false;
-                    _healthLookup[enemy] = enemyHealth;
-                    ecb.AddComponent<DespawnTag>(enemy);
-                }
+                Entity enemy = Grid.Entities[i];
+                if (!ContactDamageLookup.TryGetComponent(enemy, out ContactDamage contactDamage)) continue;
+                if (!HealthLookup.TryGetComponent(enemy, out Health enemyHealth) || !enemyHealth.IsAlive) continue;
 
-                if (totalDamage <= 0f) continue;
+                totalDamage += contactDamage.Value;
 
-                DamageShared.Writers.Complete();
-                DamageShared.Queue.Enqueue(new DamageEvent { Target = beaconEntity, Value = totalDamage });
+                enemyHealth.IsAlive = false;
+                HealthLookup[enemy] = enemyHealth;
+                ECB.AddComponent<DespawnTag>(enemy);
             }
+
+            if (totalDamage <= 0f) return;
+
+            DamageQueue.Enqueue(new DamageEvent { Target = beaconEntity, Value = totalDamage });
         }
     }
 }

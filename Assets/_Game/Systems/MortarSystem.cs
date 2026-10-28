@@ -1,12 +1,10 @@
 using _Game.Components;
 using _Game.Config;
-using _Game.Core;
 using _Game.Shared;
 using _Game.Util;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
-using Unity.Jobs;
 using Unity.Mathematics;
 using Unity.Transforms;
 
@@ -25,7 +23,9 @@ namespace _Game.Systems
         {
             state.RequireForUpdate<MortarShellTag>();
             state.RequireForUpdate<EndSimulationEntityCommandBufferSystem.Singleton>();
-            
+            state.RequireForUpdate<SpatialGrids>();
+            state.RequireForUpdate<DamageEvents>();
+
             _mortarStatsLookup = state.GetComponentLookup<MortarStats>(isReadOnly: true);
             _weaponStatsLookup = state.GetComponentLookup<WeaponStats>(isReadOnly: true);
         }
@@ -37,7 +37,8 @@ namespace _Game.Systems
 
             float deltaTime = math.min(SystemAPI.Time.DeltaTime, SimulationConfig.MaxDeltaTime);
 
-            state.Dependency = JobHandle.CombineDependencies(state.Dependency, DotsBridge.BridgeDependencies, DamageShared.Writers);
+            SpatialGrids grids = SystemAPI.GetSingleton<SpatialGrids>();
+            NativeQueue<DamageEvent> damageQueue = SystemAPI.GetSingletonRW<DamageEvents>().ValueRO.Queue;
 
             EndSimulationEntityCommandBufferSystem.Singleton ecbSingleton = SystemAPI.GetSingleton<EndSimulationEntityCommandBufferSystem.Singleton>();
             EntityCommandBuffer.ParallelWriter ecb = ecbSingleton.CreateCommandBuffer(state.WorldUnmanaged).AsParallelWriter();
@@ -50,15 +51,11 @@ namespace _Game.Systems
                 PayloadLookup = _mortarStatsLookup,
                 WeaponStatsLookup = _weaponStatsLookup,
                 
-                EnemyGridValid = SpatialGridShared.EnemyGridValid,
-                EnemyGrid = SpatialGridShared.EnemyGrid,
-                
-                HitQueue = DotsBridge.HitQueue.IsCreated ? DotsBridge.HitQueue.AsParallelWriter() : default,
-                DamageQueue = DamageShared.Queue.AsParallelWriter(),
-            }.ScheduleParallel(state.Dependency);
+                EnemyGridValid = grids.EnemiesValid,
+                EnemyGrid = grids.Enemies,
 
-            DotsBridge.BridgeDependencies = JobHandle.CombineDependencies(DotsBridge.BridgeDependencies, state.Dependency);
-            DamageShared.Writers = state.Dependency;
+                DamageQueue = damageQueue.AsParallelWriter(),
+            }.ScheduleParallel(state.Dependency);
         }
 
         [BurstCompile]
@@ -73,7 +70,6 @@ namespace _Game.Systems
             [ReadOnly] public bool EnemyGridValid;
             [ReadOnly] public SpatialGrid EnemyGrid;
 
-            public NativeQueue<HitEvent>.ParallelWriter HitQueue;
             [WriteOnly] public NativeQueue<DamageEvent>.ParallelWriter DamageQueue;
 
             public void Execute(Entity entity, [EntityIndexInQuery] int sortKey, ref LocalTransform transform, ref MortarTrajectory flight, in ProjectileWeapon weapon)
@@ -141,14 +137,12 @@ namespace _Game.Systems
                 {
                     if (math.distancesq(EnemyGrid.Positions[i], center) > radiusSq) continue;
 
-                    // Apply Damage
-                    DamageQueue.Enqueue(new DamageEvent { Target = EnemyGrid.Entities[i], Value = damage });
-
-                    HitQueue.Enqueue(new HitEvent
+                    DamageQueue.Enqueue(new DamageEvent
                     {
+                        Target = EnemyGrid.Entities[i],
+                        Value = damage,
+                        Weapon = weaponEntity,
                         Position = new float3(center, 0f),
-                        Damage = damage,
-                        WeaponEntity = weaponEntity,
                     });
                 }
             }

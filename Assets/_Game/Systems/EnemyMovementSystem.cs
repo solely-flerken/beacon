@@ -12,7 +12,7 @@ namespace _Game.Systems
 {
     /// <summary>
     /// Moves all enemy entities each frame.
-    /// Reads from EnemySimShared (positions) and SpatialGridShared (neighbors)
+    /// Reads the FlowField (direction) and SpatialGrids (neighbors) singletons.
     /// </summary>
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     [UpdateAfter(typeof(SpatialGridSystem))]
@@ -21,22 +21,26 @@ namespace _Game.Systems
         public void OnCreate(ref SystemState state)
         {
             state.RequireForUpdate<ArenaBounds>();
+            state.RequireForUpdate<SpatialGrids>();
+            state.RequireForUpdate<FlowField>();
         }
 
         public void OnUpdate(ref SystemState state)
         {
-            if (!EnemyDataShared.IsValid || !SpatialGridShared.EnemyGridValid || !FlowFieldShared.IsValid) return;
+            SpatialGrids grids = SystemAPI.GetSingleton<SpatialGrids>();
+            FlowField flowField = SystemAPI.GetSingleton<FlowField>();
+            if (!grids.EnemiesValid || !flowField.IsValid) return;
 
             ArenaBounds bounds = SystemAPI.GetSingleton<ArenaBounds>();
 
             new MoveEnemyJob
             {
-                FlowFieldDirections = FlowFieldShared.Directions,
-                FlowFieldCellSize = FlowFieldShared.CellSize,
-                FlowFieldGridWidth = FlowFieldShared.GridWidth,
-                FlowFieldGridHeight = FlowFieldShared.GridHeight,
-                NearestAttractorPos = FlowFieldShared.NearestAttractorPos,
-                SpatialGrid = SpatialGridShared.EnemyGrid,
+                FlowFieldDirections = flowField.Directions,
+                FlowFieldCellSize = flowField.CellSize,
+                FlowFieldGridWidth = flowField.GridWidth,
+                FlowFieldGridHeight = flowField.GridHeight,
+                NearestAttractorPos = flowField.NearestAttractorPos,
+                SpatialGrid = grids.Enemies,
                 SeparationRadius = 1.0f,
                 SeparationStrength = 6.0f,
                 HalfExtents = new float2(bounds.Width * 0.5f, bounds.Height * 0.5f),

@@ -1,12 +1,10 @@
 ﻿using _Game.Components;
 using _Game.Config;
-using _Game.Core;
 using _Game.Shared;
 using _Game.Util;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
-using Unity.Jobs;
 using Unity.Mathematics;
 using Unity.Transforms;
 
@@ -20,6 +18,8 @@ namespace _Game.Systems
         {
             state.RequireForUpdate<BeamTag>();
             state.RequireForUpdate<EndSimulationEntityCommandBufferSystem.Singleton>();
+            state.RequireForUpdate<SpatialGrids>();
+            state.RequireForUpdate<DamageEvents>();
         }
 
         public void OnUpdate(ref SystemState state)
@@ -55,12 +55,10 @@ namespace _Game.Systems
             }
 
             // Handle collisions
-            if (!SpatialGridShared.EnemyGridValid) return;
+            SpatialGrids grids = SystemAPI.GetSingleton<SpatialGrids>();
+            NativeQueue<DamageEvent> damageQueue = SystemAPI.GetSingletonRW<DamageEvents>().ValueRO.Queue;
+            if (!grids.EnemiesValid) return;
 
-            bool hasHitQueue = DotsBridge.HitQueue.IsCreated;
-            NativeQueue<HitEvent>.ParallelWriter hitQueueWriter = default;
-            if (hasHitQueue) hitQueueWriter = DotsBridge.HitQueue.AsParallelWriter();
-            
             EntityCommandBuffer.ParallelWriter ecb = SystemAPI
                 .GetSingleton<EndSimulationEntityCommandBufferSystem.Singleton>()
                 .CreateCommandBuffer(state.WorldUnmanaged)
@@ -68,18 +66,13 @@ namespace _Game.Systems
 
             state.Dependency = new BeamDamageJob
             {
-                SpatialGrid = SpatialGridShared.EnemyGrid,
+                SpatialGrid = grids.Enemies,
                 EnemyHitRadius = 0.5f,
                 HitCooldowns = SystemAPI.GetBufferLookup<HitCooldown>(true),
                 ECB = ecb,
                 CurrentTime = (float)SystemAPI.Time.ElapsedTime,
-                HasHitQueue = hasHitQueue,
-                HitQueue = hitQueueWriter,
-                DamageQueue = DamageShared.Queue.AsParallelWriter(),
-            }.ScheduleParallel(JobHandle.CombineDependencies(state.Dependency, DamageShared.Writers));
-
-            DotsBridge.BridgeDependencies = JobHandle.CombineDependencies(DotsBridge.BridgeDependencies, state.Dependency);
-            DamageShared.Writers = state.Dependency;
+                DamageQueue = damageQueue.AsParallelWriter(),
+            }.ScheduleParallel(state.Dependency);
         }
 
         private static float2 RotateToward(float2 current, float2 target, float maxRadians)
@@ -105,8 +98,6 @@ namespace _Game.Systems
         public EntityCommandBuffer.ParallelWriter ECB;
         public float CurrentTime;
 
-        public bool HasHitQueue;
-        [WriteOnly] public NativeQueue<HitEvent>.ParallelWriter HitQueue;
         [WriteOnly] public NativeQueue<DamageEvent>.ParallelWriter DamageQueue;
 
         private void Execute(
@@ -152,17 +143,13 @@ namespace _Game.Systems
                     hitSet.Add(i);
 
                     ECB.AppendToBuffer(sortKey, target, new HitCooldown { Source = beamEntity, Expiry = CurrentTime + tickInterval });
-                    DamageQueue.Enqueue(new DamageEvent { Target = target, Value = stats.Damage });
-
-                    if (HasHitQueue)
+                    DamageQueue.Enqueue(new DamageEvent
                     {
-                        HitQueue.Enqueue(new HitEvent
-                        {
-                            Position = new float3(pos, 0f),
-                            Damage = stats.Damage,
-                            WeaponEntity = beamEntity,
-                        });
-                    }
+                        Target = target,
+                        Value = stats.Damage,
+                        Weapon = beamEntity,
+                        Position = new float3(pos, 0f),
+                    });
                 }
             }
 

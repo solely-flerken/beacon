@@ -1,5 +1,6 @@
 using _Game.Components;
 using _Game.Core;
+using _Game.Shared;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
@@ -15,6 +16,7 @@ namespace _Game.Systems
         public void OnCreate(ref SystemState state)
         {
             state.RequireForUpdate<EndSimulationEntityCommandBufferSystem.Singleton>();
+            state.RequireForUpdate<ExpOrbEvents>();
         }
 
         public void OnUpdate(ref SystemState state)
@@ -23,21 +25,17 @@ namespace _Game.Systems
             EntityCommandBuffer.ParallelWriter ecb = ecbSingleton.CreateCommandBuffer(state.WorldUnmanaged).AsParallelWriter();
 
             bool hasDeathQueue = DotsBridge.DeathQueue.IsCreated;
-            bool hasExpQueue = DotsBridge.ExpOrbQueue.IsCreated;
-
             NativeQueue<DeathEvent>.ParallelWriter deathQueueWriter = default;
-            NativeQueue<DeathEvent>.ParallelWriter expQueueWriter = default;
-
             if (hasDeathQueue) deathQueueWriter = DotsBridge.DeathQueue.AsParallelWriter();
-            if (hasExpQueue) expQueueWriter = DotsBridge.ExpOrbQueue.AsParallelWriter();
+
+            NativeQueue<DeathEvent> expOrbQueue = SystemAPI.GetSingletonRW<ExpOrbEvents>().ValueRO.Queue;
 
             state.Dependency = new EnemyDeathJob
             {
                 ECB = ecb,
                 HasDeathQueue = hasDeathQueue,
-                HasExpQueue = hasExpQueue,
                 DeathQueue = deathQueueWriter,
-                ExpOrbQueue = expQueueWriter,
+                ExpOrbQueue = expOrbQueue.AsParallelWriter(),
             }.ScheduleParallel(state.Dependency);
 
             state.Dependency = new EnemyDespawnJob
@@ -56,7 +54,6 @@ namespace _Game.Systems
             public EntityCommandBuffer.ParallelWriter ECB;
 
             public bool HasDeathQueue;
-            public bool HasExpQueue;
 
             [WriteOnly] public NativeQueue<DeathEvent>.ParallelWriter DeathQueue;
             [WriteOnly] public NativeQueue<DeathEvent>.ParallelWriter ExpOrbQueue;
@@ -74,7 +71,7 @@ namespace _Game.Systems
                 };
 
                 if (HasDeathQueue) DeathQueue.Enqueue(deathEvent);
-                if (HasExpQueue) ExpOrbQueue.Enqueue(deathEvent);
+                ExpOrbQueue.Enqueue(deathEvent);
 
                 ECB.DestroyEntity(sortKey, entity);
             }

@@ -3,6 +3,7 @@ using _Game.Core;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
+using Unity.Jobs;
 using Unity.Mathematics;
 using Unity.Transforms;
 
@@ -12,20 +13,11 @@ namespace _Game.Systems
     [UpdateAfter(typeof(WaveEndCollectSystem))]
     public partial struct BeaconCollectExpSystem : ISystem
     {
-        private NativeQueue<float> _arrivedExp;
-
         public void OnCreate(ref SystemState state)
         {
             state.RequireForUpdate<SaturatedTag>();
             state.RequireForUpdate<ExpOrbConfig>();
             state.RequireForUpdate<EndSimulationEntityCommandBufferSystem.Singleton>();
-            
-            _arrivedExp = new NativeQueue<float>(Allocator.Persistent);
-        }
-
-        public void OnDestroy(ref SystemState state)
-        {
-            if (_arrivedExp.IsCreated) _arrivedExp.Dispose();
         }
 
         public void OnUpdate(ref SystemState state)
@@ -35,11 +27,11 @@ namespace _Game.Systems
 
             EntityCommandBuffer.ParallelWriter ecb = SystemAPI.GetSingleton<EndSimulationEntityCommandBufferSystem.Singleton>().CreateCommandBuffer(state.WorldUnmanaged).AsParallelWriter();
 
-            _arrivedExp.Clear();
+            bool hasExpQueue = DotsBridge.ExpCollectedQueue.IsCreated;
+            NativeQueue<float>.ParallelWriter expQueueWriter = default;
+            if (hasExpQueue) expQueueWriter = DotsBridge.ExpCollectedQueue.AsParallelWriter();
 
-            state.Dependency.Complete();
-
-            new MoveOrbsToBeaconJob
+            state.Dependency = new MoveOrbsToBeaconJob
             {
                 BeaconPos = beaconPos,
                 ArrivalRadius = cfg.BeaconArrivalRadius,
@@ -47,13 +39,11 @@ namespace _Game.Systems
                 CollectMaxSpeed = cfg.CollectMaxSpeed,
                 DeltaTime = SystemAPI.Time.DeltaTime,
                 ECB = ecb,
-                ArrivedExp = _arrivedExp.AsParallelWriter(),
-            }.Run();
+                HasExpQueue = hasExpQueue,
+                ExpCollectedQueue = expQueueWriter,
+            }.ScheduleParallel(state.Dependency);
 
-            while (_arrivedExp.TryDequeue(out float exp))
-            {
-                EventBus.FireExpCollected(exp);
-            }
+            DotsBridge.BridgeDependencies = JobHandle.CombineDependencies(DotsBridge.BridgeDependencies, state.Dependency);
         }
 
         private float2 GetBeaconPosition(ref SystemState state)
@@ -77,7 +67,9 @@ namespace _Game.Systems
         public float CollectMaxSpeed;
         public float DeltaTime;
         public EntityCommandBuffer.ParallelWriter ECB;
-        public NativeQueue<float>.ParallelWriter ArrivedExp;
+
+        public bool HasExpQueue;
+        [WriteOnly] public NativeQueue<float>.ParallelWriter ExpCollectedQueue;
 
         private void Execute(Entity entity, [EntityIndexInQuery] int sortKey, ref LocalTransform transform, in ExpOrbData data)
         {
@@ -87,7 +79,11 @@ namespace _Game.Systems
 
             if (dist < ArrivalRadius)
             {
-                ArrivedExp.Enqueue(data.Value);
+                if (HasExpQueue)
+                {
+                    ExpCollectedQueue.Enqueue(data.Value);
+                }
+                
                 ECB.DestroyEntity(sortKey, entity);
                 return;
             }

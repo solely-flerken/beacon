@@ -8,7 +8,7 @@ namespace _Game.Core
     /// <summary>
     /// Bridge between ECS simulation and managed C# events.
     ///
-    /// DeathQueue is a static so ECS systems can write to it without an Instance reference.
+    /// The queues are statics so ECS systems can write to them without an Instance reference.
     /// Listeners on batch events must process the NativeArray immediately - do not store it.
     /// </summary>
     public class DotsBridge : MonoBehaviour
@@ -18,19 +18,19 @@ namespace _Game.Core
         [SerializeField] private int hitBufferSize = 4096;
 
         /// <summary>
-        /// Written by ProjectileSystem on enemy death.
+        /// Written by EnemyDeathSystem on enemy death.
         /// </summary>
         public static NativeQueue<DeathEvent> DeathQueue;
- 
+
         /// <summary>
-        /// Written by ProjectileSystem on enemy death. Drained by ExpOrbSpawnSystem.
-        /// </summary>
-        public static NativeQueue<DeathEvent> ExpOrbQueue;
-        
-        /// <summary>
-        /// Written by ProjectileSystem on enemy hit (damage but not death).
+        /// Written by DamageAndDeathSystem for every weapon hit that lands on a living target.
         /// </summary>
         public static NativeQueue<HitEvent> HitQueue;
+
+        /// <summary>
+        /// Written by BeaconCollectExpSystem with the exp value of every orb that reaches the beacon.
+        /// </summary>
+        public static NativeQueue<float> ExpCollectedQueue;
 
         private NativeArray<DeathEvent> _deathBatch;
         private NativeArray<HitEvent> _hitBatch;
@@ -40,8 +40,8 @@ namespace _Game.Core
         private void Awake()
         {
             DeathQueue  = new NativeQueue<DeathEvent>(Allocator.Persistent);
-            ExpOrbQueue = new NativeQueue<DeathEvent>(Allocator.Persistent);
             HitQueue = new NativeQueue<HitEvent>(Allocator.Persistent);
+            ExpCollectedQueue = new NativeQueue<float>(Allocator.Persistent);
             _deathBatch = new NativeArray<DeathEvent>(deathBufferSize, Allocator.Persistent);
             _hitBatch = new NativeArray<HitEvent>(hitBufferSize, Allocator.Persistent);
         }
@@ -52,15 +52,20 @@ namespace _Game.Core
             
             DrainQueue(DeathQueue, _deathBatch, EventBus.FireEnemiesDiedBatch);
             DrainQueue(HitQueue, _hitBatch, EventBus.FireEnemiesHitBatch);
-            
+
+            while (ExpCollectedQueue.TryDequeue(out float exp))
+            {
+                EventBus.FireExpCollected(exp);
+            }
+
             BridgeDependencies = default; 
         }
         
         private void OnDestroy()
         {
             if (DeathQueue.IsCreated) DeathQueue.Dispose();
-            if (ExpOrbQueue.IsCreated) ExpOrbQueue.Dispose();
             if (HitQueue.IsCreated) HitQueue.Dispose();
+            if (ExpCollectedQueue.IsCreated) ExpCollectedQueue.Dispose();
             if (_deathBatch.IsCreated) _deathBatch.Dispose();
             if (_hitBatch.IsCreated) _hitBatch.Dispose();
         }

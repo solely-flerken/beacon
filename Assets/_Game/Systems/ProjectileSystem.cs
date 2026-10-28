@@ -1,11 +1,9 @@
 ﻿using _Game.Components;
-using _Game.Core;
 using _Game.Shared;
 using _Game.Util;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
-using Unity.Jobs;
 using Unity.Mathematics;
 using Unity.Transforms;
 using UnityEngine;
@@ -23,7 +21,9 @@ namespace _Game.Systems
         {
             state.RequireForUpdate<ProjectileTag>();
             state.RequireForUpdate<EndSimulationEntityCommandBufferSystem.Singleton>();
-            
+            state.RequireForUpdate<SpatialGrids>();
+            state.RequireForUpdate<DamageEvents>();
+
             _playerProjectiles = SystemAPI.QueryBuilder()
                 .WithAll<PlayerProjectileTag, LocalTransform, ProjectileVelocity, ProjectileDamage, ProjectilePierce>()
                 .Build();
@@ -42,32 +42,26 @@ namespace _Game.Systems
             }.ScheduleParallel(state.Dependency);
 
             EndSimulationEntityCommandBufferSystem.Singleton ecbSingleton = SystemAPI.GetSingleton<EndSimulationEntityCommandBufferSystem.Singleton>();
-
-            // Depend on any prior HitQueue / DamageQueue writers (e.g. BeamDamageJob) before scheduling collision jobs
-            state.Dependency = JobHandle.CombineDependencies(state.Dependency, DotsBridge.BridgeDependencies, DamageShared.Writers);
+            SpatialGrids grids = SystemAPI.GetSingleton<SpatialGrids>();
 
             // Check collisions
-            bool hasHitQueue = DotsBridge.HitQueue.IsCreated;
-            NativeQueue<HitEvent>.ParallelWriter hitQueueWriter = default;
-            if (hasHitQueue) hitQueueWriter = DotsBridge.HitQueue.AsParallelWriter();
-
-            NativeQueue<DamageEvent>.ParallelWriter damageQueueWriter = DamageShared.Queue.AsParallelWriter();
+            NativeQueue<DamageEvent> damageQueue = SystemAPI.GetSingletonRW<DamageEvents>().ValueRO.Queue;
+            NativeQueue<DamageEvent>.ParallelWriter damageQueueWriter = damageQueue.AsParallelWriter();
             BufferLookup<HitCooldown> hitCooldownLookup = SystemAPI.GetBufferLookup<HitCooldown>(true);
-            
+
             ComponentLookup<ProjectileWeapon> weaponSourceLookup = SystemAPI.GetComponentLookup<ProjectileWeapon>(true);
 
             // PLAYER PROJECTILES vs ENEMIES
-            if (SpatialGridShared.EnemyGridValid && !_playerProjectiles.IsEmpty)
+            if (grids.EnemiesValid && !_playerProjectiles.IsEmpty)
             {
                 EntityCommandBuffer.ParallelWriter ecb = ecbSingleton.CreateCommandBuffer(state.WorldUnmanaged).AsParallelWriter();
-                
+
                 state.Dependency = new CollisionJob
                 {
-                    SpatialGrid = SpatialGridShared.EnemyGrid,
+                    SpatialGrid = grids.Enemies,
                     HitRadius = 0.5f,
                     ECB = ecb,
-                    HasHitQueue = hasHitQueue,
-                    HitQueue = hitQueueWriter,
+                    ReportHits = true,
                     DamageQueue = damageQueueWriter,
                     HitCooldowns = hitCooldownLookup,
                     WeaponSourceLookup = weaponSourceLookup,
@@ -75,25 +69,21 @@ namespace _Game.Systems
             }
 
             // ENEMY PROJECTILES vs PLAYER
-            if (SpatialGridShared.AllyGridValid && !_enemyProjectiles.IsEmpty)
+            if (grids.AlliesValid && !_enemyProjectiles.IsEmpty)
             {
                 EntityCommandBuffer.ParallelWriter ecb = ecbSingleton.CreateCommandBuffer(state.WorldUnmanaged).AsParallelWriter();
-                
+
                 state.Dependency = new CollisionJob
                 {
-                    SpatialGrid = SpatialGridShared.AllyGrid,
+                    SpatialGrid = grids.Allies,
                     HitRadius = 0.5f,
                     ECB = ecb,
-                    HasHitQueue = false, // TODO: enemy -> beacon hits don't count as player weapon stats. Need to create a dedicated HitQueue
-                    HitQueue = hitQueueWriter,
+                    ReportHits = false, // TODO: enemy -> beacon hits don't count as player weapon stats. Need a dedicated stat for them
                     DamageQueue = damageQueueWriter,
                     HitCooldowns = hitCooldownLookup,
                     WeaponSourceLookup = weaponSourceLookup,
                 }.ScheduleParallel(_enemyProjectiles, state.Dependency);
             }
-            
-            DotsBridge.BridgeDependencies = JobHandle.CombineDependencies(DotsBridge.BridgeDependencies, state.Dependency);
-            DamageShared.Writers = state.Dependency;
         }
     }
 
@@ -117,9 +107,11 @@ namespace _Game.Systems
         
         public EntityCommandBuffer.ParallelWriter ECB;
         
-        public bool HasHitQueue;
-        [WriteOnly] public NativeQueue<HitEvent>.ParallelWriter HitQueue;
-        
+        /// <summary>
+        /// Credit hits to the firing weapon.
+        /// </summary>
+        public bool ReportHits;
+
         [WriteOnly] public NativeQueue<DamageEvent>.ParallelWriter DamageQueue;
         [ReadOnly] public BufferLookup<HitCooldown> HitCooldowns;
         [ReadOnly] public ComponentLookup<ProjectileWeapon> WeaponSourceLookup;
@@ -161,20 +153,17 @@ namespace _Game.Systems
 #endif
                 }
 
-                Entity weaponEntity = WeaponSourceLookup.HasComponent(projectile) ? WeaponSourceLookup[projectile].Value : Entity.Null;
+                Entity weaponEntity = ReportHits && WeaponSourceLookup.HasComponent(projectile)
+                    ? WeaponSourceLookup[projectile].Value
+                    : Entity.Null;
 
-                DamageQueue.Enqueue(new DamageEvent { Target = target, Value = damage.Value });
-
-                // Send Hit Event to Bridge
-                if (HasHitQueue)
+                DamageQueue.Enqueue(new DamageEvent
                 {
-                    HitQueue.Enqueue(new HitEvent
-                    {
-                        Position = transform.Position,
-                        Damage = damage.Value,
-                        WeaponEntity = weaponEntity,
-                    });
-                }
+                    Target = target,
+                    Value = damage.Value,
+                    Weapon = weaponEntity,
+                    Position = transform.Position,
+                });
 
                 // Handle pierce
                 pierce.Remaining--;

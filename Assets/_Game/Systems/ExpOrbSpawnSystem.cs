@@ -1,6 +1,7 @@
 using _Game.Authoring;
 using _Game.Components;
 using _Game.Core;
+using _Game.Shared;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
@@ -12,27 +13,35 @@ namespace _Game.Systems
 {
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     [UpdateAfter(typeof(ProjectileSystem))]
+    [UpdateBefore(typeof(EnemyDeathSystem))]
     public partial struct ExpOrbSpawnSystem : ISystem
     {
+        private NativeQueue<DeathEvent> _expQueue;
+
         public void OnCreate(ref SystemState state)
         {
             state.RequireForUpdate<ExpOrbConfig>();
             state.RequireForUpdate<EndSimulationEntityCommandBufferSystem.Singleton>();
+
+            _expQueue = new NativeQueue<DeathEvent>(Allocator.Persistent);
+            state.EntityManager.CreateSingleton(new ExpOrbEvents { Queue = _expQueue });
+        }
+
+        public void OnDestroy(ref SystemState state)
+        {
+            state.EntityManager.CompleteAllTrackedJobs();
+            if (_expQueue.IsCreated) _expQueue.Dispose();
         }
 
         public void OnUpdate(ref SystemState state)
         {
-            if (!DotsBridge.ExpOrbQueue.IsCreated || DotsBridge.ExpOrbQueue.Count == 0) return;
+            SystemAPI.GetSingletonRW<ExpOrbEvents>();
+            state.EntityManager.CompleteDependencyBeforeRW<ExpOrbEvents>();
+
+            if (_expQueue.Count == 0) return;
             if (!SystemAPI.TryGetSingleton(out PrefabRefs prefabs)) return;
 
             ExpOrbConfig config = SystemAPI.GetSingleton<ExpOrbConfig>();
-
-            // Drain every death that happened this frame into a flat list.
-            NativeList<DeathEvent> deaths = new(DotsBridge.ExpOrbQueue.Count, Allocator.Temp);
-            while (DotsBridge.ExpOrbQueue.TryDequeue(out DeathEvent death))
-            {
-                deaths.Add(death);
-            }
 
             // Snapshot all live orbs that are still collecting exp.
             NativeList<Entity> existingEntities = new(config.MaxBuckets, Allocator.Temp);
@@ -55,7 +64,7 @@ namespace _Game.Systems
 
             float mergeRadiusSq = config.MergeRadius * config.MergeRadius;
 
-            foreach (DeathEvent death in deaths)
+            while (_expQueue.TryDequeue(out DeathEvent death))
             {
                 float2 deathPos = death.Position.xy;
 
@@ -154,7 +163,6 @@ namespace _Game.Systems
                 }
             }
 
-            deaths.Dispose();
             existingEntities.Dispose();
             existingPositions.Dispose();
             existingData.Dispose();

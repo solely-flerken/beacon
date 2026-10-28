@@ -25,15 +25,15 @@ namespace _Game.Systems
         public void OnCreate(ref SystemState state)
         {
             state.RequireForUpdate<ArenaBounds>();
+            state.RequireForUpdate<UnitData>();
+
+            state.EntityManager.CreateSingleton(new SpatialGrids());
         }
 
         public void OnDestroy(ref SystemState state)
         {
             _enemyBuffers.Dispose();
             _allyBuffers.Dispose();
-
-            SpatialGridShared.EnemyGrid = default;
-            SpatialGridShared.AllyGrid = default;
         }
 
         private void Initialize(ref SystemState state)
@@ -63,25 +63,30 @@ namespace _Game.Systems
                 Initialize(ref state);
             }
 
-            _enemyBuffers.EnsureCapacity(ref state, EnemyDataShared.Count);
-            _allyBuffers.EnsureCapacity(ref state, AllyDataShared.Count);
+            UnitData units = SystemAPI.GetSingleton<UnitData>();
 
-            JobHandle enemyHandle = ScheduleBuild(_enemyBuffers, EnemyDataShared.Positions, EnemyDataShared.Entities, EnemyDataShared.Count, state.Dependency);
-            JobHandle allyHandle = ScheduleBuild(_allyBuffers, AllyDataShared.Positions, AllyDataShared.Entities, AllyDataShared.Count, state.Dependency);
+            _enemyBuffers.EnsureCapacity(ref state, units.Enemies.Count);
+            _allyBuffers.EnsureCapacity(ref state, units.Allies.Count);
 
-            JobHandle.CombineDependencies(enemyHandle, allyHandle).Complete();
+            JobHandle enemyHandle = ScheduleBuild(_enemyBuffers, units.Enemies, state.Dependency);
+            JobHandle allyHandle = ScheduleBuild(_allyBuffers, units.Allies, state.Dependency);
+            state.Dependency = JobHandle.CombineDependencies(enemyHandle, allyHandle);
 
-            SpatialGridShared.EnemyGrid = _enemyBuffers.ToGrid(_layout, EnemyDataShared.Count);
-            SpatialGridShared.AllyGrid = _allyBuffers.ToGrid(_layout, AllyDataShared.Count);
+            // Registers this system as the writer, so systems reading SpatialGrids wait for the build jobs
+            SystemAPI.GetSingletonRW<SpatialGrids>().ValueRW = new SpatialGrids
+            {
+                Enemies = _enemyBuffers.ToGrid(_layout, units.Enemies.Count),
+                Allies = _allyBuffers.ToGrid(_layout, units.Allies.Count),
+            };
         }
 
-        private JobHandle ScheduleBuild(GridBuffers buffers, NativeArray<float2> positions, NativeArray<Entity> entities, int count, JobHandle dependency)
+        private JobHandle ScheduleBuild(GridBuffers buffers, UnitSnapshot units, JobHandle dependency)
         {
             return new BuildGridJob
             {
-                Positions = positions,
-                Entities = entities,
-                EntityCount = count,
+                Positions = units.Positions,
+                Entities = units.Entities,
+                EntityCount = units.Count,
                 Origin = _layout.Origin,
                 InvCellSize = _layout.InvCellSize,
                 Width = _layout.Width,

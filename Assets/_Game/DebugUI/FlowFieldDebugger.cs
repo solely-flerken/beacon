@@ -1,5 +1,6 @@
 ﻿using _Game.Shared;
 using _Game.Util;
+using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine;
 
@@ -9,17 +10,26 @@ namespace _Game.DebugUI
     {
         private void OnDrawGizmos()
         {
-            if (!Application.isPlaying || !FlowFieldShared.IsValid) return;
+            if (!Application.isPlaying) return;
 
-            float arenaW = FlowFieldShared.GridWidth * FlowFieldShared.CellSize;
-            float arenaH = FlowFieldShared.GridHeight * FlowFieldShared.CellSize;
-            
+            World world = World.DefaultGameObjectInjectionWorld;
+            if (world == null || !world.IsCreated) return;
+
+            EntityManager em = world.EntityManager;
+            using EntityQuery query = em.CreateEntityQuery(typeof(FlowField));
+            if (!query.TryGetSingleton(out FlowField flowField) || !flowField.IsValid) return;
+
+            em.CompleteDependencyBeforeRO<FlowField>();
+
+            float cellSize = flowField.CellSize;
+            int gridWidth = flowField.GridWidth;
+            int gridHeight = flowField.GridHeight;
+
+            float arenaW = gridWidth * cellSize;
+            float arenaH = gridHeight * cellSize;
+
             Gizmos.color = Color.white;
             Gizmos.DrawWireCube(Vector3.zero, new Vector3(arenaW, arenaH, 0f));
-
-            float cellSize = FlowFieldShared.CellSize;
-            int gridWidth = FlowFieldShared.GridWidth;
-            int gridHeight = FlowFieldShared.GridHeight;
 
             for (int y = 0; y < gridHeight; y++)
             {
@@ -28,7 +38,7 @@ namespace _Game.DebugUI
                     float2 worldPos = FlowFieldUtil.CellToWorld(new int2(x, y), cellSize, gridWidth, gridHeight);
                     Vector3 center = new(worldPos.x, worldPos.y, 0f);
                     int idx = FlowFieldUtil.GetIndex(new int2(x, y), gridWidth);
-                    float2 dir = FlowFieldShared.Directions[idx];
+                    float2 dir = flowField.Directions[idx];
 
                     if (math.lengthsq(dir) > 0.001f)
                     {
