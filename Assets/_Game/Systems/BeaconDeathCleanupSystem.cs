@@ -13,8 +13,10 @@ namespace _Game.Systems
             EntityCommandBuffer ecb = new(state.WorldUpdateAllocator);
             bool signalFound = false;
 
-            foreach ((BeaconStats _, Entity entity) in SystemAPI.Query<BeaconStats>().WithAll<IsDead>().WithEntityAccess())
+            foreach ((RefRO<Health> health, Entity entity) in SystemAPI.Query<RefRO<Health>>().WithAll<BeaconStats>().WithEntityAccess())
             {
+                if (health.ValueRO.Current > 0f) continue;
+
                 signalFound = true;
                 ecb.DestroyEntity(entity);
             }

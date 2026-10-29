@@ -7,8 +7,5 @@ namespace _Game.Components
         public float BaseMax;
         public float Max;
         public float Current;
-        public bool IsAlive;
     }
-    
-    public struct IsDead : IComponentData, IEnableableComponent { }
 }

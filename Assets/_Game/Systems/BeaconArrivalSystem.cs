@@ -24,7 +24,7 @@ namespace _Game.Systems
             state.RequireForUpdate<DamageEvents>();
 
             _contactDamageLookup = state.GetComponentLookup<ContactDamage>(isReadOnly: true);
-            _healthLookup = state.GetComponentLookup<Health>(isReadOnly: false);
+            _healthLookup = state.GetComponentLookup<Health>(isReadOnly: true);
             _despawnLookup = state.GetComponentLookup<Despawn>(isReadOnly: false);
         }
 
@@ -57,13 +57,13 @@ namespace _Game.Systems
     {
         [ReadOnly] public SpatialGrid Grid;
         [ReadOnly] public ComponentLookup<ContactDamage> ContactDamageLookup;
-        public ComponentLookup<Health> HealthLookup;
+        [ReadOnly] public ComponentLookup<Health> HealthLookup;
         public ComponentLookup<Despawn> DespawnLookup;
         public NativeQueue<DamageEvent> DamageQueue;
 
         private void Execute(Entity beaconEntity, in BeaconStats stats, in LocalTransform transform)
         {
-            if (!HealthLookup.TryGetComponent(beaconEntity, out Health health) || !health.IsAlive) return;
+            if (!HealthLookup.TryGetComponent(beaconEntity, out Health health) || health.Current <= 0f) return;
 
             float2 beaconPos = transform.Position.xy;
             float radiusSq = stats.ArrivalRadius * stats.ArrivalRadius;
@@ -75,12 +75,11 @@ namespace _Game.Systems
 
                 Entity enemy = Grid.Entities[i];
                 if (!ContactDamageLookup.TryGetComponent(enemy, out ContactDamage contactDamage)) continue;
-                if (!HealthLookup.TryGetComponent(enemy, out Health enemyHealth) || !enemyHealth.IsAlive) continue;
+                // Only deal arrival damage if the entity can be removed, and isn't being removed already
+                if (!DespawnLookup.HasComponent(enemy) || DespawnLookup.IsComponentEnabled(enemy)) continue;
 
                 totalDamage += contactDamage.Value;
 
-                enemyHealth.IsAlive = false;
-                HealthLookup[enemy] = enemyHealth;
                 DespawnLookup.SetComponentEnabled(enemy, true);
             }
 

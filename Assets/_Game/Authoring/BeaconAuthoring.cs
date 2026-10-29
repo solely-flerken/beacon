@@ -39,7 +39,6 @@ namespace _Game.Authoring
                     BaseMax = config.maxHp,
                     Max = config.maxHp,
                     Current = config.maxHp,
-                    IsAlive = true
                 });
 
                 AddComponent(entity, new Speed
@@ -54,8 +53,6 @@ namespace _Game.Authoring
                 
                 // Damage
                 AddBuffer<HitCooldown>(entity);
-                AddComponent<IsDead>(entity);
-                SetComponentEnabled<IsDead>(entity, false);
                 
                 // Modifier
                 AddBuffer<StatModifier>(entity);

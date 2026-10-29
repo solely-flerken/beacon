@@ -61,7 +61,7 @@ namespace _Game.Authoring
                 AddComponent(entity, new Steering { Responsiveness = authoring.steeringResponsiveness });
                 AddComponent(entity, new EnemyReward { BaseExpValue = authoring.exp, ExpValue = authoring.exp });
                 AddComponent(entity, new ContactDamage { BaseValue = authoring.contactDamage, Value = authoring.contactDamage });
-                AddComponent(entity, new Health { BaseMax = authoring.maxHealth, Max = authoring.maxHealth, Current = authoring.maxHealth, IsAlive = true});
+                AddComponent(entity, new Health { BaseMax = authoring.maxHealth, Max = authoring.maxHealth, Current = authoring.maxHealth });
                 
                 // Reference to the enemy type 
                 AddComponent<EnemyTypeRef>(entity);

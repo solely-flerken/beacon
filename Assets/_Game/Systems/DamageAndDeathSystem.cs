@@ -18,7 +18,6 @@ namespace _Game.Systems
         private NativeQueue<DamageEvent> _queue;
         
         private ComponentLookup<Health> _healthLookup;
-        private ComponentLookup<IsDead> _isDeadLookup;
         private ComponentLookup<Despawn> _despawnLookup;
 
         public void OnCreate(ref SystemState state)
@@ -27,7 +26,6 @@ namespace _Game.Systems
             state.EntityManager.CreateSingleton(new DamageEvents { Queue = _queue });
 
             _healthLookup = state.GetComponentLookup<Health>(isReadOnly: false);
-            _isDeadLookup = state.GetComponentLookup<IsDead>(isReadOnly: false);
             _despawnLookup = state.GetComponentLookup<Despawn>(isReadOnly: false);
         }
 
@@ -41,7 +39,6 @@ namespace _Game.Systems
         public void OnUpdate(ref SystemState state)
         {
             _healthLookup.Update(ref state);
-            _isDeadLookup.Update(ref state);
             _despawnLookup.Update(ref state);
 
             SystemAPI.GetSingletonRW<DamageEvents>();
@@ -52,7 +49,6 @@ namespace _Game.Systems
             {
                 Queue = _queue,
                 HealthLookup = _healthLookup,
-                IsDeadLookup = _isDeadLookup,
                 DespawnLookup = _despawnLookup,
                 HasHitQueue = hasHitQueue,
                 HitQueue = hasHitQueue ? DotsBridge.HitQueue.AsParallelWriter() : default,
@@ -66,7 +62,6 @@ namespace _Game.Systems
         {
             public NativeQueue<DamageEvent> Queue;
             public ComponentLookup<Health> HealthLookup;
-            public ComponentLookup<IsDead> IsDeadLookup;
             public ComponentLookup<Despawn> DespawnLookup;
 
             public bool HasHitQueue;
@@ -81,7 +76,7 @@ namespace _Game.Systems
                     ref Health health = ref HealthLookup.GetRefRW(damage.Target).ValueRW;
 
                     // Already dead or despawning: no second death, no rewards, no hit stats
-                    if (!health.IsAlive) continue;
+                    if (health.Current <= 0f) continue;
                     bool hasDespawn = DespawnLookup.HasComponent(damage.Target);
                     if (hasDespawn && DespawnLookup.IsComponentEnabled(damage.Target)) continue;
 
@@ -97,19 +92,10 @@ namespace _Game.Systems
                     }
 
                     health.Current -= damage.Value;
-                    if (health.Current > 0f) continue;
+                    if (health.Current > 0f || !hasDespawn) continue;
 
-                    health.IsAlive = false;
-
-                    if (hasDespawn)
-                    {
-                        DespawnLookup[damage.Target] = new Despawn { Killed = true };
-                        DespawnLookup.SetComponentEnabled(damage.Target, true);
-                    }
-                    else if (IsDeadLookup.HasComponent(damage.Target))
-                    {
-                        IsDeadLookup.SetComponentEnabled(damage.Target, true);
-                    }
+                    DespawnLookup[damage.Target] = new Despawn { Killed = true };
+                    DespawnLookup.SetComponentEnabled(damage.Target, true);
                 }
             }
         }
