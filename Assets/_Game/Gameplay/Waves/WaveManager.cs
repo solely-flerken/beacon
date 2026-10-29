@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using _Game.Components;
 using _Game.Core;
+using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine;
@@ -92,6 +93,7 @@ namespace _Game.Gameplay.Waves
 
         private EntityManager _entityManager;
         private EntityQuery _enemyQuery;
+        private EntityQuery _despawnQuery;
         private EntityQuery _spawnQueueQuery;
         private EntityQuery _waveModQuery;
 
@@ -115,6 +117,7 @@ namespace _Game.Gameplay.Waves
         {
             _entityManager = World.DefaultGameObjectInjectionWorld.EntityManager;
             _enemyQuery = _entityManager.CreateEntityQuery(typeof(EnemyTag));
+            _despawnQuery = new EntityQueryBuilder(Allocator.Temp).WithAll<EnemyTag>().WithPresent<Despawn>().Build(_entityManager);
             _spawnQueueQuery = _entityManager.CreateEntityQuery(typeof(EnemySpawnRequest));
             _waveModQuery = _entityManager.CreateEntityQuery(typeof(GlobalModSingleton), typeof(WaveStatModifier));
 
@@ -129,6 +132,7 @@ namespace _Game.Gameplay.Waves
             if (world != null && world.IsCreated)
             {
                 _enemyQuery.Dispose();
+                _despawnQuery.Dispose();
                 _spawnQueueQuery.Dispose();
                 _waveModQuery.Dispose();
             }
@@ -304,8 +308,8 @@ namespace _Game.Gameplay.Waves
         {
             ClearSpawnQueue();
 
-            int count = _enemyQuery.CalculateEntityCount();
-            _entityManager.AddComponent<DespawnTag>(_enemyQuery);
+            int count = _despawnQuery.CalculateEntityCount();
+            _entityManager.SetComponentEnabled<Despawn>(_despawnQuery, true);
             Debug.Log($"[WaveManager] Grace period over, despawned {count} enemies.");
         }
 

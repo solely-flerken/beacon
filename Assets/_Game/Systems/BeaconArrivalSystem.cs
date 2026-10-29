@@ -15,16 +15,17 @@ namespace _Game.Systems
     {
         private ComponentLookup<ContactDamage> _contactDamageLookup;
         private ComponentLookup<Health> _healthLookup;
+        private ComponentLookup<Despawn> _despawnLookup;
 
         public void OnCreate(ref SystemState state)
         {
             state.RequireForUpdate<BeaconStats>();
-            state.RequireForUpdate<EndSimulationEntityCommandBufferSystem.Singleton>();
             state.RequireForUpdate<SpatialGrids>();
             state.RequireForUpdate<DamageEvents>();
 
             _contactDamageLookup = state.GetComponentLookup<ContactDamage>(isReadOnly: true);
             _healthLookup = state.GetComponentLookup<Health>(isReadOnly: false);
+            _despawnLookup = state.GetComponentLookup<Despawn>(isReadOnly: false);
         }
 
         public void OnUpdate(ref SystemState state)
@@ -35,13 +36,14 @@ namespace _Game.Systems
 
             _contactDamageLookup.Update(ref state);
             _healthLookup.Update(ref state);
+            _despawnLookup.Update(ref state);
 
             state.Dependency = new BeaconArrivalJob
             {
                 Grid = grids.Enemies,
                 ContactDamageLookup = _contactDamageLookup,
                 HealthLookup = _healthLookup,
-                ECB = SystemAPI.GetSingleton<EndSimulationEntityCommandBufferSystem.Singleton>().CreateCommandBuffer(state.WorldUnmanaged),
+                DespawnLookup = _despawnLookup,
                 DamageQueue = damageQueue,
             }.Schedule(state.Dependency);
         }
@@ -56,7 +58,7 @@ namespace _Game.Systems
         [ReadOnly] public SpatialGrid Grid;
         [ReadOnly] public ComponentLookup<ContactDamage> ContactDamageLookup;
         public ComponentLookup<Health> HealthLookup;
-        public EntityCommandBuffer ECB;
+        public ComponentLookup<Despawn> DespawnLookup;
         public NativeQueue<DamageEvent> DamageQueue;
 
         private void Execute(Entity beaconEntity, in BeaconStats stats, in LocalTransform transform)
@@ -79,7 +81,7 @@ namespace _Game.Systems
 
                 enemyHealth.IsAlive = false;
                 HealthLookup[enemy] = enemyHealth;
-                ECB.AddComponent<DespawnTag>(enemy);
+                DespawnLookup.SetComponentEnabled(enemy, true);
             }
 
             if (totalDamage <= 0f) return;

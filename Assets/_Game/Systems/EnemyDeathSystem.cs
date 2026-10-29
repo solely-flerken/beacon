@@ -9,21 +9,20 @@ using Unity.Transforms;
 
 namespace _Game.Systems
 {
+    /// <summary>
+    /// Sends death events for enemies killed this frame. DespawnSystem removes them.
+    /// </summary>
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     [UpdateAfter(typeof(DamageAndDeathSystem))]
     public partial struct EnemyDeathSystem : ISystem
     {
         public void OnCreate(ref SystemState state)
         {
-            state.RequireForUpdate<EndSimulationEntityCommandBufferSystem.Singleton>();
             state.RequireForUpdate<ExpOrbEvents>();
         }
 
         public void OnUpdate(ref SystemState state)
         {
-            EndSimulationEntityCommandBufferSystem.Singleton ecbSingleton = SystemAPI.GetSingleton<EndSimulationEntityCommandBufferSystem.Singleton>();
-            EntityCommandBuffer.ParallelWriter ecb = ecbSingleton.CreateCommandBuffer(state.WorldUnmanaged).AsParallelWriter();
-
             bool hasDeathQueue = DotsBridge.DeathQueue.IsCreated;
             NativeQueue<DeathEvent>.ParallelWriter deathQueueWriter = default;
             if (hasDeathQueue) deathQueueWriter = DotsBridge.DeathQueue.AsParallelWriter();
@@ -32,38 +31,27 @@ namespace _Game.Systems
 
             state.Dependency = new EnemyDeathJob
             {
-                ECB = ecb,
                 HasDeathQueue = hasDeathQueue,
                 DeathQueue = deathQueueWriter,
                 ExpOrbQueue = expOrbQueue.AsParallelWriter(),
-            }.ScheduleParallel(state.Dependency);
-
-            state.Dependency = new EnemyDespawnJob
-            {
-                ECB = ecb,
             }.ScheduleParallel(state.Dependency);
 
             DotsBridge.BridgeDependencies = JobHandle.CombineDependencies(DotsBridge.BridgeDependencies, state.Dependency);
         }
 
         [BurstCompile]
-        [WithAll(typeof(EnemyTag), typeof(IsDead))]
-        [WithNone(typeof(DespawnTag))]
+        [WithAll(typeof(EnemyTag))]
         internal partial struct EnemyDeathJob : IJobEntity
         {
-            public EntityCommandBuffer.ParallelWriter ECB;
-
             public bool HasDeathQueue;
 
             [WriteOnly] public NativeQueue<DeathEvent>.ParallelWriter DeathQueue;
             [WriteOnly] public NativeQueue<DeathEvent>.ParallelWriter ExpOrbQueue;
 
-            private void Execute(
-                Entity entity,
-                [EntityIndexInQuery] int sortKey,
-                in EnemyReward reward,
-                in LocalTransform transform)
+            private void Execute(in Despawn despawn, in EnemyReward reward, in LocalTransform transform)
             {
+                if (!despawn.Killed) return;
+
                 DeathEvent deathEvent = new()
                 {
                     Position = transform.Position,
@@ -72,20 +60,6 @@ namespace _Game.Systems
 
                 if (HasDeathQueue) DeathQueue.Enqueue(deathEvent);
                 ExpOrbQueue.Enqueue(deathEvent);
-
-                ECB.DestroyEntity(sortKey, entity);
-            }
-        }
-        
-        [BurstCompile]
-        [WithAll(typeof(EnemyTag), typeof(DespawnTag))]
-        internal partial struct EnemyDespawnJob : IJobEntity
-        {
-            public EntityCommandBuffer.ParallelWriter ECB;
-
-            private void Execute(Entity entity, [EntityIndexInQuery] int sortKey)
-            {
-                ECB.DestroyEntity(sortKey, entity);
             }
         }
     }

@@ -6,9 +6,13 @@ namespace _Game.Components
     public struct EnemyTag : IComponentData { }
 
     /// <summary>
-    /// Removes the enemy via EnemyDeathSystem without rewards or death events.
+    /// Added (disabled) at bake time. Enabled means the entity is removed by DespawnSystem at the end of the frame:
+    /// disabled = alive, enabled + Killed = died (EnemyDeathSystem sends rewards), enabled + !Killed = despawned without rewards.
     /// </summary>
-    public struct DespawnTag : IComponentData { }
+    public struct Despawn : IComponentData, IEnableableComponent
+    {
+        public bool Killed;
+    }
 
     /// <summary>
     /// Damage dealt to the beacon on contact.

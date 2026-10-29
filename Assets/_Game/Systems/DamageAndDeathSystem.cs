@@ -19,6 +19,7 @@ namespace _Game.Systems
         
         private ComponentLookup<Health> _healthLookup;
         private ComponentLookup<IsDead> _isDeadLookup;
+        private ComponentLookup<Despawn> _despawnLookup;
 
         public void OnCreate(ref SystemState state)
         {
@@ -27,6 +28,7 @@ namespace _Game.Systems
 
             _healthLookup = state.GetComponentLookup<Health>(isReadOnly: false);
             _isDeadLookup = state.GetComponentLookup<IsDead>(isReadOnly: false);
+            _despawnLookup = state.GetComponentLookup<Despawn>(isReadOnly: false);
         }
 
         public void OnDestroy(ref SystemState state)
@@ -40,6 +42,7 @@ namespace _Game.Systems
         {
             _healthLookup.Update(ref state);
             _isDeadLookup.Update(ref state);
+            _despawnLookup.Update(ref state);
 
             SystemAPI.GetSingletonRW<DamageEvents>();
 
@@ -50,6 +53,7 @@ namespace _Game.Systems
                 Queue = _queue,
                 HealthLookup = _healthLookup,
                 IsDeadLookup = _isDeadLookup,
+                DespawnLookup = _despawnLookup,
                 HasHitQueue = hasHitQueue,
                 HitQueue = hasHitQueue ? DotsBridge.HitQueue.AsParallelWriter() : default,
             }.Schedule(JobHandle.CombineDependencies(state.Dependency, DotsBridge.BridgeDependencies));
@@ -63,6 +67,7 @@ namespace _Game.Systems
             public NativeQueue<DamageEvent> Queue;
             public ComponentLookup<Health> HealthLookup;
             public ComponentLookup<IsDead> IsDeadLookup;
+            public ComponentLookup<Despawn> DespawnLookup;
 
             public bool HasHitQueue;
             [WriteOnly] public NativeQueue<HitEvent>.ParallelWriter HitQueue;
@@ -77,6 +82,8 @@ namespace _Game.Systems
 
                     // Already dead or despawning: no second death, no rewards, no hit stats
                     if (!health.IsAlive) continue;
+                    bool hasDespawn = DespawnLookup.HasComponent(damage.Target);
+                    if (hasDespawn && DespawnLookup.IsComponentEnabled(damage.Target)) continue;
 
                     // TODO: Capture damage by enemies (or enemy type), e.g. contact damage or with weapons.
                     if (HasHitQueue && damage.Weapon != Entity.Null)
@@ -93,7 +100,13 @@ namespace _Game.Systems
                     if (health.Current > 0f) continue;
 
                     health.IsAlive = false;
-                    if (IsDeadLookup.HasComponent(damage.Target))
+
+                    if (hasDespawn)
+                    {
+                        DespawnLookup[damage.Target] = new Despawn { Killed = true };
+                        DespawnLookup.SetComponentEnabled(damage.Target, true);
+                    }
+                    else if (IsDeadLookup.HasComponent(damage.Target))
                     {
                         IsDeadLookup.SetComponentEnabled(damage.Target, true);
                     }
