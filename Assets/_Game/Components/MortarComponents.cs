@@ -12,8 +12,12 @@ namespace _Game.Components
         public float Duration;
         public float Elapsed;
         public float ArcHeight;
-        public Entity Shadow;
         public Entity ExplosionPrefab;
+    }
+
+    public struct MortarShadow : IComponentData
+    {
+        public Entity Shell;
     }
 
     /// <summary>
