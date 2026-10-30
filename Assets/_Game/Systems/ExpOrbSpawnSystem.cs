@@ -2,12 +2,11 @@ using _Game.Authoring;
 using _Game.Components;
 using _Game.Core;
 using _Game.Shared;
+using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
-using UnityEngine;
-using Random = UnityEngine.Random;
 
 namespace _Game.Systems
 {
@@ -17,12 +16,14 @@ namespace _Game.Systems
     public partial struct ExpOrbSpawnSystem : ISystem
     {
         private NativeQueue<DeathEvent> _expQueue;
+        private Random _random;
 
         public void OnCreate(ref SystemState state)
         {
             state.RequireForUpdate<ExpOrbConfig>();
             state.RequireForUpdate<EndSimulationEntityCommandBufferSystem.Singleton>();
 
+            _random = new Random((uint)System.Environment.TickCount | 1u);
             _expQueue = new NativeQueue<DeathEvent>(Allocator.Persistent);
             state.EntityManager.CreateSingleton(new ExpOrbEvents { Queue = _expQueue });
         }
@@ -33,6 +34,7 @@ namespace _Game.Systems
             if (_expQueue.IsCreated) _expQueue.Dispose();
         }
 
+        [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
             SystemAPI.GetSingletonRW<ExpOrbEvents>();
@@ -99,8 +101,8 @@ namespace _Game.Systems
                 if (!withinRadius && canSpawn)
                 {
                     // No nearby orb and a slot is free — spawn a new orb at this death location.
-                    Vector2 rnd = Random.insideUnitCircle * 0.3f;
-                    float2 spawnPos = deathPos + new float2(rnd.x, rnd.y);
+                    float2 rnd = _random.NextFloat2Direction() * math.sqrt(_random.NextFloat()) * 0.3f;
+                    float2 spawnPos = deathPos + rnd;
 
                     spawnPositions.Add(spawnPos);
                     spawnData.Add(new ExpOrbData
