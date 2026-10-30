@@ -36,6 +36,9 @@ namespace _Game.Core
         private NativeArray<HitEvent> _hitBatch;
 
         public static JobHandle BridgeDependencies;
+
+        private static readonly Action<NativeArray<DeathEvent>, int> FireEnemiesDiedBatch = EventBus.FireEnemiesDiedBatch;
+        private static readonly Action<NativeArray<HitEvent>, int> FireEnemiesHitBatch = EventBus.FireEnemiesHitBatch;
         
         private void Awake()
         {
@@ -50,8 +53,8 @@ namespace _Game.Core
         {
             BridgeDependencies.Complete();
             
-            DrainQueue(DeathQueue, _deathBatch, EventBus.FireEnemiesDiedBatch);
-            DrainQueue(HitQueue, _hitBatch, EventBus.FireEnemiesHitBatch);
+            DrainQueue(DeathQueue, _deathBatch, FireEnemiesDiedBatch);
+            DrainQueue(HitQueue, _hitBatch, FireEnemiesHitBatch);
 
             while (ExpCollectedQueue.TryDequeue(out float exp))
             {
