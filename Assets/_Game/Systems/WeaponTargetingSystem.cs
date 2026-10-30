@@ -60,6 +60,8 @@ namespace _Game.Systems
     [BurstCompile]
     internal partial struct WeaponTargetingJob : IJobEntity
     {
+        private const int RandomSampleAttempts = 8;
+
         [ReadOnly] public ComponentLookup<EnemyTag> EnemyTagLookup;
         [ReadOnly] public ComponentLookup<LocalToWorld> TransformLookup;
 
@@ -170,16 +172,19 @@ namespace _Game.Systems
         {
             switch (strategy)
             {
-                case TargetStrategy.Furthest:
-                    return FindNearest(origin, grid, range, healthLookup, incomingDamageLookup, checkIncoming, out foundIndex, invert: true);
                 case TargetStrategy.Random:
                     return FindRandom(origin, grid, range, healthLookup, incomingDamageLookup, checkIncoming, ref seed, out foundIndex);
+                case TargetStrategy.Furthest:
+                    return FindFurthest(origin, grid, range, healthLookup, incomingDamageLookup, checkIncoming, out foundIndex);
                 case TargetStrategy.Nearest:
                 default:
                     return FindNearest(origin, grid, range, healthLookup, incomingDamageLookup, checkIncoming, out foundIndex);
             }
         }
 
+        /// <summary>
+        /// Picks a uniformly random valid unit in range: a few random draws first, then a full scan if none of them is valid.
+        /// </summary>
         private static bool FindRandom(
             float2 origin,
             SpatialGrid grid,
@@ -194,9 +199,30 @@ namespace _Game.Systems
 
             float maxRangeSq = maxRange * maxRange;
             Random rng = new(seed);
-            int count = 0;
 
-            foreach (int i in Candidates(grid, origin, maxRange))
+            grid.GetCellBounds(origin - maxRange, origin + maxRange, out int2 minCell, out int2 maxCell);
+            bool flat = UseFlatScan(grid, minCell, maxCell);
+            int candidateCount = flat ? grid.Count : grid.CountInBox(minCell, maxCell);
+            if (candidateCount == 0) return false;
+
+            // Rejection sampling: draw random candidates until one is valid.
+            for (int attempt = 0; attempt < RandomSampleAttempts; attempt++)
+            {
+                int n = rng.NextInt(0, candidateCount);
+                int i = flat ? n : grid.NthInBox(minCell, maxCell, n);
+                if (math.distancesq(origin, grid.Positions[i]) > maxRangeSq) continue;
+                if (checkIncoming && IsOverCommitted(grid.Entities[i], healthLookup, incomingDamageLookup)) continue;
+
+                randomIndex = i;
+                seed = rng.state;
+                return true;
+            }
+
+            // Few or no valid targets: scan all candidates and pick one uniformly (reservoir sampling)
+            int count = 0;
+            
+            GridQuery candidates = flat ? grid.All() : grid.Query(minCell, maxCell);
+            foreach (int i in candidates)
             {
                 if (math.distancesq(origin, grid.Positions[i]) > maxRangeSq) continue;
                 if (checkIncoming && IsOverCommitted(grid.Entities[i], healthLookup, incomingDamageLookup)) continue;
@@ -210,6 +236,9 @@ namespace _Game.Systems
             return randomIndex != -1;
         }
 
+        /// <summary>
+        /// Searches ring by ring outward from the weapon's cell and stops once no unvisited unit can be nearer than the best so far.
+        /// </summary>
         private static bool FindNearest(
             float2 origin,
             SpatialGrid grid,
@@ -217,35 +246,145 @@ namespace _Game.Systems
             ComponentLookup<Health> healthLookup,
             ComponentLookup<EnemyIncomingDamage> incomingDamageLookup,
             bool checkIncoming,
-            out int resultIndex,
-            bool invert = false)
+            out int resultIndex)
         {
             resultIndex = -1;
 
             float maxRangeSq = maxRange * maxRange;
-            float bestSq = invert ? 0f : maxRangeSq;
+            float bestSq = maxRangeSq;
 
-            foreach (int i in Candidates(grid, origin, maxRange))
+            grid.GetCellBounds(origin - maxRange, origin + maxRange, out int2 minCell, out int2 maxCell);
+            if (UseFlatScan(grid, minCell, maxCell))
             {
-                float distSq = math.distancesq(origin, grid.Positions[i]);
-                bool betterTarget = invert ? distSq <= maxRangeSq && distSq > bestSq : distSq < bestSq;
-                if (!betterTarget) continue;
-                if (checkIncoming && IsOverCommitted(grid.Entities[i], healthLookup, incomingDamageLookup)) continue;
+                foreach (int i in grid.All())
+                {
+                    if (!IsBetterTarget(i, origin, grid, maxRangeSq, false, healthLookup, incomingDamageLookup, checkIncoming, bestSq, out float distSq)) continue;
 
-                bestSq = distSq;
-                resultIndex = i;
+                    bestSq = distSq;
+                    resultIndex = i;
+                }
+
+                return resultIndex != -1;
+            }
+
+            int2 center = grid.WorldToCell(origin);
+            int maxRadius = math.cmax(math.max(center - minCell, maxCell - center));
+            float edgeDist = grid.DistanceToCellEdge(origin);
+
+            for (int radius = 0; radius <= maxRadius; radius++)
+            {
+                float minDist = radius == 0 ? 0f : (radius - 1) * grid.CellSize + edgeDist;
+                if (minDist * minDist >= bestSq) break;
+
+                foreach (int i in grid.QueryRing(center, radius))
+                {
+                    if (!IsBetterTarget(i, origin, grid, maxRangeSq, false, healthLookup, incomingDamageLookup, checkIncoming, bestSq, out float distSq)) continue;
+
+                    bestSq = distSq;
+                    resultIndex = i;
+                }
             }
 
             return resultIndex != -1;
         }
 
         /// <summary>
-        /// All units that may be in range.
+        /// Searches ring by ring inward from the edge of the range and stops once no unvisited unit can be further than the best so far.
         /// </summary>
-        private static GridQuery Candidates(SpatialGrid grid, float2 origin, float range)
+        private static bool FindFurthest(
+            float2 origin,
+            SpatialGrid grid,
+            float maxRange,
+            ComponentLookup<Health> healthLookup,
+            ComponentLookup<EnemyIncomingDamage> incomingDamageLookup,
+            bool checkIncoming,
+            out int resultIndex)
         {
-            grid.GetCellBounds(origin - range, origin + range, out int2 minCell, out int2 maxCell);
-            return grid.Count <= maxCell.y - minCell.y + 1 ? grid.All() : grid.Query(minCell, maxCell);
+            resultIndex = -1;
+
+            float maxRangeSq = maxRange * maxRange;
+            float bestSq = 0f;
+
+            grid.GetCellBounds(origin - maxRange, origin + maxRange, out int2 minCell, out int2 maxCell);
+            if (UseFlatScan(grid, minCell, maxCell))
+            {
+                foreach (int i in grid.All())
+                {
+                    if (!IsBetterTarget(i, origin, grid, maxRangeSq, true, healthLookup, incomingDamageLookup, checkIncoming, bestSq, out float distSq)) continue;
+
+                    bestSq = distSq;
+                    resultIndex = i;
+                }
+
+                return resultIndex != -1;
+            }
+
+            int2 center = grid.WorldToCell(origin);
+            int maxRadius = math.cmax(math.max(center - minCell, maxCell - center));
+
+            for (int radius = maxRadius; radius >= 0; radius--)
+            {
+                foreach (int i in grid.QueryRing(center, radius))
+                {
+                    if (!IsBetterTarget(i, origin, grid, maxRangeSq, true, healthLookup, incomingDamageLookup, checkIncoming, bestSq, out float distSq)) continue;
+
+                    bestSq = distSq;
+                    resultIndex = i;
+                }
+
+                if (resultIndex != -1 && MaxDistanceSqWithin(grid, origin, center, radius - 1) <= bestSq) break;
+            }
+
+            return resultIndex != -1;
+        }
+
+        /// <summary>
+        /// Squared distance from <paramref name="origin"/> to the farthest corner of the cells within <paramref name="radius"/> of <paramref name="centerCell"/>, so no unit inside can be further.
+        /// Infinite if the box touches an edge cell, since those also hold units from outside the grid, which can be any distance away.
+        /// </summary>
+        private static float MaxDistanceSqWithin(SpatialGrid grid, float2 origin, int2 centerCell, int radius)
+        {
+            if (radius < 0) return 0f;
+
+            int2 min = centerCell - radius;
+            int2 max = centerCell + radius;
+            if (math.any(min <= 0) || max.x >= grid.Width - 1 || max.y >= grid.Height - 1)
+            {
+                return float.PositiveInfinity;
+            }
+
+            float2 boxMin = grid.Origin + (float2)min * grid.CellSize;
+            float2 boxMax = grid.Origin + (float2)(max + 1) * grid.CellSize;
+            return math.lengthsq(math.max(math.abs(origin - boxMin), math.abs(boxMax - origin)));
+        }
+
+        /// <summary>
+        /// True if unit <paramref name="i"/> is nearer than <paramref name="bestSq"/> (further, if <paramref name="invert"/>), in range, and not over-committed.
+        /// </summary>
+        private static bool IsBetterTarget(
+            int i,
+            float2 origin,
+            SpatialGrid grid,
+            float maxRangeSq,
+            bool invert,
+            ComponentLookup<Health> healthLookup,
+            ComponentLookup<EnemyIncomingDamage> incomingDamageLookup,
+            bool checkIncoming,
+            float bestSq,
+            out float distSq)
+        {
+            distSq = math.distancesq(origin, grid.Positions[i]);
+            bool betterTarget = invert ? distSq <= maxRangeSq && distSq > bestSq : distSq < bestSq;
+            if (!betterTarget) return false;
+            return !checkIncoming || !IsOverCommitted(grid.Entities[i], healthLookup, incomingDamageLookup);
+        }
+
+        /// <summary>
+        /// True if there are so few units that scanning all of them is cheaper than walking the cells.
+        /// </summary>
+        private static bool UseFlatScan(SpatialGrid grid, int2 minCell, int2 maxCell)
+        {
+            return grid.Count <= maxCell.y - minCell.y + 1;
         }
 
         /// <summary>
