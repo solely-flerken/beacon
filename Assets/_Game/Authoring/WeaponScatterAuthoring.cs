@@ -15,7 +15,13 @@ namespace _Game.Authoring
         public float speed = 60f;
         public int pierce = 1;
 
-        [Header("Scatter Stats")] 
+        [Header("Ricochet")]
+        public int bounceCount = 0;
+        public float bounceRange = 8f;
+        public float bounceFalloff = 0.85f;
+        public float bounceDamageFloor = 0.5f;
+
+        [Header("Scatter Stats")]
         public int projectileCount = 5;
         public float spreadAngle = 15f;
 
@@ -33,8 +39,16 @@ namespace _Game.Authoring
                 {
                     BaseSpeed = authoring.speed,
                     BasePierce = authoring.pierce,
+                    BaseBounceCount = authoring.bounceCount,
+                    BaseBounceRange = authoring.bounceRange,
+                    BaseBounceFalloff = authoring.bounceFalloff,
+                    BaseBounceDamageFloor = authoring.bounceDamageFloor,
                     Speed = authoring.speed,
                     Pierce = authoring.pierce,
+                    BounceCount = authoring.bounceCount,
+                    BounceRange = authoring.bounceRange,
+                    BounceFalloff = authoring.bounceFalloff,
+                    BounceDamageFloor = authoring.bounceDamageFloor,
                 });
 
                 AddComponent(entity, new ScatterStats

@@ -84,6 +84,7 @@ namespace _Game.Systems
             ECB.SetComponent(sortKey, projectile, new ProjectileVelocity { Value = baseDir * projStats.Speed });
             ECB.SetComponent(sortKey, projectile, new ProjectileDamage { Value = stats.Damage });
             ECB.SetComponent(sortKey, projectile, new ProjectilePierce { Remaining = projStats.Pierce });
+            ECB.SetComponent(sortKey, projectile, new ProjectileBounce { Remaining = projStats.BounceCount, Range = projStats.BounceRange, Falloff = projStats.BounceFalloff, MinDamage = stats.Damage * projStats.BounceDamageFloor });
 
             // Who owns this weapon?
             if (PlayerTagLookup.HasComponent(owner.Value))
@@ -95,7 +96,7 @@ namespace _Game.Systems
                 {
                     float flightTime = math.length(delta) / projStats.Speed;
                     
-                    ECB.AddComponent(sortKey, projectile, new ProjectileTarget
+                    ECB.SetComponent(sortKey, projectile, new ProjectileTarget
                     {
                         Value = targeting.CurrentTarget,
                         ReservationExpiry = ElapsedTime + flightTime * 1.5,

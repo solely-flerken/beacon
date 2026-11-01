@@ -63,6 +63,10 @@ namespace _Game.Systems
 
                     proj.ValueRW.Speed = StatResolver.ResolveWeapon(StatType.ProjectileSpeed, proj.ValueRO.BaseSpeed, mask.ValueRO, globalBuffer, waveBuffer, localMods, ownerMods, ownerBlobRef);
                     proj.ValueRW.Pierce = (int)StatResolver.ResolveWeapon(StatType.Pierce, proj.ValueRO.BasePierce, mask.ValueRO, globalBuffer, waveBuffer, localMods, ownerMods, ownerBlobRef);
+                    proj.ValueRW.BounceCount = (int)StatResolver.ResolveWeapon(StatType.BounceCount, proj.ValueRO.BaseBounceCount, mask.ValueRO, globalBuffer, waveBuffer, localMods, ownerMods, ownerBlobRef);
+                    proj.ValueRW.BounceRange = StatResolver.ResolveWeapon(StatType.BounceRange, proj.ValueRO.BaseBounceRange, mask.ValueRO, globalBuffer, waveBuffer, localMods, ownerMods, ownerBlobRef);
+                    proj.ValueRW.BounceFalloff = StatResolver.ResolveWeapon(StatType.BounceFalloff, proj.ValueRO.BaseBounceFalloff, mask.ValueRO, globalBuffer, waveBuffer, localMods, ownerMods, ownerBlobRef);
+                    proj.ValueRW.BounceDamageFloor = StatResolver.ResolveWeapon(StatType.BounceDamageFloor, proj.ValueRO.BaseBounceDamageFloor, mask.ValueRO, globalBuffer, waveBuffer, localMods, ownerMods, ownerBlobRef);
                 }
 
                 if (SystemAPI.HasComponent<BeamStats>(entity))

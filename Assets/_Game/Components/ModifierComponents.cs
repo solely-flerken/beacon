@@ -20,7 +20,12 @@ namespace _Game.Components
         BeamRotationSpeed,
         BeamWidth,
         // Enemy reward
-        Exp
+        Exp,
+        // Projectile ricochet
+        BounceCount,
+        BounceRange,
+        BounceFalloff,
+        BounceDamageFloor,
     }
 
     public enum ModifierType : byte

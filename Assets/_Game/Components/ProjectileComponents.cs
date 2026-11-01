@@ -34,6 +34,25 @@ namespace _Game.Components
     }
 
     /// <summary>
+    /// Ricochet: once pierce is used up, the projectile redirects to the nearest enemy it hasn't hit yet.
+    /// </summary>
+    public struct ProjectileBounce : IComponentData
+    {
+        public int Remaining;
+        public float Range;
+
+        /// <summary>
+        /// Damage multiplier applied on each bounce.
+        /// </summary>
+        public float Falloff;
+
+        /// <summary>
+        /// Lowest damage a bounce can reduce to. % relative of the shot damage.
+        /// </summary>
+        public float MinDamage;
+    }
+
+    /// <summary>
     /// Links a projectile back to the weapon entity that fired it.
     /// </summary>
     public struct ProjectileWeapon : IComponentData

@@ -73,6 +73,7 @@ namespace _Game.Cards
         private static ICardConstraint MinCards(int count) => new MinDraftedCardsConstraint { MinCount = count };
         private static ICardConstraint MinHealth(float percent) => new BeaconHealthPercentConstraint { MinHealthPercent = percent };
         private static ICardConstraint HasWeaponOfType(WeaponType type) => new HasWeaponTypeConstraint { WeaponType = type };
+        private static ICardConstraint HasAnyWeaponOfType(params WeaponType[] types) => new HasAnyWeaponTypeConstraint { WeaponTypes = types };
 
         #endregion
 
@@ -134,6 +135,22 @@ namespace _Game.Cards
             effects: new[] { WeaponTypeFx(WeaponType.Basic, StatType.Pierce, ModifierType.Additive, 1f) }
         );
 
+        public static readonly CardData Ricochet = new(
+            cardId: 252,
+            title: "Ricochet",
+            description: "Basic and Scatter shots bounce to 2 more enemies, dealing 15% less damage per bounce (down to 50%).",
+            effects: new[]
+            {
+                WeaponTypeFx(WeaponType.Basic, StatType.BounceCount, ModifierType.Additive, 2f),
+                WeaponTypeFx(WeaponType.Basic, StatType.BounceFalloff, ModifierType.Overwrite, 0.85f),
+                WeaponTypeFx(WeaponType.Basic, StatType.BounceDamageFloor, ModifierType.Overwrite, 0.5f),
+                WeaponTypeFx(WeaponType.Scatter, StatType.BounceCount, ModifierType.Additive, 2f),
+                WeaponTypeFx(WeaponType.Scatter, StatType.BounceFalloff, ModifierType.Overwrite, 0.85f),
+                WeaponTypeFx(WeaponType.Scatter, StatType.BounceDamageFloor, ModifierType.Overwrite, 0.5f),
+            },
+            constraints: new[] { HasAnyWeaponOfType(WeaponType.Basic, WeaponType.Scatter) }
+        );
+
         // Enemy-debuff cards
         public static readonly CardData SlowBasicEnemies = new(
             cardId: 301,
@@ -170,6 +187,7 @@ namespace _Game.Cards
             OverchargedBarrels,
             DeepMagazine,
             ArmorPiercing,
+            Ricochet,
             SlowBasicEnemies,
             Overclocked,
             DangerousGame,

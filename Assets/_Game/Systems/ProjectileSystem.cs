@@ -25,11 +25,11 @@ namespace _Game.Systems
             state.RequireForUpdate<DamageEvents>();
 
             _playerProjectiles = SystemAPI.QueryBuilder()
-                .WithAll<PlayerProjectileTag, LocalTransform, ProjectileVelocity, ProjectileDamage, ProjectilePierce>()
+                .WithAll<PlayerProjectileTag, LocalTransform, ProjectileVelocity, ProjectileDamage, ProjectilePierce, ProjectileBounce, ProjectileTarget>()
                 .Build();
 
             _enemyProjectiles = SystemAPI.QueryBuilder()
-                .WithAll<EnemyProjectileTag, LocalTransform, ProjectileVelocity, ProjectileDamage, ProjectilePierce>()
+                .WithAll<EnemyProjectileTag, LocalTransform, ProjectileVelocity, ProjectileDamage, ProjectilePierce, ProjectileBounce, ProjectileTarget>()
                 .Build();
         }
 
@@ -50,6 +50,7 @@ namespace _Game.Systems
             BufferLookup<HitCooldown> hitCooldownLookup = SystemAPI.GetBufferLookup<HitCooldown>(true);
 
             ComponentLookup<ProjectileWeapon> weaponSourceLookup = SystemAPI.GetComponentLookup<ProjectileWeapon>(true);
+            double elapsedTime = SystemAPI.Time.ElapsedTime;
 
             // PLAYER PROJECTILES vs ENEMIES
             if (grids.EnemiesValid && !_playerProjectiles.IsEmpty)
@@ -65,6 +66,7 @@ namespace _Game.Systems
                     DamageQueue = damageQueueWriter,
                     HitCooldowns = hitCooldownLookup,
                     WeaponSourceLookup = weaponSourceLookup,
+                    ElapsedTime = elapsedTime,
                 }.ScheduleParallel(_playerProjectiles, state.Dependency);
             }
 
@@ -82,6 +84,7 @@ namespace _Game.Systems
                     DamageQueue = damageQueueWriter,
                     HitCooldowns = hitCooldownLookup,
                     WeaponSourceLookup = weaponSourceLookup,
+                    ElapsedTime = elapsedTime,
                 }.ScheduleParallel(_enemyProjectiles, state.Dependency);
             }
         }
@@ -116,7 +119,9 @@ namespace _Game.Systems
         [ReadOnly] public BufferLookup<HitCooldown> HitCooldowns;
         [ReadOnly] public ComponentLookup<ProjectileWeapon> WeaponSourceLookup;
 
-        private void Execute(Entity projectile, [EntityIndexInQuery] int sortKey, in LocalTransform transform, in ProjectileDamage damage, ref ProjectilePierce pierce)
+        public double ElapsedTime;
+
+        private void Execute(Entity projectile, [EntityIndexInQuery] int sortKey, in LocalTransform transform, ref ProjectileVelocity velocity, ref ProjectileDamage damage, ref ProjectilePierce pierce, ref ProjectileBounce bounce, ref ProjectileTarget reservation)
         {
             float2 pos = new(transform.Position.x, transform.Position.y);
             float hitRadiusSq = HitRadius * HitRadius;
@@ -165,14 +170,57 @@ namespace _Game.Systems
                     Position = transform.Position,
                 });
 
-                // Handle pierce
+                // Handle pierce, then ricochet
                 pierce.Remaining--;
-                if (pierce.Remaining < 0)
-                {
-                    ECB.DestroyEntity(sortKey, projectile);
-                }
+                if (pierce.Remaining >= 0) return;
+
+                if (bounce.Remaining > 0 && TryBounce(projectile, target, pos, ref velocity, ref damage, ref bounce, ref reservation)) return;
+
+                ECB.DestroyEntity(sortKey, projectile);
                 return;
             }
+        }
+
+        /// <summary>
+        /// Redirects the projectile to the nearest enemy in bounce range it hasn't hit yet, and moves its overkill reservation there.
+        /// False if there is none.
+        /// </summary>
+        private bool TryBounce(Entity projectile, Entity lastTarget, float2 pos, ref ProjectileVelocity velocity, ref ProjectileDamage damage, ref ProjectileBounce bounce, ref ProjectileTarget reservation)
+        {
+            RicochetFilter filter = new() { Projectile = projectile, LastTarget = lastTarget, HitCooldowns = HitCooldowns };
+            if (!HopTargeting.FindNearest(pos, SpatialGrid, bounce.Range, ref filter, out int next)) return false;
+
+            float2 toNext = SpatialGrid.Positions[next] - pos;
+            float speed = math.length(velocity.Value);
+
+            velocity.Value = math.normalizesafe(toNext) * speed;
+            damage.Value = math.max(damage.Value * bounce.Falloff, bounce.MinDamage);
+            bounce.Remaining--;
+
+            reservation.Value = SpatialGrid.Entities[next];
+            reservation.ReservationExpiry = ElapsedTime + math.length(toNext) / math.max(speed, 0.01f) * 1.5;
+
+            return true;
+        }
+    }
+
+    internal struct RicochetFilter : IHopFilter
+    {
+        public Entity Projectile;
+        public Entity LastTarget;
+        [ReadOnly] public BufferLookup<HitCooldown> HitCooldowns;
+
+        public bool IsExcluded(Entity entity)
+        {
+            if (entity == LastTarget) return true;
+            if (!HitCooldowns.TryGetBuffer(entity, out DynamicBuffer<HitCooldown> cds)) return false;
+
+            for (int c = 0; c < cds.Length; c++)
+            {
+                if (cds[c].Source == Projectile) return true;
+            }
+
+            return false;
         }
     }
 }

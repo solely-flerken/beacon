@@ -93,6 +93,7 @@ namespace _Game.Systems
                 ECB.SetComponent(sortKey, projectile, new ProjectileVelocity { Value = dir * (projStats.Speed * speedMul) });
                 ECB.SetComponent(sortKey, projectile, new ProjectileDamage { Value = weaponStats.Damage });
                 ECB.SetComponent(sortKey, projectile, new ProjectilePierce { Remaining = projStats.Pierce });
+                ECB.SetComponent(sortKey, projectile, new ProjectileBounce { Remaining = projStats.BounceCount, Range = projStats.BounceRange, Falloff = projStats.BounceFalloff, MinDamage = weaponStats.Damage * projStats.BounceDamageFloor });
 
                 // Who owns this weapon?
                 if (isPlayer)

@@ -53,10 +53,18 @@ namespace _Game.Components
         // Base Values (Authored)
         public float BaseSpeed;
         public int BasePierce;
-        
+        public int BaseBounceCount;
+        public float BaseBounceRange;
+        public float BaseBounceFalloff;
+        public float BaseBounceDamageFloor;
+
         // Result Values (Calculated)
         public float Speed;
         public int Pierce;
+        public int BounceCount;
+        public float BounceRange;
+        public float BounceFalloff;
+        public float BounceDamageFloor;
     }
     
     public struct ShootProjectile : IComponentData
