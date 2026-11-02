@@ -111,4 +111,5 @@ InitTestScene*.unity*
 # Gen AI Skills etc.
 .claude
 .agents
+.agent-workspace
 skills-lock.json
