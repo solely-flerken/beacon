@@ -29,8 +29,8 @@ namespace _Game.Systems
             float deltaTime = math.min(SystemAPI.Time.DeltaTime, SimulationConfig.MaxDeltaTime);
 
             // Update beam direction and shared data for beam visuals
-            foreach ((RefRW<BeamFacing> facing, RefRO<WeaponTargeting> targeting, RefRO<WeaponStats> stats, RefRO<BeamStats> beamStats, RefRO<LocalToWorld> transform, Entity entity) in
-                     SystemAPI.Query<RefRW<BeamFacing>, RefRO<WeaponTargeting>, RefRO<WeaponStats>, RefRO<BeamStats>, RefRO<LocalToWorld>>().WithAll<BeamTag>().WithEntityAccess())
+            foreach ((RefRW<BeamFacing> facing, RefRO<WeaponTargeting> targeting, RefRO<WeaponStats> stats, RefRO<BeamStats> beamStats, RefRO<WeaponState> weaponState, RefRO<LocalToWorld> transform, Entity entity) in
+                     SystemAPI.Query<RefRW<BeamFacing>, RefRO<WeaponTargeting>, RefRO<WeaponStats>, RefRO<BeamStats>, RefRO<WeaponState>, RefRO<LocalToWorld>>().WithAll<BeamTag>().WithEntityAccess())
             {
                 if (!targeting.ValueRO.HasTarget)
                 {
@@ -47,9 +47,11 @@ namespace _Game.Systems
                 
                 BeamVisualShared.Beams.Add(new BeamVisualData
                 {
-                    Origin = transform.ValueRO.Position,
-                    End = new float3(weaponPos + facing.ValueRO.Direction * stats.ValueRO.TargetRange, 0f),
+                    Origin = weaponPos,
+                    End = weaponPos + facing.ValueRO.Direction * stats.ValueRO.TargetRange,
                     Width = beamStats.ValueRO.Width,
+                    SincePulse = weaponState.ValueRO.Timer,
+                    Seed = (uint)entity.Index,
                 });
             }
 
