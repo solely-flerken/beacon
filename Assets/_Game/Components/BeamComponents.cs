@@ -22,6 +22,16 @@ namespace _Game.Components
     public struct BeamFacing : IComponentData
     {
         public float2 Direction;
-        public float2 PreviousDirection;
+        
+        /// <summary>
+        /// Direction when the window before the next pulse opened; the pulse damages the slice swept from here to <see cref="Direction"/>.
+        /// Only valid while <see cref="WindowOpen"/>.
+        /// </summary>
+        public float2 WindowStartDirection;
+
+        /// <summary>
+        /// True while the beam's sweep counts toward the next pulse (the last MaxWindow seconds before it).
+        /// </summary>
+        public bool WindowOpen;
     }
 }

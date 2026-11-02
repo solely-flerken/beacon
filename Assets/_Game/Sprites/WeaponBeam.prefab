@@ -47,9 +47,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::_Game.Authoring.WeaponBaseAuthoring
   weaponType: 1
-  damage: 2
+  damage: 10
   fireRate: 10
-  targetRange: 40
+  targetRange: 60
 --- !u!114 &8687449625626758979
 MonoBehaviour:
   m_ObjectHideFlags: 0
