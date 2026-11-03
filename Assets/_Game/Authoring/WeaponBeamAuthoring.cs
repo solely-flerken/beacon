@@ -13,6 +13,12 @@ namespace _Game.Authoring
         public float width = 0.1f;
         public float rotationSpeed = 3f;
 
+        [Header("Chain Lightning")]
+        public int chainCount = 0;
+        public float chainRange = 6f;
+        public float chainFalloff = 0.8f;
+        public float chainDamageFloor = 0.5f;
+
         private class Baker : Baker<WeaponBeamAuthoring>
         {
             public override void Bake(WeaponBeamAuthoring authoring)
@@ -20,7 +26,19 @@ namespace _Game.Authoring
                 Entity entity = GetEntity(TransformUsageFlags.Dynamic);
 
                 AddComponent<BeamTag>(entity);
-                
+
+                AddComponent(entity, new ChainStats
+                {
+                    BaseCount = authoring.chainCount,
+                    BaseRange = authoring.chainRange,
+                    BaseFalloff = authoring.chainFalloff,
+                    BaseDamageFloor = authoring.chainDamageFloor,
+                    Count = authoring.chainCount,
+                    Range = authoring.chainRange,
+                    Falloff = authoring.chainFalloff,
+                    DamageFloor = authoring.chainDamageFloor,
+                });
+
                 AddComponent(entity, new BeamStats
                 {
                     BaseWidth = authoring.width,

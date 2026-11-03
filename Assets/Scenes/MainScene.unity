@@ -386,6 +386,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::_Game.Simulation.DOTSBridge
   deathBufferSize: 8192
   hitBufferSize: 4096
+  arcBufferSize: 1024
 --- !u!114 &238055992
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1191,6 +1192,63 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4298c13971d77ed45b6d0e2414d3f015, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::_Game.Gameplay.WeaponSlot
+--- !u!1 &1247933501
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1247933502}
+  - component: {fileID: 1247933503}
+  m_Layer: 0
+  m_Name: ChainLightningVisual
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1247933502
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1247933501}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1247933503
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1247933501}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e58a6f9f8e166ea45b2a49a87379cd5b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::_Game.Gameplay.ChainLightningRenderer
+  shader: {fileID: 4800000, guid: be7ca493d7b6b60429659977bafe2d2d, type: 3}
+  capacity: 8192
+  lifetime: 0.18
+  coreWidth: 0.04
+  glowRadius: 0.2
+  jaggedness: 0.4
+  noiseFrequency: 1.5
+  flickerRate: 24
+  color: {r: 0.45, g: 0.7, b: 2.5, a: 1}
+  branchStrength: 0.6
+  branchOffset: 0.6
+  flashRadius: 0.3
+  z: -0.1
 --- !u!1 &1292649035
 GameObject:
   m_ObjectHideFlags: 0
@@ -1631,5 +1689,6 @@ SceneRoots:
   - {fileID: 230792675}
   - {fileID: 438619593}
   - {fileID: 581267943}
+  - {fileID: 1247933502}
   - {fileID: 1825727380}
   - {fileID: 16051485}

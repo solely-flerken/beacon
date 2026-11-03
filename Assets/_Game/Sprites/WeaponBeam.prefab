@@ -79,3 +79,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::_Game.Authoring.WeaponBeamAuthoring
   width: 0.1
   rotationSpeed: 3
+  chainCount: 10
+  chainRange: 6
+  chainFalloff: 0.8
+  chainDamageFloor: 0.5

@@ -16,7 +16,8 @@ namespace _Game.Core
         #region Batch Events
 
         public static event Action<NativeArray<DeathEvent>, int> OnEnemiesDiedBatch;
-        public static event Action<NativeArray<HitEvent>, int>   OnEnemiesHitBatch;
+        public static event Action<NativeArray<HitEvent>, int> OnEnemiesHitBatch;
+        public static event Action<NativeArray<ChainArcVisualData>, int> OnChainArcsBatch;
 
         #endregion
         
@@ -47,6 +48,7 @@ namespace _Game.Core
         // Fire
         public static void FireEnemiesDiedBatch(NativeArray<DeathEvent> batch, int count) => OnEnemiesDiedBatch?.Invoke(batch, count);
         public static void FireEnemiesHitBatch(NativeArray<HitEvent> batch, int count) => OnEnemiesHitBatch?.Invoke(batch, count);
+        public static void FireChainArcsBatch(NativeArray<ChainArcVisualData> batch, int count) => OnChainArcsBatch?.Invoke(batch, count);
 
         public static void FireWaveStarted(int wave) => OnWaveStarted?.Invoke(wave);
         public static void FireWaveCleared(int wave) => OnWaveCleared?.Invoke(wave);
@@ -67,6 +69,7 @@ namespace _Game.Core
         {
             OnEnemiesDiedBatch = null;
             OnEnemiesHitBatch = null;
+            OnChainArcsBatch = null;
             OnWaveStarted = null;
             OnWaveCleared = null;
             OnExpCollected = null;

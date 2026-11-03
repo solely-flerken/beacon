@@ -83,6 +83,25 @@ namespace _Game.Components
         public Entity Prefab;
     }
 
+    #region Chain Lightning
+
+    public struct ChainStats : IComponentData
+    {
+        // Base Values (Authored)
+        public int BaseCount;
+        public float BaseRange;
+        public float BaseFalloff;
+        public float BaseDamageFloor;
+
+        // Result Values (Calculated)
+        public int Count;
+        public float Range;
+        public float Falloff;
+        public float DamageFloor;
+    }
+
+    #endregion
+
     #region Scatter
 
     public struct ShootScatter : IComponentData

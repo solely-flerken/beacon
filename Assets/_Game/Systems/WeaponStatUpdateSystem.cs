@@ -77,6 +77,16 @@ namespace _Game.Systems
                     beam.ValueRW.RotationSpeed = StatResolver.ResolveWeapon(StatType.BeamRotationSpeed, beam.ValueRO.BaseRotationSpeed, mask.ValueRO, globalBuffer, waveBuffer, localMods, ownerMods, ownerBlobRef);
                 }
 
+                if (SystemAPI.HasComponent<ChainStats>(entity))
+                {
+                    RefRW<ChainStats> chain = SystemAPI.GetComponentRW<ChainStats>(entity);
+
+                    chain.ValueRW.Count = (int)StatResolver.ResolveWeapon(StatType.ChainCount, chain.ValueRO.BaseCount, mask.ValueRO, globalBuffer, waveBuffer, localMods, ownerMods, ownerBlobRef);
+                    chain.ValueRW.Range = StatResolver.ResolveWeapon(StatType.ChainRange, chain.ValueRO.BaseRange, mask.ValueRO, globalBuffer, waveBuffer, localMods, ownerMods, ownerBlobRef);
+                    chain.ValueRW.Falloff = StatResolver.ResolveWeapon(StatType.ChainFalloff, chain.ValueRO.BaseFalloff, mask.ValueRO, globalBuffer, waveBuffer, localMods, ownerMods, ownerBlobRef);
+                    chain.ValueRW.DamageFloor = StatResolver.ResolveWeapon(StatType.ChainDamageFloor, chain.ValueRO.BaseDamageFloor, mask.ValueRO, globalBuffer, waveBuffer, localMods, ownerMods, ownerBlobRef);
+                }
+
                 SystemAPI.SetComponentEnabled<WeaponStatUpdateRequired>(entity, false);
             }
         }

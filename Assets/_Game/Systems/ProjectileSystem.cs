@@ -210,7 +210,7 @@ namespace _Game.Systems
         public Entity LastTarget;
         [ReadOnly] public BufferLookup<HitCooldown> HitCooldowns;
 
-        public bool IsExcluded(Entity entity)
+        public bool IsExcluded(int index, Entity entity)
         {
             if (entity == LastTarget) return true;
             if (!HitCooldowns.TryGetBuffer(entity, out DynamicBuffer<HitCooldown> cds)) return false;

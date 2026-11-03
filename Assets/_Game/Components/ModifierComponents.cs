@@ -26,6 +26,11 @@ namespace _Game.Components
         BounceRange,
         BounceFalloff,
         BounceDamageFloor,
+        // Chain lightning
+        ChainCount,
+        ChainRange,
+        ChainFalloff,
+        ChainDamageFloor,
     }
 
     public enum ModifierType : byte

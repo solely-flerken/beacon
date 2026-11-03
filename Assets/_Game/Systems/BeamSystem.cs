@@ -19,6 +19,7 @@ namespace _Game.Systems
             state.RequireForUpdate<BeamTag>();
             state.RequireForUpdate<SpatialGrids>();
             state.RequireForUpdate<DamageEvents>();
+            state.RequireForUpdate<ChainRequests>();
         }
 
         public void OnUpdate(ref SystemState state)
@@ -58,6 +59,7 @@ namespace _Game.Systems
             // Damage ticks
             SpatialGrids grids = SystemAPI.GetSingleton<SpatialGrids>();
             NativeQueue<DamageEvent> damageQueue = SystemAPI.GetSingletonRW<DamageEvents>().ValueRO.Queue;
+            NativeQueue<ChainRequest> chainQueue = SystemAPI.GetSingletonRW<ChainRequests>().ValueRO.Queue;
             if (!grids.EnemiesValid) return;
 
             state.Dependency = new BeamDamageJob
@@ -65,6 +67,7 @@ namespace _Game.Systems
                 SpatialGrid = grids.Enemies,
                 EnemyHitRadius = 0.5f,
                 DamageQueue = damageQueue.AsParallelWriter(),
+                ChainQueue = chainQueue.AsParallelWriter(),
             }.ScheduleParallel(state.Dependency);
         }
 
@@ -91,6 +94,7 @@ namespace _Game.Systems
         [ReadOnly] public float EnemyHitRadius;
 
         [WriteOnly] public NativeQueue<DamageEvent>.ParallelWriter DamageQueue;
+        [WriteOnly] public NativeQueue<ChainRequest>.ParallelWriter ChainQueue;
 
         private void Execute(
             Entity beamEntity,
@@ -99,6 +103,7 @@ namespace _Game.Systems
             in WeaponState weaponState,
             in WeaponStats stats,
             in BeamStats beamStats,
+            in ChainStats chain,
             in LocalToWorld transform)
         {
             float2 toDir = facing.Direction;
@@ -158,6 +163,9 @@ namespace _Game.Systems
             }
             SpatialGrid.GetCellBounds(boundsMin - hitRadius, boundsMax + hitRadius, out int2 minCell, out int2 maxCell);
 
+            int nearestHitIndex = -1;
+            float nearestHitDistSq = float.MaxValue;
+
             for (int row = minCell.y; row <= maxCell.y; row++)
             {
                 // Edge rows also hold units clamped in from outside the grid, so their band reaches to infinity
@@ -184,8 +192,28 @@ namespace _Game.Systems
                         Weapon = beamEntity,
                         Position = new float3(pos, 0f),
                     });
+
+                    float distSq = math.distancesq(pos, origin);
+                    if (distSq >= nearestHitDistSq) continue;
+                    nearestHitDistSq = distSq;
+                    nearestHitIndex = i;
                 }
             }
+
+            if (chain.Count <= 0 || nearestHitIndex < 0) return;
+
+            ChainQueue.Enqueue(new ChainRequest
+            {
+                InitialIndex = nearestHitIndex,
+                InitialTarget = SpatialGrid.Entities[nearestHitIndex],
+                Position = SpatialGrid.Positions[nearestHitIndex],
+                Damage = stats.Damage,
+                Count = chain.Count,
+                Range = chain.Range,
+                MinDamage = stats.Damage * chain.DamageFloor,
+                Falloff = chain.Falloff,
+                Weapon = beamEntity,
+            });
         }
 
         /// <summary>

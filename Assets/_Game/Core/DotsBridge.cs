@@ -16,6 +16,7 @@ namespace _Game.Core
         [Header("Buffer Sizes")] 
         [SerializeField] private int deathBufferSize = 8192;
         [SerializeField] private int hitBufferSize = 4096;
+        [SerializeField] private int arcBufferSize = 1024;
 
         /// <summary>
         /// Written by EnemyDeathSystem on enemy death.
@@ -32,21 +33,30 @@ namespace _Game.Core
         /// </summary>
         public static NativeQueue<float> ExpCollectedQueue;
 
+        /// <summary>
+        /// Written by ChainLightningSystem to visualize chain lightning.
+        /// </summary>
+        public static NativeQueue<ChainArcVisualData> ArcQueue;
+
         private NativeArray<DeathEvent> _deathBatch;
         private NativeArray<HitEvent> _hitBatch;
+        private NativeArray<ChainArcVisualData> _arcBatch;
 
         public static JobHandle BridgeDependencies;
 
         private static readonly Action<NativeArray<DeathEvent>, int> FireEnemiesDiedBatch = EventBus.FireEnemiesDiedBatch;
         private static readonly Action<NativeArray<HitEvent>, int> FireEnemiesHitBatch = EventBus.FireEnemiesHitBatch;
-        
+        private static readonly Action<NativeArray<ChainArcVisualData>, int> FireChainArcsBatch = EventBus.FireChainArcsBatch;
+
         private void Awake()
         {
             DeathQueue  = new NativeQueue<DeathEvent>(Allocator.Persistent);
             HitQueue = new NativeQueue<HitEvent>(Allocator.Persistent);
             ExpCollectedQueue = new NativeQueue<float>(Allocator.Persistent);
+            ArcQueue = new NativeQueue<ChainArcVisualData>(Allocator.Persistent);
             _deathBatch = new NativeArray<DeathEvent>(deathBufferSize, Allocator.Persistent);
             _hitBatch = new NativeArray<HitEvent>(hitBufferSize, Allocator.Persistent);
+            _arcBatch = new NativeArray<ChainArcVisualData>(arcBufferSize, Allocator.Persistent);
         }
 
         private void LateUpdate()
@@ -55,6 +65,7 @@ namespace _Game.Core
             
             DrainQueue(DeathQueue, _deathBatch, FireEnemiesDiedBatch);
             DrainQueue(HitQueue, _hitBatch, FireEnemiesHitBatch);
+            DrainQueue(ArcQueue, _arcBatch, FireChainArcsBatch);
 
             while (ExpCollectedQueue.TryDequeue(out float exp))
             {
@@ -69,8 +80,10 @@ namespace _Game.Core
             if (DeathQueue.IsCreated) DeathQueue.Dispose();
             if (HitQueue.IsCreated) HitQueue.Dispose();
             if (ExpCollectedQueue.IsCreated) ExpCollectedQueue.Dispose();
+            if (ArcQueue.IsCreated) ArcQueue.Dispose();
             if (_deathBatch.IsCreated) _deathBatch.Dispose();
             if (_hitBatch.IsCreated) _hitBatch.Dispose();
+            if (_arcBatch.IsCreated) _arcBatch.Dispose();
         }
         
         private static void DrainQueue<T>(NativeQueue<T> queue, NativeArray<T> batch, Action<NativeArray<T>, int> fireEvent) where T : unmanaged

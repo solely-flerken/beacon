@@ -8,7 +8,7 @@ namespace _Game.Util
     /// </summary>
     public interface IHopFilter
     {
-        bool IsExcluded(Entity entity);
+        bool IsExcluded(int index, Entity entity);
     }
 
     /// <summary>
@@ -37,7 +37,7 @@ namespace _Game.Util
                 foreach (int i in grid.QueryRing(center, radius))
                 {
                     float distSq = math.distancesq(origin, grid.Positions[i]);
-                    if (distSq >= bestSq || filter.IsExcluded(grid.Entities[i])) continue;
+                    if (distSq >= bestSq || filter.IsExcluded(i, grid.Entities[i])) continue;
 
                     bestSq = distSq;
                     resultIndex = i;
