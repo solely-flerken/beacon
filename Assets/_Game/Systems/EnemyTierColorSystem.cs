@@ -20,8 +20,8 @@ namespace _Game.Systems
 
         public void OnCreate(ref SystemState state)
         {
-            _eliteColor = ShaderColor.From(new Color(0.6f, 0.6f, 0.6f));
-            _bossColor = ShaderColor.From(new Color(0f, 0f, 0f));
+            _eliteColor = ShaderColor.From(new Color(1f, 0.8f, 0.2f));
+            _bossColor = ShaderColor.From(new Color(1f, 1f, 1f));
         }
 
         [BurstCompile]
