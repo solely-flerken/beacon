@@ -70,6 +70,8 @@ Shader "Unit/Neon"
                 // Object-space position on the (grown) quad; the shape spans [-0.5, 0.5]
                 float2 local : TEXCOORD0;
                 nointerpolation float3 hue : TEXCOORD1;
+                // Tint alpha dims the whole shape (additive blending ignores the alpha channel)
+                nointerpolation float fade : TEXCOORD2;
             };
 
             // Shapes on the unit quad: full quad square, equilateral triangle (side 1, apex up,
@@ -134,6 +136,7 @@ Shader "Unit/Neon"
                 float3 c = BASE_COLOR.rgb;
                 float m = max(max(c.r, c.g), c.b);
                 o.hue = m > 1e-3 ? c / m : float3(1, 1, 1);
+                o.fade = BASE_COLOR.a;
                 return o;
             }
 
@@ -159,7 +162,7 @@ Shader "Unit/Neon"
                 float fill = (1.0 - smoothstep(-aa, aa, d)) * _Fill;
 
                 float3 color = i.hue * (tube * tube_boost + glow + fill) + core;
-                return half4(color * _Intensity, 0);
+                return half4(color * (_Intensity * i.fade), 0);
             }
             ENDHLSL
         }

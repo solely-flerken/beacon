@@ -57,11 +57,12 @@ namespace _Game.Systems
             float duration = dist / projStats.Speed;
             float3 spawnPos = new(weaponPos, 0f);
 
-            LocalToWorld spawnMatrix = new() { Value = float4x4.Translate(spawnPos) };
-            
+            LocalTransform shellTransform = LocalTransform.FromPositionRotationScale(spawnPos, quaternion.identity, MortarSystem.ShellGroundScale);
+            LocalTransform shadowTransform = LocalTransform.FromPositionRotationScale(spawnPos, quaternion.identity, MortarSystem.ShadowGroundScale);
+
             Entity shell = ECB.Instantiate(sortKey, mortarData.ShellPrefab);
-            ECB.SetComponent(sortKey, shell, LocalTransform.FromPosition(spawnPos));
-            ECB.SetComponent(sortKey, shell, spawnMatrix);
+            ECB.SetComponent(sortKey, shell, shellTransform);
+            ECB.SetComponent(sortKey, shell, new LocalToWorld { Value = shellTransform.ToMatrix() });
             ECB.AddComponent(sortKey, shell, new ProjectileWeapon { Value = entity });
             ECB.SetComponent(sortKey, shell, new MortarTrajectory
             {
@@ -69,13 +70,13 @@ namespace _Game.Systems
                 TargetPos = targetPos,
                 Duration = duration,
                 Elapsed = 0f,
-                ArcHeight = mortarData.ArcHeight,
+                ArcHeight = dist * mortarData.ArcHeightPerUnit,
                 ExplosionPrefab = mortarData.ExplosionPrefab,
             });
             
             Entity shadow = ECB.Instantiate(sortKey, mortarData.ShadowPrefab);
-            ECB.SetComponent(sortKey, shadow, LocalTransform.FromPosition(spawnPos));
-            ECB.SetComponent(sortKey, shadow, spawnMatrix);
+            ECB.SetComponent(sortKey, shadow, shadowTransform);
+            ECB.SetComponent(sortKey, shadow, new LocalToWorld { Value = shadowTransform.ToMatrix() });
             ECB.AddComponent(sortKey, shadow, new MortarShadow { Shell = shell });
             
             bool isPlayer = (classification.Faction & FactionMask.Player) != 0;

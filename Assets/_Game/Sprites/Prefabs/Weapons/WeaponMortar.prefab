@@ -81,5 +81,5 @@ MonoBehaviour:
   explosionPrefab: {fileID: 8641662480037574763, guid: 03a60c2be7f390044ab393cec654a21f, type: 3}
   shadowPrefab: {fileID: 3038601834222057274, guid: e3259f96f0195cc4c8101fad357ff8c2, type: 3}
   explosionRadius: 5
-  shellSpeed: 40
-  arcHeight: 2
+  shellSpeed: 30
+  arcHeightPerUnit: 0.3

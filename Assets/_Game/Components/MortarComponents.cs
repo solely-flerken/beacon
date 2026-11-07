@@ -21,7 +21,7 @@ namespace _Game.Components
     }
 
     /// <summary>
-    /// Snapshot of weapon stats at fire time, stored on the shell.
+    /// Mortar-specific weapon stats, read from the weapon at impact time.
     /// </summary>
     public struct MortarStats : IComponentData
     {
@@ -33,6 +33,6 @@ namespace _Game.Components
         public Entity ShellPrefab;
         public Entity ExplosionPrefab;
         public Entity ShadowPrefab;
-        public float ArcHeight;
+        public float ArcHeightPerUnit;
     }
 }

@@ -6,6 +6,7 @@ using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
+using Unity.Rendering;
 using Unity.Transforms;
 
 namespace _Game.Systems
@@ -67,11 +68,21 @@ namespace _Game.Systems
             }.ScheduleParallel(state.Dependency);
         }
 
-        private static void EvaluateFlight(in MortarTrajectory flight, out float progress, out float2 groundPos, out float arcY)
+        internal const float ShellGroundScale = 0.6f;
+        private const float ShellApexScale = 1.4f;
+        internal const float ShadowGroundScale = 0.8f;
+        private const float ShadowApexScale = 2.5f;
+        private const float ShadowGroundBrightness = 0.5f;
+        private const float ShadowApexBrightness = 0.12f;
+
+        /// <summary>
+        /// Constant ground speed along a parabola. heightFraction is 0 at launch and impact, 1 at the apex.
+        /// </summary>
+        private static void EvaluateFlight(in MortarTrajectory flight, out float progress, out float2 groundPos, out float heightFraction)
         {
             progress = flight.Duration > 0f ? math.saturate(flight.Elapsed / flight.Duration) : 1f;
             groundPos = math.lerp(flight.StartPos, flight.TargetPos, progress);
-            arcY = flight.ArcHeight * 4f * progress * (1f - progress);
+            heightFraction = 4f * progress * (1f - progress);
         }
 
         [BurstCompile]
@@ -91,8 +102,9 @@ namespace _Game.Systems
             public void Execute(Entity entity, [EntityIndexInQuery] int sortKey, ref LocalTransform transform, ref MortarTrajectory flight, in ProjectileWeapon weapon)
             {
                 flight.Elapsed += DeltaTime;
-                EvaluateFlight(flight, out float progress, out float2 groundPos, out float arcY);
-                transform.Position = new float3(groundPos.x, groundPos.y + arcY, 0f);
+                EvaluateFlight(flight, out float progress, out float2 groundPos, out float heightFraction);
+                transform.Position = new float3(groundPos.x, groundPos.y + heightFraction * flight.ArcHeight, 0f);
+                transform.Scale = math.lerp(ShellGroundScale, ShellApexScale, heightFraction);
 
                 if (progress >= 1f)
                 {
@@ -160,7 +172,7 @@ namespace _Game.Systems
             public EntityCommandBuffer.ParallelWriter ECB;
             [ReadOnly] public ComponentLookup<MortarTrajectory> TrajectoryLookup;
 
-            public void Execute(Entity entity, [EntityIndexInQuery] int sortKey, ref LocalTransform transform, in MortarShadow shadow)
+            public void Execute(Entity entity, [EntityIndexInQuery] int sortKey, ref LocalTransform transform, ref URPMaterialPropertyBaseColor color, in MortarShadow shadow)
             {
                 if (!TrajectoryLookup.TryGetComponent(shadow.Shell, out MortarTrajectory flight))
                 {
@@ -168,17 +180,16 @@ namespace _Game.Systems
                     return;
                 }
 
-                EvaluateFlight(flight, out float progress, out float2 groundPos, out float arcY);
+                EvaluateFlight(flight, out float progress, out float2 groundPos, out float heightFraction);
                 if (progress >= 1f)
                 {
                     ECB.DestroyEntity(sortKey, entity);
                     return;
                 }
 
-                float arcFraction = flight.ArcHeight > 0f ? arcY / flight.ArcHeight : 0f;
-                float shadowScale = math.lerp(1f, 0.2f, arcFraction);
-
+                float shadowScale = math.lerp(ShadowGroundScale, ShadowApexScale, heightFraction);
                 transform = LocalTransform.FromPositionRotationScale(new float3(groundPos, 0f), quaternion.identity, shadowScale);
+                color.Value.w = math.lerp(ShadowGroundBrightness, ShadowApexBrightness, heightFraction);
             }
         }
     }

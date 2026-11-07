@@ -81,7 +81,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: decf31a5c2f18fc459daa634b504172f, type: 2}
+  - {fileID: 2100000, guid: 8cafaf5c45d5255a3073c74a78120ed0, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -117,4 +117,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 851c2318af8c9344e94150dd8879d5a1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::_Game.Authoring.SpriteTintAuthoring
-  color: {r: 0.754717, g: 0.46450633, b: 0, a: 1}
+  color: {r: 1, g: 0.6, b: 0.1, a: 1}

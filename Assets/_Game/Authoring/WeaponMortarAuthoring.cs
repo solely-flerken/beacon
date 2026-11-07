@@ -15,7 +15,7 @@ namespace _Game.Authoring
         [Header("Stats")] 
         public float explosionRadius = 5f;
         public float shellSpeed = 40f;
-        public float arcHeight = 2f;
+        public float arcHeightPerUnitDistance = 0.3f;
 
         private class Baker : Baker<WeaponMortarAuthoring>
         {
@@ -41,7 +41,7 @@ namespace _Game.Authoring
                     ShellPrefab = GetEntity(authoring.shellPrefab, TransformUsageFlags.Dynamic),
                     ExplosionPrefab = GetEntity(authoring.explosionPrefab, TransformUsageFlags.Dynamic),
                     ShadowPrefab = GetEntity(authoring.shadowPrefab, TransformUsageFlags.Dynamic),
-                    ArcHeight = authoring.arcHeight,
+                    ArcHeightPerUnit = authoring.arcHeightPerUnitDistance,
                 });
             }
         }
