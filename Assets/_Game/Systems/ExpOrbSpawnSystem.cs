@@ -45,6 +45,8 @@ namespace _Game.Systems
 
             ExpOrbConfig config = SystemAPI.GetSingleton<ExpOrbConfig>();
 
+            bool waveEnding = SystemAPI.HasSingleton<WaveEndTag>();
+
             // Snapshot all live orbs that are still collecting exp.
             NativeList<Entity> existingEntities = new(config.MaxBuckets, Allocator.Temp);
             NativeList<float2> existingPositions = new(config.MaxBuckets, Allocator.Temp);
@@ -142,7 +144,7 @@ namespace _Game.Systems
                     Scale = ValueToScale(data.Value, config),
                 });
 
-                if (data.Value >= data.MaxValue)
+                if (waveEnding || data.Value >= data.MaxValue)
                 {
                     ecb.AddComponent<SaturatedTag>(existingEntities[i]);
                 }
@@ -159,7 +161,7 @@ namespace _Game.Systems
                 ecb.SetComponent(orb, new LocalToWorld { Value = spawnTransform.ToMatrix() });
                 ecb.SetComponent(orb, data);
 
-                if (data.Value >= data.MaxValue)
+                if (waveEnding || data.Value >= data.MaxValue)
                 {
                     ecb.AddComponent<SaturatedTag>(orb);
                 }
