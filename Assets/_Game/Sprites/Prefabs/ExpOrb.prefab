@@ -116,4 +116,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 851c2318af8c9344e94150dd8879d5a1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::_Game.Authoring.SpriteTintAuthoring
-  color: {r: 0.7591264, g: 0.9811321, b: 0.11569952, a: 1}
+  color: {r: 0.25, g: 1, b: 0.45, a: 1}
