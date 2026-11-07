@@ -2,7 +2,7 @@ Shader "Unit/Neon"
 {
     Properties
     {
-        [Enum(Square, 0, Triangle, 1, Hexagon, 2)]
+        [Enum(Square, 0, Triangle, 1, Hexagon, 2, Circle, 3)]
         _Shape ("Shape", Float) = 0
         _BaseColor ("Color", Color) = (1, 1, 1, 1)
         _Intensity ("Intensity", Range(0, 4)) = 1.5
@@ -10,6 +10,7 @@ Shader "Unit/Neon"
         _CoreWidth ("White Core Width (fraction of line)", Range(0, 1)) = 0.35
         _GlowRadius ("Glow Radius", Range(0.01, 0.3)) = 0.07
         _GlowStrength ("Glow Strength", Range(0, 2)) = 0.6
+        _Fill ("Fill", Range(0, 1)) = 0
     }
 
     SubShader
@@ -45,6 +46,7 @@ Shader "Unit/Neon"
                 float _CoreWidth;
                 float _GlowRadius;
                 float _GlowStrength;
+                float _Fill;
             CBUFFER_END
 
             #ifdef UNITY_DOTS_INSTANCING_ENABLED
@@ -71,7 +73,7 @@ Shader "Unit/Neon"
             };
 
             // Shapes on the unit quad: full quad square, equilateral triangle (side 1, apex up,
-            // vertically centered), flat-top hexagon with its points on the quad's side edges.
+            // vertically centered), flat-top hexagon with its points on the quad's side edges, circle touching all four edges.
             float sd_square(float2 p)
             {
                 float2 d = abs(p) - 0.5;
@@ -99,11 +101,17 @@ Shader "Unit/Neon"
                 return length(p) * sign(p.y);
             }
 
+            float sd_circle(float2 p)
+            {
+                return length(p) - 0.5;
+            }
+
             float sd_shape(float2 p)
             {
                 if (_Shape < 0.5) return sd_square(p);
                 if (_Shape < 1.5) return sd_triangle(p);
-                return sd_hexagon(p);
+                if (_Shape < 2.5) return sd_hexagon(p);
+                return sd_circle(p);
             }
 
             // 1 inside half_width, 0 outside, antialiased across +-aa
@@ -148,7 +156,9 @@ Shader "Unit/Neon"
                 float edge = max(to_center - half_width, 0.0);
                 float glow = exp(-(edge * edge) / (_GlowRadius * _GlowRadius)) * _GlowStrength;
 
-                float3 color = i.hue * (tube * tube_boost + glow) + core;
+                float fill = (1.0 - smoothstep(-aa, aa, d)) * _Fill;
+
+                float3 color = i.hue * (tube * tube_boost + glow + fill) + core;
                 return half4(color * _Intensity, 0);
             }
             ENDHLSL
