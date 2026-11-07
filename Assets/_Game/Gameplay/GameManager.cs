@@ -174,13 +174,13 @@ namespace _Game.Gameplay
             int enemyCount = _enemyCountQuery.CalculateEntityCount();
             int projectileCount = _projectileCountQuery.CalculateEntityCount();
             WaveManager waves = WaveManager.Instance;
-            GUI.Box(new Rect(10, 10, 150, 25), $"Enemies: {enemyCount}");
-            GUI.Box(new Rect(10, 40, 150, 25), $"Projectiles: {projectileCount}");
+            HudBox(new Rect(10, 10, 150, 25), $"Enemies: {enemyCount}");
+            HudBox(new Rect(10, 40, 150, 25), $"Projectiles: {projectileCount}");
 
             string waveLabel = waves.Phase == WavePhase.None
                 ? $"Wave {waves.CurrentWave}"
                 : $"Wave {waves.CurrentWave} - {waves.Phase} {waves.PhaseTimeRemaining:0.0}s - {waves.SpawnedCount}/{waves.TotalEnemies}";
-            GUI.Box(new Rect(10, 70, 300, 25), waveLabel);
+            HudBox(new Rect(10, 70, 300, 25), waveLabel);
             
             if (ExpManager.Instance != null)
             {
@@ -188,11 +188,9 @@ namespace _Game.Gameplay
                 float progress = ExpManager.Instance.LevelProgress;
                 float totalExp = ExpManager.Instance.TotalExp;
 
-                GUI.Box(new Rect(10, 100, 150, 25), $"Level: {level} - Exp: {(int)totalExp}");
+                HudBox(new Rect(10, 100, 150, 25), $"Level: {level} - Exp: {(int)totalExp}");
 
-                // Progress bar
-                GUI.Box(new Rect(10, 130, 150, 16), "");
-                if (progress > 0) GUI.Box(new Rect(10, 130, 150 * progress, 16), "");
+                HudProgressBar(new Rect(10, 130, 150, 16), progress);
             }
 
             // Stats
@@ -202,7 +200,7 @@ namespace _Game.Gameplay
                 foreach (Entity e in RunStatsManager.Instance.WeaponStats.Keys)
                 {
                     RunStatsManager.WeaponRecord r = RunStatsManager.Instance.WeaponStats[e];
-                    GUI.Box(new Rect(10, y, 150, 25), $"{e.Index} {r.Raw:0}");
+                    HudBox(new Rect(10, y, 150, 25), $"{e.Index} {r.Raw:0}");
                     y += 30;
                 }
             }
@@ -226,7 +224,7 @@ namespace _Game.Gameplay
                         ? $"Ability {i} - {slot.Charges}/{slot.EffectiveMaxCharges}"
                         : $"Ability {i} - {slot.RechargeTimer:0.0}s";
 
-                    GUI.Box(new Rect(startX + i * (slotW + gap), slotY, slotW, slotH), label);
+                    HudBox(new Rect(startX + i * (slotW + gap), slotY, slotW, slotH), label);
                 }
             }
 
@@ -240,9 +238,28 @@ namespace _Game.Gameplay
                 GameState.Paused => "Unpause(P)",
                 _ => ""
             };
-            GUI.Box(new Rect(10, Screen.height - 35, 400, 25), hint);
+            HudBox(new Rect(10, Screen.height - 35, 400, 25), hint);
 
-            GUI.Box(new Rect(10, Screen.height - 65, 400, 25), $"State: {GameStateMachine.Instance?.CurrentState.ToString()}");
+            HudBox(new Rect(10, Screen.height - 65, 400, 25), $"State: {GameStateMachine.Instance?.CurrentState.ToString()}");
+        }
+
+        private static readonly Color HudOutlineColor = new(0.75f, 0.85f, 1f, 0.6f);
+        private static readonly Color HudFillColor = new(0.4f, 0.75f, 1f, 0.85f);
+
+        private static void HudBox(Rect rect, string text)
+        {
+            GUI.Box(rect, text);
+            GUI.DrawTexture(rect, Texture2D.whiteTexture, ScaleMode.StretchToFill, true, 0f, HudOutlineColor, 1f, 0f);
+        }
+
+        private static void HudProgressBar(Rect rect, float progress)
+        {
+            if (progress > 0)
+            {
+                Rect fill = new(rect.x, rect.y, rect.width * Mathf.Clamp01(progress), rect.height);
+                GUI.DrawTexture(fill, Texture2D.whiteTexture, ScaleMode.StretchToFill, true, 0f, HudFillColor, 0f, 0f);
+            }
+            HudBox(rect, "");
         }
     }
 }
