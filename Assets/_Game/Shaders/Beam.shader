@@ -35,7 +35,9 @@ Shader "Weapon/Beam"
 
             StructuredBuffer<beam_data> _Beams;
 
-            float _Now;
+            // Global, set every frame by ShaderGlobalsSystem
+            float _GameTime;
+
             float _GlowRadius;
             float4 _Color;
             float _FlowSpeed;
@@ -157,13 +159,13 @@ Shader "Weapon/Beam"
                 float glow = exp(-(edge * edge) / (_GlowRadius * _GlowRadius));
 
                 // Brighter bands flowing out from the weapon
-                float flow = 1.0 + _FlowAmount * value_noise(u * _FlowFrequency - _Now * _FlowSpeed, i.seed + 53u);
+                float flow = 1.0 + _FlowAmount * value_noise(u * _FlowFrequency - _GameTime * _FlowSpeed, i.seed + 53u);
 
                 // Filaments: two strands crackling around the core, emerging from the muzzle
                 float2 filaments = 0.0;
                 if (_FilamentStrength > 0.0)
                 {
-                    uint flicker = (uint)(_Now * _FlickerRate) * 7919u;
+                    uint flicker = (uint)(_GameTime * _FlickerRate) * 7919u;
                     float envelope = saturate(u / max(_MuzzleRadius * 2.0, 1e-3));
                     float amplitude = (i.half_width + _Jaggedness) * envelope;
 

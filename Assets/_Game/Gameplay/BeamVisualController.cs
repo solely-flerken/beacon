@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using _Game.Shared;
 using Unity.Collections.LowLevel.Unsafe;
-using Unity.Entities;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -70,7 +69,6 @@ namespace _Game.Gameplay
         private float z = -0.1f;
 
         private static readonly int BeamsId = Shader.PropertyToID("_Beams");
-        private static readonly int NowId = Shader.PropertyToID("_Now");
         private static readonly int GlowRadiusId = Shader.PropertyToID("_GlowRadius");
         private static readonly int ColorId = Shader.PropertyToID("_Color");
         private static readonly int FlowSpeedId = Shader.PropertyToID("_FlowSpeed");
@@ -122,7 +120,6 @@ namespace _Game.Gameplay
             
             _buffer.SetData(beams);
 
-            _material.SetFloat(NowId, WorldTime());
             _material.SetFloat(GlowRadiusId, glowRadius);
             _material.SetColor(ColorId, color);
             _material.SetFloat(FlowSpeedId, flowSpeed);
@@ -162,15 +159,6 @@ namespace _Game.Gameplay
             _buffer?.Release();
             _buffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, capacity, UnsafeUtility.SizeOf<BeamVisualData>());
             _material.SetBuffer(BeamsId, _buffer);
-        }
-
-        private static float WorldTime()
-        {
-            World world = World.DefaultGameObjectInjectionWorld;
-
-            if (world == null || !world.IsCreated) return 0f;
-
-            return (float)world.Time.ElapsedTime;
         }
     }
 }

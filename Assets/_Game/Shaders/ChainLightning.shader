@@ -37,7 +37,9 @@ Shader "Weapon/ChainLightning"
 
             StructuredBuffer<arc_data> _Arcs;
 
-            float _Now;
+            // Global, set every frame by ShaderGlobalsSystem
+            float _GameTime;
+
             float _Lifetime;
             float _CoreWidth;
             float _GlowRadius;
@@ -115,7 +117,7 @@ Shader "Weapon/ChainLightning"
                 varyings o = (varyings)0;
 
                 arc_data arc = _Arcs[instance_id];
-                float age = _Now - arc.start_time;
+                float age = _GameTime - arc.start_time;
 
                 // Expired, or left over from an earlier run: collapse the quad outside the view
                 if (age < 0.0 || age >= _Lifetime)

@@ -59,7 +59,6 @@ namespace _Game.Gameplay
         private float z = -0.1f;
 
         private static readonly int ArcsId = Shader.PropertyToID("_Arcs");
-        private static readonly int NowId = Shader.PropertyToID("_Now");
         private static readonly int LifetimeId = Shader.PropertyToID("_Lifetime");
         private static readonly int CoreWidthId = Shader.PropertyToID("_CoreWidth");
         private static readonly int GlowRadiusId = Shader.PropertyToID("_GlowRadius");
@@ -134,7 +133,6 @@ namespace _Game.Gameplay
             // Every arc has expired: skip the draw
             if (_used == 0 || now - _lastArcTime >= lifetime) return;
 
-            _material.SetFloat(NowId, now);
             _material.SetFloat(LifetimeId, lifetime);
             _material.SetFloat(CoreWidthId, coreWidth);
             _material.SetFloat(GlowRadiusId, glowRadius);
