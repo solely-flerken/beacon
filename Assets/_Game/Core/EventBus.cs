@@ -35,6 +35,7 @@ namespace _Game.Core
 
         // Beacon
         public static event Action<float, float> OnBeaconHit; // currentHp, maxHp
+        public static event Action<float, float> OnBeaconHealthChanged; // currentHp, maxHp
         public static event Action OnBeaconDestroyed;
 
         // Card draft
@@ -60,6 +61,7 @@ namespace _Game.Core
         public static void FireLevelUp(int level) => OnLevelUp?.Invoke(level);
 
         public static void FireBeaconHit(float hp, float max) => OnBeaconHit?.Invoke(hp, max);
+        public static void FireBeaconHealthChanged(float currentHp, float maxHp) => OnBeaconHealthChanged?.Invoke(currentHp, maxHp);
         public static void FireBeaconDestroyed() => OnBeaconDestroyed?.Invoke();
 
         public static void FireCardDrafted(int cardId) => OnCardDrafted?.Invoke(cardId);
@@ -79,6 +81,7 @@ namespace _Game.Core
             OnExpChanged = null;
             OnLevelUp = null;
             OnBeaconHit = null;
+            OnBeaconHealthChanged = null;
             OnBeaconDestroyed = null;
             OnCardDrafted = null;
             OnGameStateChanged = null;

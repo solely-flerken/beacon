@@ -22,15 +22,15 @@ namespace _Game.Gameplay
 
         private void OnEnable()
         {
-            EventBus.OnBeaconHit += OnBeaconHit;
+            EventBus.OnBeaconHealthChanged += OnBeaconHealthChanged;
         }
 
         private void OnDisable()
         {
-            EventBus.OnBeaconHit -= OnBeaconHit;
+            EventBus.OnBeaconHealthChanged -= OnBeaconHealthChanged;
         }
 
-        private void OnBeaconHit(float current, float max)
+        private void OnBeaconHealthChanged(float current, float max)
         {
             SetHealthColor(math.saturate(current / max));
         }
