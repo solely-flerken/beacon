@@ -11,6 +11,14 @@ Shader "Unit/Neon"
         _GlowRadius ("Glow Radius", Range(0.01, 0.3)) = 0.07
         _GlowStrength ("Glow Strength", Range(0, 2)) = 0.6
         _Fill ("Fill", Range(0, 1)) = 0
+
+        [Header(Hit Flash)]
+        // Per instance from HitFlashTime; entities without it keep this default and never flash
+        [HideInInspector] _HitTime ("Hit Time", Float) = -1000
+        _HitFlashDuration ("Hit Flash Duration", Range(0.02, 0.5)) = 0.12
+        _HitFlashWhiten ("Hit Flash Whiten", Range(0, 1)) = 0.75
+        _HitFlashFill ("Hit Flash Fill", Range(0, 1)) = 0.35
+        _HitFlashBoost ("Hit Flash Brightness Boost", Range(0, 2)) = 0.6
     }
 
     SubShader
@@ -47,15 +55,26 @@ Shader "Unit/Neon"
                 float _GlowRadius;
                 float _GlowStrength;
                 float _Fill;
+                float _HitTime;
+                float _HitFlashDuration;
+                float _HitFlashWhiten;
+                float _HitFlashFill;
+                float _HitFlashBoost;
             CBUFFER_END
+
+            // Global, set every frame
+            float _GameTime;
 
             #ifdef UNITY_DOTS_INSTANCING_ENABLED
             UNITY_DOTS_INSTANCING_START (MaterialPropertyMetadata)
             UNITY_DOTS_INSTANCED_PROP(float4, _BaseColor)
+            UNITY_DOTS_INSTANCED_PROP(float, _HitTime)
             UNITY_DOTS_INSTANCING_END (MaterialPropertyMetadata)
             #define BASE_COLOR UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float4, _BaseColor)
+            #define HIT_TIME UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float, _HitTime)
             #else
             #define BASE_COLOR _BaseColor
+            #define HIT_TIME _HitTime
             #endif
 
             struct attributes
@@ -72,6 +91,8 @@ Shader "Unit/Neon"
                 nointerpolation float3 hue : TEXCOORD1;
                 // Tint alpha dims the whole shape (additive blending ignores the alpha channel)
                 nointerpolation float fade : TEXCOORD2;
+                // 1 right after a hit, eases to 0 over _HitFlashDuration
+                nointerpolation float flash : TEXCOORD3;
             };
 
             // Shapes on the unit quad: full quad square, equilateral triangle (side 1, apex up,
@@ -137,6 +158,10 @@ Shader "Unit/Neon"
                 float m = max(max(c.r, c.g), c.b);
                 o.hue = m > 1e-3 ? c / m : float3(1, 1, 1);
                 o.fade = BASE_COLOR.a;
+
+                float since_hit = _GameTime - HIT_TIME;
+                float flash = since_hit >= 0.0 ? saturate(1.0 - since_hit / _HitFlashDuration) : 0.0;
+                o.flash = flash * flash;
                 return o;
             }
 
@@ -159,10 +184,13 @@ Shader "Unit/Neon"
                 float edge = max(to_center - half_width, 0.0);
                 float glow = exp(-(edge * edge) / (_GlowRadius * _GlowRadius)) * _GlowStrength;
 
-                float fill = (1.0 - smoothstep(-aa, aa, d)) * _Fill;
+                // Hit flash: whiten the hue, light up the interior and push the brightness
+                float inside = 1.0 - smoothstep(-aa, aa, d);
+                float fill = inside * saturate(_Fill + i.flash * _HitFlashFill);
+                float3 hue = lerp(i.hue, float3(1, 1, 1), i.flash * _HitFlashWhiten);
 
-                float3 color = i.hue * (tube * tube_boost + glow + fill) + core;
-                return half4(color * (_Intensity * i.fade), 0);
+                float3 color = hue * (tube * tube_boost + glow + fill) + core;
+                return half4(color * (_Intensity * i.fade * (1.0 + i.flash * _HitFlashBoost)), 0);
             }
             ENDHLSL
         }

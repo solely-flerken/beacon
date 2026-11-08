@@ -17,6 +17,7 @@ namespace _Game.Core
         [SerializeField] private int deathBufferSize = 8192;
         [SerializeField] private int hitBufferSize = 4096;
         [SerializeField] private int arcBufferSize = 1024;
+        [SerializeField] private int maxSparkHitsPerFrame = 256;
 
         /// <summary>
         /// Written by EnemyDeathSystem on enemy death.
@@ -38,6 +39,11 @@ namespace _Game.Core
         /// </summary>
         public static NativeQueue<ChainArcVisualData> ArcQueue;
 
+        /// <summary>
+        /// Written by DamageAndDeathSystem. Already in the GPU layout, so it is fired as one batch straight.
+        /// </summary>
+        public static NativeList<HitSparkData> SparkList;
+
         private NativeArray<DeathEvent> _deathBatch;
         private NativeArray<HitEvent> _hitBatch;
         private NativeArray<ChainArcVisualData> _arcBatch;
@@ -50,10 +56,11 @@ namespace _Game.Core
 
         private void Awake()
         {
-            DeathQueue  = new NativeQueue<DeathEvent>(Allocator.Persistent);
+            DeathQueue = new NativeQueue<DeathEvent>(Allocator.Persistent);
             HitQueue = new NativeQueue<HitEvent>(Allocator.Persistent);
             ExpCollectedQueue = new NativeQueue<float>(Allocator.Persistent);
             ArcQueue = new NativeQueue<ChainArcVisualData>(Allocator.Persistent);
+            SparkList = new NativeList<HitSparkData>(maxSparkHitsPerFrame, Allocator.Persistent);
             _deathBatch = new NativeArray<DeathEvent>(deathBufferSize, Allocator.Persistent);
             _hitBatch = new NativeArray<HitEvent>(hitBufferSize, Allocator.Persistent);
             _arcBatch = new NativeArray<ChainArcVisualData>(arcBufferSize, Allocator.Persistent);
@@ -66,6 +73,12 @@ namespace _Game.Core
             DrainQueue(DeathQueue, _deathBatch, FireEnemiesDiedBatch);
             DrainQueue(HitQueue, _hitBatch, FireEnemiesHitBatch);
             DrainQueue(ArcQueue, _arcBatch, FireChainArcsBatch);
+
+            if (SparkList.Length > 0)
+            {
+                EventBus.FireHitSparksBatch(SparkList.AsArray(), SparkList.Length);
+                SparkList.Clear();
+            }
 
             while (ExpCollectedQueue.TryDequeue(out float exp))
             {
@@ -81,6 +94,7 @@ namespace _Game.Core
             if (HitQueue.IsCreated) HitQueue.Dispose();
             if (ExpCollectedQueue.IsCreated) ExpCollectedQueue.Dispose();
             if (ArcQueue.IsCreated) ArcQueue.Dispose();
+            if (SparkList.IsCreated) SparkList.Dispose();
             if (_deathBatch.IsCreated) _deathBatch.Dispose();
             if (_hitBatch.IsCreated) _hitBatch.Dispose();
             if (_arcBatch.IsCreated) _arcBatch.Dispose();

@@ -5,6 +5,8 @@ using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Jobs;
+using Unity.Mathematics;
+using Unity.Transforms;
 
 namespace _Game.Systems
 {
@@ -19,6 +21,12 @@ namespace _Game.Systems
         
         private ComponentLookup<Health> _healthLookup;
         private ComponentLookup<Despawn> _despawnLookup;
+        private ComponentLookup<HitFlashTime> _hitFlashLookup;
+        private ComponentLookup<LocalTransform> _transformLookup;
+        private ComponentLookup<LocalToWorld> _localToWorldLookup;
+        private ComponentLookup<WeaponTypeRef> _weaponTypeLookup;
+
+        private uint _frame;
 
         public void OnCreate(ref SystemState state)
         {
@@ -27,6 +35,10 @@ namespace _Game.Systems
 
             _healthLookup = state.GetComponentLookup<Health>(isReadOnly: false);
             _despawnLookup = state.GetComponentLookup<Despawn>(isReadOnly: false);
+            _hitFlashLookup = state.GetComponentLookup<HitFlashTime>(isReadOnly: false);
+            _transformLookup = state.GetComponentLookup<LocalTransform>(isReadOnly: true);
+            _localToWorldLookup = state.GetComponentLookup<LocalToWorld>(isReadOnly: true);
+            _weaponTypeLookup = state.GetComponentLookup<WeaponTypeRef>(isReadOnly: true);
         }
 
         public void OnDestroy(ref SystemState state)
@@ -40,18 +52,32 @@ namespace _Game.Systems
         {
             _healthLookup.Update(ref state);
             _despawnLookup.Update(ref state);
+            _hitFlashLookup.Update(ref state);
+            _transformLookup.Update(ref state);
+            _localToWorldLookup.Update(ref state);
+            _weaponTypeLookup.Update(ref state);
 
             SystemAPI.GetSingletonRW<DamageEvents>();
 
             bool hasHitQueue = DotsBridge.HitQueue.IsCreated;
+            bool hasSparks = DotsBridge.SparkList.IsCreated;
+            _frame++;
 
             state.Dependency = new ApplyDamageJob
             {
                 Queue = _queue,
                 HealthLookup = _healthLookup,
                 DespawnLookup = _despawnLookup,
+                HitFlashLookup = _hitFlashLookup,
+                TransformLookup = _transformLookup,
+                LocalToWorldLookup = _localToWorldLookup,
+                WeaponTypeLookup = _weaponTypeLookup,
+                Now = (float)SystemAPI.Time.ElapsedTime,
                 HasHitQueue = hasHitQueue,
                 HitQueue = hasHitQueue ? DotsBridge.HitQueue.AsParallelWriter() : default,
+                HasSparks = hasSparks,
+                Sparks = hasSparks ? DotsBridge.SparkList : default,
+                SeedBase = _frame * 65599u,
             }.Schedule(JobHandle.CombineDependencies(state.Dependency, DotsBridge.BridgeDependencies));
 
             DotsBridge.BridgeDependencies = JobHandle.CombineDependencies(DotsBridge.BridgeDependencies, state.Dependency);
@@ -63,12 +89,24 @@ namespace _Game.Systems
             public NativeQueue<DamageEvent> Queue;
             public ComponentLookup<Health> HealthLookup;
             public ComponentLookup<Despawn> DespawnLookup;
+            public ComponentLookup<HitFlashTime> HitFlashLookup;
+            [ReadOnly] public ComponentLookup<LocalTransform> TransformLookup;
+            [ReadOnly] public ComponentLookup<LocalToWorld> LocalToWorldLookup;
+            [ReadOnly] public ComponentLookup<WeaponTypeRef> WeaponTypeLookup;
+            public float Now;
 
             public bool HasHitQueue;
             [WriteOnly] public NativeQueue<HitEvent>.ParallelWriter HitQueue;
 
+            public bool HasSparks;
+            public NativeList<HitSparkData> Sparks;
+            public uint SeedBase;
+
             public void Execute()
             {
+                // Spark hits left this frame; once spent, the hot loop skips the spark lookups entirely
+                int sparkBudget = HasSparks ? Sparks.Capacity - Sparks.Length : 0;
+
                 while (Queue.TryDequeue(out DamageEvent damage))
                 {
                     if (!HealthLookup.HasComponent(damage.Target)) continue;
@@ -80,15 +118,28 @@ namespace _Game.Systems
                     bool hasDespawn = DespawnLookup.HasComponent(damage.Target);
                     if (hasDespawn && DespawnLookup.IsComponentEnabled(damage.Target)) continue;
 
-                    // TODO: Capture damage by enemies (or enemy type), e.g. contact damage or with weapons.
-                    if (HasHitQueue && damage.Weapon != Entity.Null)
+                    if (HitFlashLookup.TryGetRefRW(damage.Target, out RefRW<HitFlashTime> flash))
                     {
-                        HitQueue.Enqueue(new HitEvent
+                        flash.ValueRW.Value = Now;
+                    }
+
+                    // TODO: Capture damage by enemies (or enemy type), e.g. contact damage or with weapons.
+                    if (damage.Weapon != Entity.Null)
+                    {
+                        if (HasHitQueue)
                         {
-                            Position = damage.Position,
-                            Damage = damage.Value,
-                            WeaponEntity = damage.Weapon,
-                        });
+                            HitQueue.Enqueue(new HitEvent
+                            {
+                                Position = damage.Position,
+                                Damage = damage.Value,
+                                WeaponEntity = damage.Weapon,
+                            });
+                        }
+
+                        if (sparkBudget > 0 && TryAddSpark(damage))
+                        {
+                            sparkBudget--;
+                        }
                     }
 
                     health.Current -= damage.Value;
@@ -97,6 +148,55 @@ namespace _Game.Systems
                     DespawnLookup[damage.Target] = new Despawn { Killed = true };
                     DespawnLookup.SetComponentEnabled(damage.Target, true);
                 }
+            }
+
+            /// <summary>
+            /// Records where the hit came from. Per-weapon style decides how the sparks fly.
+            /// Source of the hit:
+            /// - Mortar: the blast center.
+            /// - Projectile Weapons: the firing weapon's position.
+            /// - Beam, Chain Lighting: hit position itself (usually enemy pos)
+            /// </summary>
+            private bool TryAddSpark(in DamageEvent damage)
+            {
+                if (!TransformLookup.TryGetComponent(damage.Target, out LocalTransform target)) return false;
+
+                WeaponType weaponType = WeaponTypeLookup.TryGetComponent(damage.Weapon, out WeaponTypeRef typeRef)
+                    ? typeRef.WeaponType
+                    : WeaponType.Basic;
+
+                float2 source = damage.Position.xy;
+                if (weaponType != WeaponType.Mortar && LocalToWorldLookup.TryGetComponent(damage.Weapon, out LocalToWorld weapon))
+                {
+                    source = weapon.Position.xy;
+                }
+
+                uint seed = SeedBase + (uint)Sparks.Length;
+                float2 center = target.Position.xy;
+                float2 dir = center - source;
+                float lenSq = math.lengthsq(dir);
+
+                if (lenSq > 1e-6f)
+                {
+                    dir *= math.rsqrt(lenSq);
+                }
+                else
+                {
+                    math.sincos(seed * 2.3999632f, out float s, out float c);
+                    dir = new float2(c, s);
+                }
+
+                Sparks.AddNoResize(new HitSparkData
+                {
+                    Center = center,
+                    Direction = dir,
+                    Radius = target.Scale * 0.5f,
+                    StartTime = Now,
+                    Seed = seed,
+                    Style = (uint)weaponType,
+                });
+                
+                return true;
             }
         }
     }

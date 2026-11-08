@@ -71,7 +71,8 @@ namespace _Game.Authoring
                 AddBuffer<HitCooldown>(entity);
                 AddComponent<Despawn>(entity);
                 SetComponentEnabled<Despawn>(entity, false);
-                
+                AddComponent(entity, new HitFlashTime { Value = HitFlashTime.Never });
+
                 // Individual enemy modifiers
                 AddBuffer<StatModifier>(entity);
                 AddComponent<Uninitialized>(entity);
