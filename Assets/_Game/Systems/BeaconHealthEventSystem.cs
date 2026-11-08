@@ -30,7 +30,7 @@ namespace _Game.Systems
 
                 if (current < _previousHealth)
                 {
-                    EventBus.FireBeaconHit(current, health.ValueRO.Max);
+                    EventBus.FireBeaconHit(_previousHealth - current, current, max);
                 }
 
                 EventBus.FireBeaconHealthChanged(current, max);

@@ -28,6 +28,8 @@ namespace _Game.Gameplay
         private Vector3 _velocity;
         private bool _ready;
 
+        private Vector3 _followPosition;
+
         /// <summary>
         /// Resolve the entity to follow this frame. Return false to hold position.
         /// </summary>
@@ -38,6 +40,11 @@ namespace _Game.Gameplay
         /// </summary>
         protected virtual void OnReady() { }
 
+        /// <summary>
+        /// Visual-only offset added on top of the followed position every frame.
+        /// </summary>
+        protected virtual Vector3 DisplayOffset => Vector3.zero;
+
         private void EnsureReady()
         {
             if (_ready) return;
@@ -46,6 +53,7 @@ namespace _Game.Gameplay
             if (!world.IsCreated) return;
 
             EntityManager = world.EntityManager;
+            _followPosition = transform.position;
             _ready = true;
             OnReady();
         }
@@ -55,16 +63,22 @@ namespace _Game.Gameplay
             EnsureReady();
             if (!_ready) return;
 
+            Follow();
+            transform.position = _followPosition + DisplayOffset;
+        }
+
+        private void Follow()
+        {
             if (!TryResolveTarget(out Entity entity)) return;
             if (!EntityManager.Exists(entity) || !EntityManager.HasComponent<LocalTransform>(entity)) return;
 
             float3 entityPos = EntityManager.GetComponentData<LocalTransform>(entity).Position;
 
             Vector3 target = new Vector3(entityPos.x, entityPos.y, entityPos.z) + offset;
-            if (keepOwnZ) target.z = transform.position.z;
+            if (keepOwnZ) target.z = _followPosition.z;
 
-            transform.position = smoothTime > 0f
-                ? Vector3.SmoothDamp(transform.position, target, ref _velocity, smoothTime)
+            _followPosition = smoothTime > 0f
+                ? Vector3.SmoothDamp(_followPosition, target, ref _velocity, smoothTime)
                 : target;
         }
     }

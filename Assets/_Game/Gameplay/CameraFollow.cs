@@ -1,3 +1,5 @@
+using UnityEngine;
+
 namespace _Game.Gameplay
 {
     /// <summary>
@@ -7,5 +9,13 @@ namespace _Game.Gameplay
     /// </summary>
     public sealed class CameraFollow : PlayerEntityFollower
     {
+        private CameraShake _cameraShake;
+
+        protected override Vector3 DisplayOffset => _cameraShake ? _cameraShake.Offset : Vector3.zero;
+
+        private void Awake()
+        {
+            _cameraShake = GetComponent<CameraShake>();
+        }
     }
 }

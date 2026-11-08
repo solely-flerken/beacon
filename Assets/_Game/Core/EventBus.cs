@@ -34,7 +34,7 @@ namespace _Game.Core
         public static event Action<int> OnLevelUp;
 
         // Beacon
-        public static event Action<float, float> OnBeaconHit; // currentHp, maxHp
+        public static event Action<float, float, float> OnBeaconHit; // damage, currentHp, maxHp
         public static event Action<float, float> OnBeaconHealthChanged; // currentHp, maxHp
         public static event Action OnBeaconDestroyed;
 
@@ -60,7 +60,7 @@ namespace _Game.Core
         public static void FireExpChanged(int level, float current, float max) => OnExpChanged?.Invoke(level, current, max);
         public static void FireLevelUp(int level) => OnLevelUp?.Invoke(level);
 
-        public static void FireBeaconHit(float hp, float max) => OnBeaconHit?.Invoke(hp, max);
+        public static void FireBeaconHit(float damage, float hp, float max) => OnBeaconHit?.Invoke(damage, hp, max);
         public static void FireBeaconHealthChanged(float currentHp, float maxHp) => OnBeaconHealthChanged?.Invoke(currentHp, maxHp);
         public static void FireBeaconDestroyed() => OnBeaconDestroyed?.Invoke();
 
