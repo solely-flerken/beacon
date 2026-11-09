@@ -1,5 +1,6 @@
 ﻿using _Game.Config;
 using _Game.Core;
+using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine;
 
@@ -8,6 +9,7 @@ namespace _Game.Gameplay
     public class BeaconVisualController : MonoBehaviour
     {
         private static readonly int BaseColor = Shader.PropertyToID("_BaseColor");
+        private static readonly int HitTime = Shader.PropertyToID("_HitTime");
 
         [SerializeField] private BeaconConfig config;
         [SerializeField] private MeshRenderer meshRenderer;
@@ -23,11 +25,13 @@ namespace _Game.Gameplay
         private void OnEnable()
         {
             EventBus.OnBeaconHealthChanged += OnBeaconHealthChanged;
+            EventBus.OnBeaconHit += OnBeaconHit;
         }
 
         private void OnDisable()
         {
             EventBus.OnBeaconHealthChanged -= OnBeaconHealthChanged;
+            EventBus.OnBeaconHit -= OnBeaconHit;
         }
 
         private void OnBeaconHealthChanged(float current, float max)
@@ -35,11 +39,25 @@ namespace _Game.Gameplay
             SetHealthColor(math.saturate(current / max));
         }
 
+        private void OnBeaconHit(float damage, float current, float max)
+        {
+            if (meshRenderer == null) return;
+            _properties.SetFloat(HitTime, WorldTime());
+            meshRenderer.SetPropertyBlock(_properties);
+        }
+
         private void SetHealthColor(float healthFraction)
         {
             if (meshRenderer == null || config == null) return;
             _properties.SetColor(BaseColor, Color.Lerp(config.lowHpColor, config.fullHpColor, healthFraction));
             meshRenderer.SetPropertyBlock(_properties);
+        }
+
+        private static float WorldTime()
+        {
+            World world = World.DefaultGameObjectInjectionWorld;
+            if (world == null || !world.IsCreated) return 0f;
+            return (float)world.Time.ElapsedTime;
         }
     }
 }
