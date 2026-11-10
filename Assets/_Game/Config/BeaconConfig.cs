@@ -7,6 +7,7 @@ namespace _Game.Config
     {
         [Header("Stats")] 
         public float maxHp = 100f;
+        public float armor = 0f;
         public float arrivalRadius = 1.2f;
 
         [Header("Movement")]

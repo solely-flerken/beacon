@@ -13,6 +13,7 @@ namespace _Game.Components
         Pierce,
         // Beacon / Enemy
         MaxHp,
+        Armor,
         ArrivalRadius,
         Speed,
         ContactDamage,

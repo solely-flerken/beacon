@@ -20,6 +20,7 @@ namespace _Game.Systems
         private NativeQueue<DamageEvent> _queue;
         
         private ComponentLookup<Health> _healthLookup;
+        private ComponentLookup<Armor> _armorLookup;
         private ComponentLookup<Despawn> _despawnLookup;
         private ComponentLookup<HitFlashTime> _hitFlashLookup;
         private ComponentLookup<LocalTransform> _transformLookup;
@@ -34,6 +35,7 @@ namespace _Game.Systems
             state.EntityManager.CreateSingleton(new DamageEvents { Queue = _queue });
 
             _healthLookup = state.GetComponentLookup<Health>(isReadOnly: false);
+            _armorLookup = state.GetComponentLookup<Armor>(isReadOnly: true);
             _despawnLookup = state.GetComponentLookup<Despawn>(isReadOnly: false);
             _hitFlashLookup = state.GetComponentLookup<HitFlashTime>(isReadOnly: false);
             _transformLookup = state.GetComponentLookup<LocalTransform>(isReadOnly: true);
@@ -51,6 +53,7 @@ namespace _Game.Systems
         public void OnUpdate(ref SystemState state)
         {
             _healthLookup.Update(ref state);
+            _armorLookup.Update(ref state);
             _despawnLookup.Update(ref state);
             _hitFlashLookup.Update(ref state);
             _transformLookup.Update(ref state);
@@ -67,6 +70,7 @@ namespace _Game.Systems
             {
                 Queue = _queue,
                 HealthLookup = _healthLookup,
+                ArmorLookup = _armorLookup,
                 DespawnLookup = _despawnLookup,
                 HitFlashLookup = _hitFlashLookup,
                 TransformLookup = _transformLookup,
@@ -88,6 +92,7 @@ namespace _Game.Systems
         {
             public NativeQueue<DamageEvent> Queue;
             public ComponentLookup<Health> HealthLookup;
+            [ReadOnly] public ComponentLookup<Armor> ArmorLookup;
             public ComponentLookup<Despawn> DespawnLookup;
             public ComponentLookup<HitFlashTime> HitFlashLookup;
             [ReadOnly] public ComponentLookup<LocalTransform> TransformLookup;
@@ -117,6 +122,12 @@ namespace _Game.Systems
                     if (health.Current <= 0f) continue;
                     bool hasDespawn = DespawnLookup.HasComponent(damage.Target);
                     if (hasDespawn && DespawnLookup.IsComponentEnabled(damage.Target)) continue;
+
+                    // Reduce damage based on armor
+                    if (ArmorLookup.TryGetComponent(damage.Target, out Armor armor))
+                    {
+                        damage.Value *= Armor.DamageMultiplier(armor.Value);
+                    }
 
                     if (HitFlashLookup.TryGetRefRW(damage.Target, out RefRW<HitFlashTime> flash))
                     {

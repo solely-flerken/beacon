@@ -41,6 +41,12 @@ namespace _Game.Authoring
                     Current = config.maxHp,
                 });
 
+                AddComponent(entity, new Armor
+                {
+                    BaseValue = config.armor,
+                    Value = config.armor,
+                });
+
                 AddComponent(entity, new Speed
                 {
                     BaseValue = config.moveSpeed,

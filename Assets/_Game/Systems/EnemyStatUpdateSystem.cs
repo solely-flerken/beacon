@@ -62,6 +62,7 @@ namespace _Game.Systems
                 EnabledRefRW<Uninitialized> uninitialized,
                 ref Speed speed,
                 ref Health health,
+                ref Armor armor,
                 ref ContactDamage contactDamage,
                 ref EnemyReward reward,
                 in EnemySpeedVariation speedVariation,
@@ -79,6 +80,7 @@ namespace _Game.Systems
 
                 speed.Value = StatResolver.ResolveEnemy(tierEnum, StatType.Speed, speed.BaseValue, mask, GlobalMods, WaveMods, entityMods, ref blob);
                 health.Max = StatResolver.ResolveEnemy(tierEnum, StatType.MaxHp, health.BaseMax, mask, GlobalMods, WaveMods, entityMods, ref blob);
+                armor.Value = StatResolver.ResolveEnemy(tierEnum, StatType.Armor, armor.BaseValue, mask, GlobalMods, WaveMods, entityMods, ref blob);
                 contactDamage.Value = StatResolver.ResolveEnemy(tierEnum, StatType.ContactDamage, contactDamage.BaseValue, mask, GlobalMods, WaveMods, entityMods, ref blob);
                 reward.ExpValue = StatResolver.ResolveEnemy(tierEnum, StatType.Exp, reward.BaseExpValue, mask, GlobalMods, WaveMods, entityMods, ref blob);
 
@@ -99,6 +101,7 @@ namespace _Game.Systems
             private void Execute(
                 ref Speed speed,
                 ref Health health,
+                ref Armor armor,
                 ref ContactDamage contactDamage,
                 ref EnemyReward reward,
                 EnabledRefRW<EnemyStatUpdateRequired> updateRequired,
@@ -111,6 +114,7 @@ namespace _Game.Systems
 
                 speed.Value = StatResolver.ResolveEnemy(tierEnum, StatType.Speed, speed.BaseValue, mask, GlobalMods, WaveMods, entityMods, ref blob);
                 health.Max = StatResolver.ResolveEnemy(tierEnum, StatType.MaxHp, health.BaseMax, mask, GlobalMods, WaveMods, entityMods, ref blob);
+                armor.Value = StatResolver.ResolveEnemy(tierEnum, StatType.Armor, armor.BaseValue, mask, GlobalMods, WaveMods, entityMods, ref blob);
                 contactDamage.Value = StatResolver.ResolveEnemy(tierEnum, StatType.ContactDamage, contactDamage.BaseValue, mask, GlobalMods, WaveMods, entityMods, ref blob);
                 reward.ExpValue = StatResolver.ResolveEnemy(tierEnum, StatType.Exp, reward.BaseExpValue, mask, GlobalMods, WaveMods, entityMods, ref blob);
 
