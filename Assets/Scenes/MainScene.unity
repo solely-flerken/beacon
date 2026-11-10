@@ -327,6 +327,7 @@ MonoBehaviour:
   hitBufferSize: 4096
   arcBufferSize: 1024
   maxSparkHitsPerFrame: 256
+  maxDeathBurstsPerFrame: 256
 --- !u!114 &238055992
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1205,6 +1206,67 @@ MonoBehaviour:
     spray: 1
     spread: 35
     speedMult: 1.3
+--- !u!1 &1447933501
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1447933502}
+  - component: {fileID: 1447933504}
+  m_Layer: 0
+  m_Name: DeathBurstVisual
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1447933502
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1447933501}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1447933504
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1447933501}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 50832755a2ec46bb8f9d7962f1083c8b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::_Game.Gameplay.DeathBurstRenderer
+  shader: {fileID: 4800000, guid: 5dca3657712d4933b9f3daceeb92b021, type: 3}
+  capacity: 4096
+  fragments: 7
+  lifetime: 0.45
+  minSpeed: 2
+  maxSpeed: 5.5
+  fragmentLength: 0.9
+  maxSpin: 720
+  lineWidth: 0.045
+  coreWidth: 0.35
+  glowRadius: 0.07
+  intensity: 1.5
+  ring: 1
+  ringLifetime: 0.16
+  ringGrowth: 2.2
+  ringIntensity: 1.2
+  z: -0.1
 --- !u!1 &1825727378
 GameObject:
   m_ObjectHideFlags: 0
@@ -1420,5 +1482,6 @@ SceneRoots:
   - {fileID: 581267943}
   - {fileID: 1247933502}
   - {fileID: 1347933502}
+  - {fileID: 1447933502}
   - {fileID: 1825727380}
   - {fileID: 16051485}

@@ -45,6 +45,29 @@ namespace _Game.Core
     }
 
     /// <summary>
+    /// Data for one enemy death that bursts into fragments.
+    /// This struct layout must match the burst_data struct in DeathBurst.shader.
+    /// </summary>
+    public struct DeathBurstData
+    {
+        public float2 Center;
+
+        /// <summary>
+        /// Radius of the enemy. The fragments start on its outline and scale with it.
+        /// </summary>
+        public float Radius;
+
+        public float StartTime;
+
+        /// <summary>
+        /// The enemy's tint.
+        /// </summary>
+        public float3 Color;
+
+        public uint Seed;
+    }
+
+    /// <summary>
     /// Data for one jump of a chain lightning, for the visuals.
     /// This struct layout must must match the arc_data struct in ChainLightning.shader.
     /// </summary>
