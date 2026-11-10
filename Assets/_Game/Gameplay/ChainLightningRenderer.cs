@@ -1,7 +1,6 @@
 using _Game.Core;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
-using Unity.Entities;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -123,12 +122,12 @@ namespace _Game.Gameplay
 
             _head = (_head + count) % capacity;
             _used = Mathf.Min(_used + count, capacity);
-            _lastArcTime = WorldTime();
+            _lastArcTime = GameClock.Now;
         }
 
         private void LateUpdate()
         {
-            float now = WorldTime();
+            float now = GameClock.Now;
 
             // Every arc has expired: skip the draw
             if (_used == 0 || now - _lastArcTime >= lifetime) return;
@@ -154,13 +153,6 @@ namespace _Game.Gameplay
             };
 
             Graphics.RenderPrimitives(rp, MeshTopology.Triangles, 6, _used);
-        }
-
-        private static float WorldTime()
-        {
-            World world = World.DefaultGameObjectInjectionWorld;
-            if (world == null || !world.IsCreated) return 0f;
-            return (float)world.Time.ElapsedTime;
         }
     }
 }

@@ -4,7 +4,6 @@ using _Game.Components;
 using _Game.Core;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
-using Unity.Entities;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -237,7 +236,7 @@ namespace _Game.Gameplay
 
         private float Tick()
         {
-            float now = WorldTime();
+            float now = GameClock.Now;
 
             if (now < _clock)
             {
@@ -253,13 +252,6 @@ namespace _Game.Gameplay
             }
 
             return now;
-        }
-
-        private static float WorldTime()
-        {
-            World world = World.DefaultGameObjectInjectionWorld;
-            if (world == null || !world.IsCreated) return 0f;
-            return (float)world.Time.ElapsedTime;
         }
     }
 }
