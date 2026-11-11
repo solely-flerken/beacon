@@ -57,6 +57,8 @@ namespace _Game.Systems
                 stats.ValueRW.FireRate = StatResolver.ResolveWeapon(StatType.FireRate, stats.ValueRO.BaseFireRate, mask.ValueRO, globalBuffer, waveBuffer, localMods, ownerMods, ownerBlobRef);
                 stats.ValueRW.TargetRange = StatResolver.ResolveWeapon(StatType.TargetRange, stats.ValueRO.BaseTargetRange, mask.ValueRO, globalBuffer, waveBuffer, localMods, ownerMods, ownerBlobRef);
                 attack.ValueRW.ArmorPenetration = (int)StatResolver.ResolveWeapon(StatType.ArmorPenetration, attack.ValueRO.BaseArmorPenetration, mask.ValueRO, globalBuffer, waveBuffer, localMods, ownerMods, ownerBlobRef);
+                attack.ValueRW.CritChance = (int)StatResolver.ResolveWeapon(StatType.CritChance, attack.ValueRO.BaseCritChance, mask.ValueRO, globalBuffer, waveBuffer, localMods, ownerMods, ownerBlobRef);
+                attack.ValueRW.CritDamage = (int)StatResolver.ResolveWeapon(StatType.CritDamage, attack.ValueRO.BaseCritDamage, mask.ValueRO, globalBuffer, waveBuffer, localMods, ownerMods, ownerBlobRef);
 
                 if (SystemAPI.HasComponent<ProjectileStats>(entity))
                 {

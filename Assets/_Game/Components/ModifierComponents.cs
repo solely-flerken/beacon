@@ -12,6 +12,8 @@ namespace _Game.Components
         ProjectileSpeed,
         Pierce,
         ArmorPenetration,
+        CritChance,
+        CritDamage,
         // Beacon / Enemy
         MaxHp,
         Armor,

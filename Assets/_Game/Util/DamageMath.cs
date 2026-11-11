@@ -1,4 +1,5 @@
 using _Game.Components;
+using Unity.Mathematics;
 
 namespace _Game.Util
 {
@@ -8,6 +9,16 @@ namespace _Game.Util
     /// </summary>
     public static class DamageMath
     {
+        /// <summary>
+        /// Rolls the attacker's crit. On a crit the damage is scaled by CritDamage percent.
+        /// </summary>
+        public static float RollCrit(float rawDamage, in AttackStats attacker, ref Random rng)
+        {
+            if (attacker.CritChance <= 0) return rawDamage;
+            if (attacker.CritChance < 100 && rng.NextInt(100) >= attacker.CritChance) return rawDamage;
+            return rawDamage * attacker.CritDamage * 0.01f;
+        }
+
         /// <summary>
         /// Damage that gets through the target's armor, after the attacker's armor penetration.
         /// </summary>

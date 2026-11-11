@@ -13,6 +13,8 @@ namespace _Game.Authoring
         public float fireRate = 10f;
         public float targetRange = 40f;
         [Range(0, 100)] public int armorPenetration;
+        [Range(0, 100)] public int critChance;
+        [Min(100)] public int critDamage = 150;
 
         private class Baker : Baker<WeaponBaseAuthoring>
         {
@@ -44,6 +46,10 @@ namespace _Game.Authoring
                 {
                     BaseArmorPenetration = authoring.armorPenetration,
                     ArmorPenetration = authoring.armorPenetration,
+                    BaseCritChance = authoring.critChance,
+                    CritChance = authoring.critChance,
+                    BaseCritDamage = authoring.critDamage,
+                    CritDamage = authoring.critDamage,
                 });
                 
                 // Reference to the weapon type 

@@ -22,6 +22,8 @@ namespace _Game.Authoring
         public float armor = 0f;
         public float contactDamage = 1f;
         [Range(0, 100)] public int armorPenetration;
+        [Range(0, 100)] public int critChance;
+        [Min(100)] public int critDamage = 150;
 
         public float exp = 1f;
         
@@ -65,7 +67,17 @@ namespace _Game.Authoring
                 AddComponent(entity, new ContactDamage { BaseValue = authoring.contactDamage, Value = authoring.contactDamage });
                 AddComponent(entity, new Health { BaseMax = authoring.maxHealth, Max = authoring.maxHealth, Current = authoring.maxHealth });
                 AddComponent(entity, new Armor { BaseValue = authoring.armor, Value = authoring.armor });
-                AddComponent(entity, new AttackStats { BaseArmorPenetration = authoring.armorPenetration, ArmorPenetration = authoring.armorPenetration });
+                
+                // Attack stats
+                AddComponent(entity, new AttackStats
+                {
+                    BaseArmorPenetration = authoring.armorPenetration,
+                    ArmorPenetration = authoring.armorPenetration,
+                    BaseCritChance = authoring.critChance,
+                    CritChance = authoring.critChance,
+                    BaseCritDamage = authoring.critDamage,
+                    CritDamage = authoring.critDamage,
+                });
 
                 // Reference to the enemy type 
                 AddComponent<EnemyTypeRef>(entity);

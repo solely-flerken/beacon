@@ -121,6 +121,8 @@ namespace _Game.Systems
                 Entity lastSource = Entity.Null;
                 AttackStats attackStats = default;
 
+                Random rng = Random.CreateFromIndex(SeedBase);
+
                 while (Queue.TryDequeue(out DamageEvent damage))
                 {
                     if (!HealthLookup.HasComponent(damage.Target)) continue;
@@ -138,6 +140,9 @@ namespace _Game.Systems
                         lastSource = damage.Source;
                         AttackStatsLookup.TryGetComponent(lastSource, out attackStats);
                     }
+
+                    // Apply crit damage
+                    damage.Value = DamageMath.RollCrit(damage.Value, attackStats, ref rng);
 
                     // Reduce damage based on armor, minus the attacker's penetration
                     if (ArmorLookup.TryGetComponent(damage.Target, out Armor armor))
