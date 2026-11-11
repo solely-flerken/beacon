@@ -1,4 +1,5 @@
 using _Game.Components;
+using _Game.Util;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
@@ -11,23 +12,31 @@ namespace _Game.Systems
     public partial struct IncomingDamageSystem : ISystem
     {
         private ComponentLookup<EnemyIncomingDamage> _incomingDamageLookup;
+        private ComponentLookup<Armor> _armorLookup;
+        private ComponentLookup<AttackStats> _attackStatsLookup;
 
         [BurstCompile]
         public void OnCreate(ref SystemState state)
         {
             _incomingDamageLookup = state.GetComponentLookup<EnemyIncomingDamage>(isReadOnly: false);
+            _armorLookup = state.GetComponentLookup<Armor>(isReadOnly: true);
+            _attackStatsLookup = state.GetComponentLookup<AttackStats>(isReadOnly: true);
         }
 
         [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
             _incomingDamageLookup.Update(ref state);
+            _armorLookup.Update(ref state);
+            _attackStatsLookup.Update(ref state);
 
             state.Dependency = new ZeroIncomingDamageJob().ScheduleParallel(state.Dependency);
 
             state.Dependency = new AccumulateIncomingDamageJob
             {
                 IncomingDamageLookup = _incomingDamageLookup,
+                ArmorLookup = _armorLookup,
+                AttackStatsLookup = _attackStatsLookup,
                 ElapsedTime = SystemAPI.Time.ElapsedTime,
             }.Schedule(state.Dependency);
         }
@@ -46,14 +55,32 @@ namespace _Game.Systems
     internal partial struct AccumulateIncomingDamageJob : IJobEntity
     {
         [NativeDisableParallelForRestriction] public ComponentLookup<EnemyIncomingDamage> IncomingDamageLookup;
+        [ReadOnly] public ComponentLookup<Armor> ArmorLookup;
+        [ReadOnly] public ComponentLookup<AttackStats> AttackStatsLookup;
         public double ElapsedTime;
 
-        private void Execute(in ProjectileTarget target, in ProjectileDamage damage)
+        private Entity _lastWeapon;
+        private AttackStats _attack;
+
+        private void Execute(in ProjectileTarget target, in ProjectileDamage damage, in ProjectileWeapon weapon)
         {
             if (target.ReservationExpiry < ElapsedTime) return;
             if (!IncomingDamageLookup.HasComponent(target.Value)) return;
-            
-            IncomingDamageLookup.GetRefRW(target.Value).ValueRW.Value += damage.Value;
+
+            // Reserve what will actually land: armor minus the firing weapon's penetration. Everything else is ignored.
+            float value = damage.Value;
+            if (ArmorLookup.TryGetComponent(target.Value, out Armor armor))
+            {
+                if (weapon.Value != _lastWeapon)
+                {
+                    _lastWeapon = weapon.Value;
+                    AttackStatsLookup.TryGetComponent(_lastWeapon, out _attack);
+                }
+
+                value = DamageMath.Mitigate(value, armor.Value, _attack);
+            }
+
+            IncomingDamageLookup.GetRefRW(target.Value).ValueRW.Value += value;
         }
     }
 }
