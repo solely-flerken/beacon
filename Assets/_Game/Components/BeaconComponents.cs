@@ -8,9 +8,15 @@ namespace _Game.Components
     {
         // Base Values (Authored)
         public float BaseArrivalRadius;
+        public float BaseExpGain;
 
         // Result Values (Calculated)
         public float ArrivalRadius;
+
+        /// <summary>
+        /// Multiplier on collected exp.
+        /// </summary>
+        public float ExpGain;
     }
 
     /// <summary>

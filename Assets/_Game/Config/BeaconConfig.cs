@@ -9,6 +9,7 @@ namespace _Game.Config
         public float maxHp = 100f;
         public float armor = 0f;
         public float arrivalRadius = 1.2f;
+        public float expGain = 1f;
 
         [Header("Movement")]
         public float moveSpeed = 10f;

@@ -32,6 +32,9 @@ namespace _Game.Systems
                 // Arrival radius
                 stats.ValueRW.ArrivalRadius = StatResolver.Resolve(StatType.ArrivalRadius, stats.ValueRO.BaseArrivalRadius, mask, globalBuffer, waveBuffer, localMods);
 
+                // Exp gain
+                stats.ValueRW.ExpGain = StatResolver.Resolve(StatType.ExpGain, stats.ValueRO.BaseExpGain, mask, globalBuffer, waveBuffer, localMods);
+
                 SystemAPI.SetComponentEnabled<BeaconStatUpdateRequired>(entity, false);
             }
         }

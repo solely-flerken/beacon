@@ -25,6 +25,8 @@ namespace _Game.Components
         BeamWidth,
         // Enemy reward
         Exp,
+        // Beacon exp
+        ExpGain,
         // Projectile ricochet
         BounceCount,
         BounceRange,

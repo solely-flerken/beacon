@@ -31,7 +31,9 @@ namespace _Game.Authoring
                 AddComponent(entity, new BeaconStats
                 {
                     BaseArrivalRadius = config.arrivalRadius,
+                    BaseExpGain = config.expGain,
                     ArrivalRadius = config.arrivalRadius,
+                    ExpGain = config.expGain,
                 });
 
                 AddComponent(entity, new Health

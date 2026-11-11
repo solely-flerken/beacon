@@ -23,7 +23,7 @@ namespace _Game.Systems
         public void OnUpdate(ref SystemState state)
         {
             ExpOrbConfig cfg = SystemAPI.GetSingleton<ExpOrbConfig>();
-            float2 beaconPos = GetBeaconPosition(ref state);
+            GetBeacon(ref state, out float2 beaconPos, out float expGain);
 
             EntityCommandBuffer.ParallelWriter ecb = SystemAPI.GetSingleton<EndSimulationEntityCommandBufferSystem.Singleton>().CreateCommandBuffer(state.WorldUnmanaged).AsParallelWriter();
 
@@ -35,6 +35,7 @@ namespace _Game.Systems
             {
                 BeaconPos = beaconPos,
                 ArrivalRadius = cfg.BeaconArrivalRadius,
+                ExpGain = expGain,
                 CollectBaseSpeed = cfg.CollectBaseSpeed,
                 CollectMaxSpeed = cfg.CollectMaxSpeed,
                 DeltaTime = SystemAPI.Time.DeltaTime,
@@ -46,14 +47,17 @@ namespace _Game.Systems
             DotsBridge.BridgeDependencies = JobHandle.CombineDependencies(DotsBridge.BridgeDependencies, state.Dependency);
         }
 
-        private float2 GetBeaconPosition(ref SystemState state)
+        private void GetBeacon(ref SystemState state, out float2 position, out float expGain)
         {
-            foreach (RefRO<LocalTransform> transform in SystemAPI.Query<RefRO<LocalTransform>>().WithAll<BeaconStats>())
+            foreach ((RefRO<LocalTransform> transform, RefRO<BeaconStats> stats) in SystemAPI.Query<RefRO<LocalTransform>, RefRO<BeaconStats>>())
             {
-                return transform.ValueRO.Position.xy;
+                position = transform.ValueRO.Position.xy;
+                expGain = stats.ValueRO.ExpGain;
+                return;
             }
 
-            return float2.zero;
+            position = float2.zero;
+            expGain = 1f;
         }
     }
 
@@ -63,6 +67,7 @@ namespace _Game.Systems
     {
         public float2 BeaconPos;
         public float ArrivalRadius;
+        public float ExpGain;
         public float CollectBaseSpeed;
         public float CollectMaxSpeed;
         public float DeltaTime;
@@ -81,7 +86,7 @@ namespace _Game.Systems
             {
                 if (HasExpQueue)
                 {
-                    ExpCollectedQueue.Enqueue(data.Value);
+                    ExpCollectedQueue.Enqueue(data.Value * ExpGain);
                 }
                 
                 ECB.DestroyEntity(sortKey, entity);
