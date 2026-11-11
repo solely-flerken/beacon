@@ -67,7 +67,6 @@ namespace _Game.Systems
 
             float2 beaconPos = transform.Position.xy;
             float radiusSq = stats.ArrivalRadius * stats.ArrivalRadius;
-            float totalDamage = 0f;
 
             foreach (int i in Grid.QueryNeighbors(beaconPos, 1))
             {
@@ -78,14 +77,12 @@ namespace _Game.Systems
                 // Only deal arrival damage if the entity can be removed, and isn't being removed already
                 if (!DespawnLookup.HasComponent(enemy) || DespawnLookup.IsComponentEnabled(enemy)) continue;
 
-                totalDamage += contactDamage.Value;
-
                 DespawnLookup.SetComponentEnabled(enemy, true);
+
+                if (contactDamage.Value <= 0f) continue;
+
+                DamageQueue.Enqueue(new DamageEvent { Target = beaconEntity, Value = contactDamage.Value, Source = enemy });
             }
-
-            if (totalDamage <= 0f) return;
-
-            DamageQueue.Enqueue(new DamageEvent { Target = beaconEntity, Value = totalDamage });
         }
     }
 }

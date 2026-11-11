@@ -158,15 +158,16 @@ namespace _Game.Systems
 #endif
                 }
 
-                Entity weaponEntity = ReportHits && WeaponSourceLookup.HasComponent(projectile)
-                    ? WeaponSourceLookup[projectile].Value
+                Entity weaponEntity = WeaponSourceLookup.TryGetComponent(projectile, out ProjectileWeapon firedBy)
+                    ? firedBy.Value
                     : Entity.Null;
 
                 DamageQueue.Enqueue(new DamageEvent
                 {
                     Target = target,
                     Value = damage.Value,
-                    Weapon = weaponEntity,
+                    Source = weaponEntity,
+                    Weapon = ReportHits ? weaponEntity : Entity.Null,
                     Position = transform.Position,
                 });
 

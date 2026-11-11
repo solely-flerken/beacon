@@ -23,6 +23,7 @@ namespace _Game.Authoring
                 AddComponent(entity, new ProjectilePierce { Remaining = 0 });
                 AddComponent(entity, new ProjectileBounce { Remaining = 0 });
                 AddComponent(entity, new ProjectileTarget { Value = Entity.Null });
+                AddComponent(entity, new ProjectileWeapon { Value = Entity.Null });
 
                 AddComponent(entity, new Lifetime { Remaining = authoring.lifetime });
             }

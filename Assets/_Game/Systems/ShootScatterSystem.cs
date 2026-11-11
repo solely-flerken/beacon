@@ -94,12 +94,12 @@ namespace _Game.Systems
                 ECB.SetComponent(sortKey, projectile, new ProjectileDamage { Value = weaponStats.Damage });
                 ECB.SetComponent(sortKey, projectile, new ProjectilePierce { Remaining = projStats.Pierce });
                 ECB.SetComponent(sortKey, projectile, new ProjectileBounce { Remaining = projStats.BounceCount, Range = projStats.BounceRange, Falloff = projStats.BounceFalloff, MinDamage = weaponStats.Damage * projStats.BounceDamageFloor });
+                ECB.SetComponent(sortKey, projectile, new ProjectileWeapon { Value = entity });
 
                 // Who owns this weapon?
                 if (isPlayer)
                 {
                     ECB.AddComponent<PlayerProjectileTag>(sortKey, projectile);
-                    ECB.AddComponent(sortKey, projectile, new ProjectileWeapon { Value = entity });
                 }
                 else
                 {

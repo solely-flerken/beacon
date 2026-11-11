@@ -155,6 +155,7 @@ namespace _Game.Systems
                     {
                         Target = EnemyGrid.Entities[i],
                         Value = damage,
+                        Source = weaponEntity,
                         Weapon = weaponEntity,
                         Position = new float3(center, 0f),
                     });

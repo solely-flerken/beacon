@@ -1,6 +1,7 @@
 using _Game.Components;
 using _Game.Core;
 using _Game.Shared;
+using _Game.Util;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
@@ -21,7 +22,7 @@ namespace _Game.Systems
         
         private ComponentLookup<Health> _healthLookup;
         private ComponentLookup<Armor> _armorLookup;
-        private ComponentLookup<WeaponStats> _weaponStatsLookup;
+        private ComponentLookup<AttackStats> _attackStatsLookup;
         private ComponentLookup<Despawn> _despawnLookup;
         private ComponentLookup<HitFlashTime> _hitFlashLookup;
         private ComponentLookup<LocalTransform> _transformLookup;
@@ -37,7 +38,7 @@ namespace _Game.Systems
 
             _healthLookup = state.GetComponentLookup<Health>(isReadOnly: false);
             _armorLookup = state.GetComponentLookup<Armor>(isReadOnly: true);
-            _weaponStatsLookup = state.GetComponentLookup<WeaponStats>(isReadOnly: true);
+            _attackStatsLookup = state.GetComponentLookup<AttackStats>(isReadOnly: true);
             _despawnLookup = state.GetComponentLookup<Despawn>(isReadOnly: false);
             _hitFlashLookup = state.GetComponentLookup<HitFlashTime>(isReadOnly: false);
             _transformLookup = state.GetComponentLookup<LocalTransform>(isReadOnly: true);
@@ -56,7 +57,7 @@ namespace _Game.Systems
         {
             _healthLookup.Update(ref state);
             _armorLookup.Update(ref state);
-            _weaponStatsLookup.Update(ref state);
+            _attackStatsLookup.Update(ref state);
             _despawnLookup.Update(ref state);
             _hitFlashLookup.Update(ref state);
             _transformLookup.Update(ref state);
@@ -74,7 +75,7 @@ namespace _Game.Systems
                 Queue = _queue,
                 HealthLookup = _healthLookup,
                 ArmorLookup = _armorLookup,
-                WeaponStatsLookup = _weaponStatsLookup,
+                AttackStatsLookup = _attackStatsLookup,
                 DespawnLookup = _despawnLookup,
                 HitFlashLookup = _hitFlashLookup,
                 TransformLookup = _transformLookup,
@@ -97,7 +98,7 @@ namespace _Game.Systems
             public NativeQueue<DamageEvent> Queue;
             public ComponentLookup<Health> HealthLookup;
             [ReadOnly] public ComponentLookup<Armor> ArmorLookup;
-            [ReadOnly] public ComponentLookup<WeaponStats> WeaponStatsLookup;
+            [ReadOnly] public ComponentLookup<AttackStats> AttackStatsLookup;
             public ComponentLookup<Despawn> DespawnLookup;
             public ComponentLookup<HitFlashTime> HitFlashLookup;
             [ReadOnly] public ComponentLookup<LocalTransform> TransformLookup;
@@ -117,6 +118,9 @@ namespace _Game.Systems
                 // Spark hits left this frame; once spent, the hot loop skips the spark lookups entirely
                 int sparkBudget = HasSparks ? Sparks.Capacity - Sparks.Length : 0;
 
+                Entity lastSource = Entity.Null;
+                AttackStats attackStats = default;
+
                 while (Queue.TryDequeue(out DamageEvent damage))
                 {
                     if (!HealthLookup.HasComponent(damage.Target)) continue;
@@ -128,16 +132,17 @@ namespace _Game.Systems
                     bool hasDespawn = DespawnLookup.HasComponent(damage.Target);
                     if (hasDespawn && DespawnLookup.IsComponentEnabled(damage.Target)) continue;
 
-                    // Reduce damage based on armor, minus the weapon's penetration
+                    // The attacker's stats.
+                    if (damage.Source != lastSource)
+                    {
+                        lastSource = damage.Source;
+                        AttackStatsLookup.TryGetComponent(lastSource, out attackStats);
+                    }
+
+                    // Reduce damage based on armor, minus the attacker's penetration
                     if (ArmorLookup.TryGetComponent(damage.Target, out Armor armor))
                     {
-                        float armorValue = armor.Value;
-                        if (armorValue > 0f && WeaponStatsLookup.TryGetComponent(damage.Weapon, out WeaponStats weapon))
-                        {
-                            armorValue = Armor.AfterPenetration(armorValue, weapon.ArmorPenetration);
-                        }
-
-                        damage.Value *= Armor.DamageMultiplier(armorValue);
+                        damage.Value = DamageMath.Mitigate(damage.Value, armor.Value, attackStats);
                     }
 
                     if (HitFlashLookup.TryGetRefRW(damage.Target, out RefRW<HitFlashTime> flash))

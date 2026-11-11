@@ -24,7 +24,7 @@ namespace _Game.Shared
         public float Falloff;
 
         /// <summary>
-        /// Weapon credited with the chain lightnings' hits in run stats.
+        /// Weapon that started the chain: the source of its hits, and credited with them in run stats.
         /// </summary>
         public Entity Weapon;
     }

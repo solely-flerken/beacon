@@ -21,7 +21,8 @@ namespace _Game.Authoring
         public float maxHealth = 10f;
         public float armor = 0f;
         public float contactDamage = 1f;
-        
+        [Range(0, 100)] public int armorPenetration;
+
         public float exp = 1f;
         
         [Header("Tier Overrides")]
@@ -64,6 +65,7 @@ namespace _Game.Authoring
                 AddComponent(entity, new ContactDamage { BaseValue = authoring.contactDamage, Value = authoring.contactDamage });
                 AddComponent(entity, new Health { BaseMax = authoring.maxHealth, Max = authoring.maxHealth, Current = authoring.maxHealth });
                 AddComponent(entity, new Armor { BaseValue = authoring.armor, Value = authoring.armor });
+                AddComponent(entity, new AttackStats { BaseArmorPenetration = authoring.armorPenetration, ArmorPenetration = authoring.armorPenetration });
 
                 // Reference to the enemy type 
                 AddComponent<EnemyTypeRef>(entity);

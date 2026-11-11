@@ -17,6 +17,11 @@ namespace _Game.Shared
         public float Value;
 
         /// <summary>
+        /// Who dealt the damage. Its AttackStats apply to the hit.
+        /// </summary>
+        public Entity Source;
+
+        /// <summary>
         /// Weapon credited with the hit in run stats. Entity.Null for damage that isn't counted.
         /// </summary>
         public Entity Weapon;

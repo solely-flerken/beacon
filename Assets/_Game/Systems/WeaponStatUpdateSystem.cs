@@ -17,8 +17,8 @@ namespace _Game.Systems
             if (!SystemAPI.TryGetSingletonBuffer(out DynamicBuffer<WaveStatModifier> waveBuffer, isReadOnly: true))
                 return;
 
-            foreach ((RefRW<WeaponStats> stats, RefRW<Classification> mask, DynamicBuffer<StatModifier> localMods, Entity entity) in
-                     SystemAPI.Query<RefRW<WeaponStats>, RefRW<Classification>, DynamicBuffer<StatModifier>>().WithAll<WeaponStatUpdateRequired>().WithEntityAccess())
+            foreach ((RefRW<WeaponStats> stats, RefRW<AttackStats> attack, RefRW<Classification> mask, DynamicBuffer<StatModifier> localMods, Entity entity) in
+                     SystemAPI.Query<RefRW<WeaponStats>, RefRW<AttackStats>, RefRW<Classification>, DynamicBuffer<StatModifier>>().WithAll<WeaponStatUpdateRequired>().WithEntityAccess())
             {
                 DynamicBuffer<StatModifier> ownerMods = default;
                 BlobAssetReference<EnemyTypeBlob> ownerBlobRef = default;
@@ -56,7 +56,7 @@ namespace _Game.Systems
                 stats.ValueRW.Damage = StatResolver.ResolveWeapon(StatType.Damage, stats.ValueRO.BaseDamage, mask.ValueRO, globalBuffer, waveBuffer, localMods, ownerMods, ownerBlobRef);
                 stats.ValueRW.FireRate = StatResolver.ResolveWeapon(StatType.FireRate, stats.ValueRO.BaseFireRate, mask.ValueRO, globalBuffer, waveBuffer, localMods, ownerMods, ownerBlobRef);
                 stats.ValueRW.TargetRange = StatResolver.ResolveWeapon(StatType.TargetRange, stats.ValueRO.BaseTargetRange, mask.ValueRO, globalBuffer, waveBuffer, localMods, ownerMods, ownerBlobRef);
-                stats.ValueRW.ArmorPenetration = StatResolver.ResolveWeapon(StatType.ArmorPenetration, stats.ValueRO.BaseArmorPenetration, mask.ValueRO, globalBuffer, waveBuffer, localMods, ownerMods, ownerBlobRef);
+                attack.ValueRW.ArmorPenetration = (int)StatResolver.ResolveWeapon(StatType.ArmorPenetration, attack.ValueRO.BaseArmorPenetration, mask.ValueRO, globalBuffer, waveBuffer, localMods, ownerMods, ownerBlobRef);
 
                 if (SystemAPI.HasComponent<ProjectileStats>(entity))
                 {

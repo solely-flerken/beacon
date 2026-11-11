@@ -156,6 +156,7 @@ namespace _Game.Systems
                     {
                         Target = target,
                         Value = damage,
+                        Source = request.Weapon,
                         Weapon = request.Weapon,
                         Position = new float3(to, 0f),
                     });

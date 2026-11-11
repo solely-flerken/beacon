@@ -63,7 +63,7 @@ namespace _Game.Systems
             Entity shell = ECB.Instantiate(sortKey, mortarData.ShellPrefab);
             ECB.SetComponent(sortKey, shell, shellTransform);
             ECB.SetComponent(sortKey, shell, new LocalToWorld { Value = shellTransform.ToMatrix() });
-            ECB.AddComponent(sortKey, shell, new ProjectileWeapon { Value = entity });
+            ECB.SetComponent(sortKey, shell, new ProjectileWeapon { Value = entity });
             ECB.SetComponent(sortKey, shell, new MortarTrajectory
             {
                 StartPos = weaponPos,

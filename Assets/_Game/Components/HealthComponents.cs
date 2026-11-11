@@ -31,10 +31,10 @@ namespace _Game.Components
         /// Armor left after the attacker's penetration.
         /// Only strips positive armor, so it does nothing against unarmored or negative-armor targets.
         /// </summary>
-        public static float AfterPenetration(float armor, float penetration)
+        public static float AfterPenetration(float armor, int penetrationPercent)
         {
             if (armor <= 0f) return armor;
-            return armor * (1f - Unity.Mathematics.math.saturate(penetration));
+            return armor * (1f - Unity.Mathematics.math.saturate(penetrationPercent * 0.01f));
         }
     }
 }
