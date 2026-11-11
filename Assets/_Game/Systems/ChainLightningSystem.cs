@@ -150,7 +150,7 @@ namespace _Game.Systems
                     float2 toVelocity = VelocityOf(target);
                     filter.Visited.Add(next);
 
-                    damage = math.min(damage * request.Falloff, request.MinDamage);
+                    damage = math.max(damage * request.Falloff, request.MinDamage);
 
                     DamageQueue.Enqueue(new DamageEvent
                     {
