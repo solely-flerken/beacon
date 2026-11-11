@@ -41,11 +41,13 @@ namespace _Game.Components
         public float BaseDamage;
         public float BaseFireRate;
         public float BaseTargetRange;
-        
+        public float BaseArmorPenetration;
+
         // Result Values (Calculated)
         public float Damage;
         public float FireRate;
         public float TargetRange;
+        public float ArmorPenetration;
     }
 
     public struct ProjectileStats : IComponentData

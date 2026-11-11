@@ -12,6 +12,7 @@ namespace _Game.Authoring
         public float damage = 10f;
         public float fireRate = 10f;
         public float targetRange = 40f;
+        [Range(0f, 1f)] public float armorPenetration;
 
         private class Baker : Baker<WeaponBaseAuthoring>
         {
@@ -34,9 +35,11 @@ namespace _Game.Authoring
                     BaseDamage = authoring.damage,
                     BaseFireRate = authoring.fireRate,
                     BaseTargetRange = authoring.targetRange,
+                    BaseArmorPenetration = authoring.armorPenetration,
                     Damage = authoring.damage,
                     FireRate = authoring.fireRate,
                     TargetRange = authoring.targetRange,
+                    ArmorPenetration = authoring.armorPenetration,
                 });
                 
                 // Reference to the weapon type 
