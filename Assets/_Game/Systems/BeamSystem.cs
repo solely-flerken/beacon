@@ -190,7 +190,7 @@ namespace _Game.Systems
                         Target = SpatialGrid.Entities[i],
                         Value = pulseDamage * coverage,
                         Source = beamEntity,
-                        Weapon = beamEntity,
+                        ReportHit = true,
                         Position = new float3(pos, 0f),
                     });
 

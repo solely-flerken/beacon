@@ -167,7 +167,7 @@ namespace _Game.Systems
                     Target = target,
                     Value = damage.Value,
                     Source = weaponEntity,
-                    Weapon = ReportHits ? weaponEntity : Entity.Null,
+                    ReportHit = ReportHits,
                     Position = transform.Position,
                 });
 

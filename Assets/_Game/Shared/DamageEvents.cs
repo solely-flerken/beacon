@@ -22,9 +22,9 @@ namespace _Game.Shared
         public Entity Source;
 
         /// <summary>
-        /// Weapon credited with the hit in run stats. Entity.Null for damage that isn't counted.
+        /// Whether the hit is reported for the Source weapon (run stats, hit sparks). False for damage that isn't counted.
         /// </summary>
-        public Entity Weapon;
+        public bool ReportHit;
 
         /// <summary>
         /// Where the hit is reported.

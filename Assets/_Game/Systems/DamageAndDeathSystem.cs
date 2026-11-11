@@ -151,7 +151,7 @@ namespace _Game.Systems
                     }
 
                     // TODO: Capture damage by enemies (or enemy type), e.g. contact damage or with weapons.
-                    if (damage.Weapon != Entity.Null)
+                    if (damage.ReportHit && damage.Source != Entity.Null)
                     {
                         if (HasHitQueue)
                         {
@@ -159,7 +159,7 @@ namespace _Game.Systems
                             {
                                 Position = damage.Position,
                                 Damage = damage.Value,
-                                WeaponEntity = damage.Weapon,
+                                WeaponEntity = damage.Source,
                             });
                         }
 
@@ -188,12 +188,12 @@ namespace _Game.Systems
             {
                 if (!TransformLookup.TryGetComponent(damage.Target, out LocalTransform target)) return false;
 
-                WeaponType weaponType = WeaponTypeLookup.TryGetComponent(damage.Weapon, out WeaponTypeRef typeRef)
+                WeaponType weaponType = WeaponTypeLookup.TryGetComponent(damage.Source, out WeaponTypeRef typeRef)
                     ? typeRef.WeaponType
                     : WeaponType.Basic;
 
                 float2 source = damage.Position.xy;
-                if (weaponType != WeaponType.Mortar && LocalToWorldLookup.TryGetComponent(damage.Weapon, out LocalToWorld weapon))
+                if (weaponType != WeaponType.Mortar && LocalToWorldLookup.TryGetComponent(damage.Source, out LocalToWorld weapon))
                 {
                     source = weapon.Position.xy;
                 }
