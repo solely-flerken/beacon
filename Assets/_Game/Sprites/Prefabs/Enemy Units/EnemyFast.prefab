@@ -57,11 +57,11 @@ MonoBehaviour:
   exp: 1
   tierModifiers:
   - tier: 1
-    stat: 5
+    stat: 8
     operation: 1
     value: 100
   - tier: 1
-    stat: 7
+    stat: 11
     operation: 1
     value: 100
 --- !u!33 &4914085237233589836
