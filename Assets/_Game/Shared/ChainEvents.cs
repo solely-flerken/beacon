@@ -27,6 +27,11 @@ namespace _Game.Shared
         /// Weapon that started the chain: the source of its hits, and credited with them in run stats.
         /// </summary>
         public Entity Weapon;
+
+        /// <summary>
+        /// Owner of <see cref="Weapon"/>. The chain never jumps to it.
+        /// </summary>
+        public Entity Owner;
     }
 
     /// <summary>

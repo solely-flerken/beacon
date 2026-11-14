@@ -131,12 +131,12 @@ namespace _Game.Systems
             targeting.CurrentTarget = Entity.Null;
 
             bool checkIncoming = !isEnemyWeapon;
-            bool foundTarget = TryFindTarget(targeting.Strategy, weaponPos, grid, weaponStats.TargetRange, HealthLookup, IncomingDamageLookup, checkIncoming, ref targeting.RandomSeed, out int foundIndex);
+            bool foundTarget = TryFindTarget(targeting.Strategy, weaponPos, grid, weaponStats.TargetRange, HealthLookup, IncomingDamageLookup, checkIncoming, owner.Value, ref targeting.RandomSeed, out int foundIndex);
 
             // Fallback: if all enemies are over-committed, fire anyway to avoid wasting fire rate
             if (!foundTarget && checkIncoming)
             {
-                foundTarget = TryFindTarget(targeting.Strategy, weaponPos, grid, weaponStats.TargetRange, HealthLookup, IncomingDamageLookup, false, ref targeting.RandomSeed, out foundIndex);
+                foundTarget = TryFindTarget(targeting.Strategy, weaponPos, grid, weaponStats.TargetRange, HealthLookup, IncomingDamageLookup, false, owner.Value, ref targeting.RandomSeed, out foundIndex);
             }
 
             if (!foundTarget) return;
@@ -167,18 +167,19 @@ namespace _Game.Systems
             ComponentLookup<Health> healthLookup,
             ComponentLookup<EnemyIncomingDamage> incomingDamageLookup,
             bool checkIncoming,
+            Entity exclude,
             ref uint seed,
             out int foundIndex)
         {
             switch (strategy)
             {
                 case TargetStrategy.Random:
-                    return FindRandom(origin, grid, range, healthLookup, incomingDamageLookup, checkIncoming, ref seed, out foundIndex);
+                    return FindRandom(origin, grid, range, healthLookup, incomingDamageLookup, checkIncoming, exclude, ref seed, out foundIndex);
                 case TargetStrategy.Furthest:
-                    return FindFurthest(origin, grid, range, healthLookup, incomingDamageLookup, checkIncoming, out foundIndex);
+                    return FindFurthest(origin, grid, range, healthLookup, incomingDamageLookup, checkIncoming, exclude, out foundIndex);
                 case TargetStrategy.Nearest:
                 default:
-                    return FindNearest(origin, grid, range, healthLookup, incomingDamageLookup, checkIncoming, out foundIndex);
+                    return FindNearest(origin, grid, range, healthLookup, incomingDamageLookup, checkIncoming, exclude, out foundIndex);
             }
         }
 
@@ -192,6 +193,7 @@ namespace _Game.Systems
             ComponentLookup<Health> healthLookup,
             ComponentLookup<EnemyIncomingDamage> incomingDamageLookup,
             bool checkIncoming,
+            Entity exclude,
             ref uint seed,
             out int randomIndex)
         {
@@ -211,6 +213,7 @@ namespace _Game.Systems
                 int n = rng.NextInt(0, candidateCount);
                 int i = flat ? n : grid.NthInBox(minCell, maxCell, n);
                 if (math.distancesq(origin, grid.Positions[i]) > maxRangeSq) continue;
+                if (grid.Entities[i] == exclude) continue;
                 if (checkIncoming && IsOverCommitted(grid.Entities[i], healthLookup, incomingDamageLookup)) continue;
 
                 randomIndex = i;
@@ -225,6 +228,7 @@ namespace _Game.Systems
             foreach (int i in candidates)
             {
                 if (math.distancesq(origin, grid.Positions[i]) > maxRangeSq) continue;
+                if (grid.Entities[i] == exclude) continue;
                 if (checkIncoming && IsOverCommitted(grid.Entities[i], healthLookup, incomingDamageLookup)) continue;
 
                 count++;
@@ -246,6 +250,7 @@ namespace _Game.Systems
             ComponentLookup<Health> healthLookup,
             ComponentLookup<EnemyIncomingDamage> incomingDamageLookup,
             bool checkIncoming,
+            Entity exclude,
             out int resultIndex)
         {
             resultIndex = -1;
@@ -258,7 +263,7 @@ namespace _Game.Systems
             {
                 foreach (int i in grid.All())
                 {
-                    if (!IsBetterTarget(i, origin, grid, maxRangeSq, false, healthLookup, incomingDamageLookup, checkIncoming, bestSq, out float distSq)) continue;
+                    if (!IsBetterTarget(i, origin, grid, maxRangeSq, false, healthLookup, incomingDamageLookup, checkIncoming, exclude, bestSq, out float distSq)) continue;
 
                     bestSq = distSq;
                     resultIndex = i;
@@ -278,7 +283,7 @@ namespace _Game.Systems
 
                 foreach (int i in grid.QueryRing(center, radius))
                 {
-                    if (!IsBetterTarget(i, origin, grid, maxRangeSq, false, healthLookup, incomingDamageLookup, checkIncoming, bestSq, out float distSq)) continue;
+                    if (!IsBetterTarget(i, origin, grid, maxRangeSq, false, healthLookup, incomingDamageLookup, checkIncoming, exclude, bestSq, out float distSq)) continue;
 
                     bestSq = distSq;
                     resultIndex = i;
@@ -298,6 +303,7 @@ namespace _Game.Systems
             ComponentLookup<Health> healthLookup,
             ComponentLookup<EnemyIncomingDamage> incomingDamageLookup,
             bool checkIncoming,
+            Entity exclude,
             out int resultIndex)
         {
             resultIndex = -1;
@@ -310,7 +316,7 @@ namespace _Game.Systems
             {
                 foreach (int i in grid.All())
                 {
-                    if (!IsBetterTarget(i, origin, grid, maxRangeSq, true, healthLookup, incomingDamageLookup, checkIncoming, bestSq, out float distSq)) continue;
+                    if (!IsBetterTarget(i, origin, grid, maxRangeSq, true, healthLookup, incomingDamageLookup, checkIncoming, exclude, bestSq, out float distSq)) continue;
 
                     bestSq = distSq;
                     resultIndex = i;
@@ -326,7 +332,7 @@ namespace _Game.Systems
             {
                 foreach (int i in grid.QueryRing(center, radius))
                 {
-                    if (!IsBetterTarget(i, origin, grid, maxRangeSq, true, healthLookup, incomingDamageLookup, checkIncoming, bestSq, out float distSq)) continue;
+                    if (!IsBetterTarget(i, origin, grid, maxRangeSq, true, healthLookup, incomingDamageLookup, checkIncoming, exclude, bestSq, out float distSq)) continue;
 
                     bestSq = distSq;
                     resultIndex = i;
@@ -359,7 +365,7 @@ namespace _Game.Systems
         }
 
         /// <summary>
-        /// True if unit <paramref name="i"/> is nearer than <paramref name="bestSq"/> (further, if <paramref name="invert"/>), in range, and not over-committed.
+        /// True if unit <paramref name="i"/> is nearer than <paramref name="bestSq"/> (further, if <paramref name="invert"/>), in range, not <paramref name="exclude"/> (the weapon's owner), and not over-committed.
         /// </summary>
         private static bool IsBetterTarget(
             int i,
@@ -370,12 +376,14 @@ namespace _Game.Systems
             ComponentLookup<Health> healthLookup,
             ComponentLookup<EnemyIncomingDamage> incomingDamageLookup,
             bool checkIncoming,
+            Entity exclude,
             float bestSq,
             out float distSq)
         {
             distSq = math.distancesq(origin, grid.Positions[i]);
             bool betterTarget = invert ? distSq <= maxRangeSq && distSq > bestSq : distSq < bestSq;
             if (!betterTarget) return false;
+            if (grid.Entities[i] == exclude) return false;
             return !checkIncoming || !IsOverCommitted(grid.Entities[i], healthLookup, incomingDamageLookup);
         }
 

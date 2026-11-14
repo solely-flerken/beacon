@@ -104,7 +104,8 @@ namespace _Game.Systems
             in WeaponStats stats,
             in BeamStats beamStats,
             in ChainStats chain,
-            in LocalToWorld transform)
+            in LocalToWorld transform,
+            in WeaponOwner owner)
         {
             float2 toDir = facing.Direction;
             if (math.lengthsq(toDir) < 0.001f) return;
@@ -180,6 +181,7 @@ namespace _Game.Systems
                 {
                     float2 pos = SpatialGrid.Positions[i];
                     if (!slice.Contains(pos)) continue;
+                    if (SpatialGrid.Entities[i] == owner.Value) continue;
 
                     // Fraction of the window the beam covered this enemy: full while the beam rests on it, less when swept past.
                     float sweptArc = math.distance(pos, origin) * absSweep;
@@ -214,6 +216,7 @@ namespace _Game.Systems
                 MinDamage = stats.Damage * chain.DamageFloor,
                 Falloff = chain.Falloff,
                 Weapon = beamEntity,
+                Owner = owner.Value,
             });
         }
 

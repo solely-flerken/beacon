@@ -135,6 +135,7 @@ namespace _Game.Systems
                 ChainRequest request = Requests[index];
 
                 ChainFilter filter = default;
+                filter.Owner = request.Owner;
                 filter.Visited.Add(request.InitialIndex);
 
                 float2 from = PositionOf(request.InitialTarget, request.Position);
@@ -206,14 +207,17 @@ namespace _Game.Systems
     }
 
     /// <summary>
-    /// Excludes enemies this chain has already hit.
+    /// Excludes units this chain has already hit, and the owner of the weapon that started it.
     /// </summary>
     internal struct ChainFilter : IHopFilter
     {
         public FixedList512Bytes<int> Visited;
+        public Entity Owner;
 
         public bool IsExcluded(int index, Entity entity)
         {
+            if (entity == Owner) return true;
+
             for (int i = 0; i < Visited.Length; i++)
             {
                 if (Visited[i] == index) return true;

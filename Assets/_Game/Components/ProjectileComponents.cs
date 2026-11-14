@@ -53,11 +53,19 @@ namespace _Game.Components
     }
 
     /// <summary>
-    /// Links a projectile back to the weapon entity that fired it.
+    /// Links a projectile back to the weapon entity that fired it, and the weapon owner.
     /// </summary>
-    public struct ProjectileWeapon : IComponentData
+    public struct ProjectileSource : IComponentData
     {
-        public Entity Value;
+        /// <summary>
+        /// Weapon that fired it.
+        /// </summary>
+        public Entity Weapon;
+
+        /// <summary>
+        /// Unit that owned the weapon.
+        /// </summary>
+        public Entity Owner;
     }
 
     /// <summary>

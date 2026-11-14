@@ -99,7 +99,7 @@ namespace _Game.Systems
 
             [WriteOnly] public NativeQueue<DamageEvent>.ParallelWriter DamageQueue;
 
-            public void Execute(Entity entity, [EntityIndexInQuery] int sortKey, ref LocalTransform transform, ref MortarTrajectory flight, in ProjectileWeapon weapon)
+            public void Execute(Entity entity, [EntityIndexInQuery] int sortKey, ref LocalTransform transform, ref MortarTrajectory flight, in ProjectileSource source)
             {
                 flight.Elapsed += DeltaTime;
                 EvaluateFlight(flight, out float progress, out float2 groundPos, out float heightFraction);
@@ -108,22 +108,22 @@ namespace _Game.Systems
 
                 if (progress >= 1f)
                 {
-                    HandleImpact(entity, sortKey, groundPos, flight, weapon.Value);
+                    HandleImpact(entity, sortKey, groundPos, flight, source);
                 }
             }
 
-            private void HandleImpact(Entity entity, int sortKey, float2 impactPos, in MortarTrajectory flight, Entity weaponEntity)
+            private void HandleImpact(Entity entity, int sortKey, float2 impactPos, in MortarTrajectory flight, in ProjectileSource source)
             {
                 ECB.DestroyEntity(sortKey, entity);
 
-                if (!PayloadLookup.TryGetComponent(weaponEntity, out MortarStats mortarStats)) return;
-                if (!WeaponStatsLookup.TryGetComponent(weaponEntity, out WeaponStats baseStats)) return;
+                if (!PayloadLookup.TryGetComponent(source.Weapon,out MortarStats mortarStats)) return;
+                if (!WeaponStatsLookup.TryGetComponent(source.Weapon,out WeaponStats baseStats)) return;
 
                 SpawnExplosion(sortKey, impactPos, mortarStats.ExplosionRadius, flight.ExplosionPrefab);
 
                 if (EnemyGridValid)
                 {
-                    ApplyRadiusDamage(impactPos, baseStats.Damage, mortarStats.ExplosionRadius, weaponEntity);
+                    ApplyRadiusDamage(impactPos, baseStats.Damage, mortarStats.ExplosionRadius, source);
                 }
             }
 
@@ -143,19 +143,20 @@ namespace _Game.Systems
                 });
             }
 
-            private void ApplyRadiusDamage(float2 center, float damage, float radius, Entity weaponEntity)
+            private void ApplyRadiusDamage(float2 center, float damage, float radius, in ProjectileSource source)
             {
                 float radiusSq = radius * radius;
                 
                 foreach (int i in EnemyGrid.Query(center - radius, center + radius))
                 {
                     if (math.distancesq(EnemyGrid.Positions[i], center) > radiusSq) continue;
+                    if (EnemyGrid.Entities[i] == source.Owner) continue;
 
                     DamageQueue.Enqueue(new DamageEvent
                     {
                         Target = EnemyGrid.Entities[i],
                         Value = damage,
-                        Source = weaponEntity,
+                        Source = source.Weapon,
                         ReportHit = true,
                         Position = new float3(center, 0f),
                     });

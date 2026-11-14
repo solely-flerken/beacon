@@ -26,10 +26,12 @@ namespace _Game.Systems
 
             _playerProjectiles = SystemAPI.QueryBuilder()
                 .WithAll<PlayerProjectileTag, LocalTransform, ProjectileVelocity, ProjectileDamage, ProjectilePierce, ProjectileBounce, ProjectileTarget>()
+                .WithAll<ProjectileSource>()
                 .Build();
 
             _enemyProjectiles = SystemAPI.QueryBuilder()
                 .WithAll<EnemyProjectileTag, LocalTransform, ProjectileVelocity, ProjectileDamage, ProjectilePierce, ProjectileBounce, ProjectileTarget>()
+                .WithAll<ProjectileSource>()
                 .Build();
         }
 
@@ -49,7 +51,6 @@ namespace _Game.Systems
             NativeQueue<DamageEvent>.ParallelWriter damageQueueWriter = damageQueue.AsParallelWriter();
             BufferLookup<HitCooldown> hitCooldownLookup = SystemAPI.GetBufferLookup<HitCooldown>(true);
 
-            ComponentLookup<ProjectileWeapon> weaponSourceLookup = SystemAPI.GetComponentLookup<ProjectileWeapon>(true);
             double elapsedTime = SystemAPI.Time.ElapsedTime;
 
             // PLAYER PROJECTILES vs ENEMIES
@@ -65,7 +66,6 @@ namespace _Game.Systems
                     ReportHits = true,
                     DamageQueue = damageQueueWriter,
                     HitCooldowns = hitCooldownLookup,
-                    WeaponSourceLookup = weaponSourceLookup,
                     ElapsedTime = elapsedTime,
                 }.ScheduleParallel(_playerProjectiles, state.Dependency);
             }
@@ -83,7 +83,6 @@ namespace _Game.Systems
                     ReportHits = false, // TODO: enemy -> beacon hits don't count as player weapon stats. Need a dedicated stat for them
                     DamageQueue = damageQueueWriter,
                     HitCooldowns = hitCooldownLookup,
-                    WeaponSourceLookup = weaponSourceLookup,
                     ElapsedTime = elapsedTime,
                 }.ScheduleParallel(_enemyProjectiles, state.Dependency);
             }
@@ -117,11 +116,10 @@ namespace _Game.Systems
 
         [WriteOnly] public NativeQueue<DamageEvent>.ParallelWriter DamageQueue;
         [ReadOnly] public BufferLookup<HitCooldown> HitCooldowns;
-        [ReadOnly] public ComponentLookup<ProjectileWeapon> WeaponSourceLookup;
 
         public double ElapsedTime;
 
-        private void Execute(Entity projectile, [EntityIndexInQuery] int sortKey, in LocalTransform transform, ref ProjectileVelocity velocity, ref ProjectileDamage damage, ref ProjectilePierce pierce, ref ProjectileBounce bounce, ref ProjectileTarget reservation)
+        private void Execute(Entity projectile, [EntityIndexInQuery] int sortKey, in LocalTransform transform, ref ProjectileVelocity velocity, ref ProjectileDamage damage, ref ProjectilePierce pierce, ref ProjectileBounce bounce, ref ProjectileTarget reservation, in ProjectileSource source)
         {
             float2 pos = new(transform.Position.x, transform.Position.y);
             float hitRadiusSq = HitRadius * HitRadius;
@@ -131,6 +129,7 @@ namespace _Game.Systems
                 if (math.distancesq(pos, SpatialGrid.Positions[i]) > hitRadiusSq) continue;
 
                 Entity target = SpatialGrid.Entities[i];
+                if (target == source.Owner) continue;
 
                 // Check if projectile can damage the current entity
                 if (HitCooldowns.HasBuffer(target))
@@ -158,15 +157,11 @@ namespace _Game.Systems
 #endif
                 }
 
-                Entity weaponEntity = WeaponSourceLookup.TryGetComponent(projectile, out ProjectileWeapon firedBy)
-                    ? firedBy.Value
-                    : Entity.Null;
-
                 DamageQueue.Enqueue(new DamageEvent
                 {
                     Target = target,
                     Value = damage.Value,
-                    Source = weaponEntity,
+                    Source = source.Weapon,
                     ReportHit = ReportHits,
                     Position = transform.Position,
                 });
@@ -175,7 +170,7 @@ namespace _Game.Systems
                 pierce.Remaining--;
                 if (pierce.Remaining >= 0) return;
 
-                if (bounce.Remaining > 0 && TryBounce(projectile, target, pos, ref velocity, ref damage, ref bounce, ref reservation)) return;
+                if (bounce.Remaining > 0 && TryBounce(projectile, target, source.Owner, pos, ref velocity, ref damage, ref bounce, ref reservation)) return;
 
                 ECB.DestroyEntity(sortKey, projectile);
                 return;
@@ -186,9 +181,9 @@ namespace _Game.Systems
         /// Redirects the projectile to the nearest enemy in bounce range it hasn't hit yet, and moves its overkill reservation there.
         /// False if there is none.
         /// </summary>
-        private bool TryBounce(Entity projectile, Entity lastTarget, float2 pos, ref ProjectileVelocity velocity, ref ProjectileDamage damage, ref ProjectileBounce bounce, ref ProjectileTarget reservation)
+        private bool TryBounce(Entity projectile, Entity lastTarget, Entity owner, float2 pos, ref ProjectileVelocity velocity, ref ProjectileDamage damage, ref ProjectileBounce bounce, ref ProjectileTarget reservation)
         {
-            RicochetFilter filter = new() { Projectile = projectile, LastTarget = lastTarget, HitCooldowns = HitCooldowns };
+            RicochetFilter filter = new() { Projectile = projectile, LastTarget = lastTarget, Owner = owner, HitCooldowns = HitCooldowns };
             if (!HopTargeting.FindNearest(pos, SpatialGrid, bounce.Range, ref filter, out int next)) return false;
 
             float2 toNext = SpatialGrid.Positions[next] - pos;
@@ -209,11 +204,12 @@ namespace _Game.Systems
     {
         public Entity Projectile;
         public Entity LastTarget;
+        public Entity Owner;
         [ReadOnly] public BufferLookup<HitCooldown> HitCooldowns;
 
         public bool IsExcluded(int index, Entity entity)
         {
-            if (entity == LastTarget) return true;
+            if (entity == LastTarget || entity == Owner) return true;
             if (!HitCooldowns.TryGetBuffer(entity, out DynamicBuffer<HitCooldown> cds)) return false;
 
             for (int c = 0; c < cds.Length; c++)

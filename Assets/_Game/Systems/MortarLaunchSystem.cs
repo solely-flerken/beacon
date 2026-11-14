@@ -42,7 +42,8 @@ namespace _Game.Systems
             in ProjectileStats projStats,
             in WeaponTargeting targeting,
             in LocalToWorld transform,
-            in Classification classification)
+            in Classification classification,
+            in WeaponOwner owner)
         {
             if (!targeting.HasTarget) return;
 
@@ -63,7 +64,7 @@ namespace _Game.Systems
             Entity shell = ECB.Instantiate(sortKey, mortarData.ShellPrefab);
             ECB.SetComponent(sortKey, shell, shellTransform);
             ECB.SetComponent(sortKey, shell, new LocalToWorld { Value = shellTransform.ToMatrix() });
-            ECB.SetComponent(sortKey, shell, new ProjectileWeapon { Value = entity });
+            ECB.SetComponent(sortKey, shell, new ProjectileSource { Weapon = entity, Owner = owner.Value });
             ECB.SetComponent(sortKey, shell, new MortarTrajectory
             {
                 StartPos = weaponPos,

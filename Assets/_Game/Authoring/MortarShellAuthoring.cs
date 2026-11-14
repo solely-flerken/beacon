@@ -15,7 +15,7 @@ namespace _Game.Authoring
                 AddComponent<MortarShellTag>(entity);
                 AddComponent<MortarTrajectory>(entity);
                 
-                AddComponent(entity, new ProjectileWeapon { Value = Entity.Null });
+                AddComponent(entity, new ProjectileSource { Weapon = Entity.Null, Owner = Entity.Null });
             }
         }
     }

@@ -62,7 +62,7 @@ namespace _Game.Systems
         private Entity _lastWeapon;
         private AttackStats _attack;
 
-        private void Execute(in ProjectileTarget target, in ProjectileDamage damage, in ProjectileWeapon weapon)
+        private void Execute(in ProjectileTarget target, in ProjectileDamage damage, in ProjectileSource source)
         {
             if (target.ReservationExpiry < ElapsedTime) return;
             if (!IncomingDamageLookup.HasComponent(target.Value)) return;
@@ -71,9 +71,9 @@ namespace _Game.Systems
             float value = damage.Value;
             if (ArmorLookup.TryGetComponent(target.Value, out Armor armor))
             {
-                if (weapon.Value != _lastWeapon)
+                if (source.Weapon != _lastWeapon)
                 {
-                    _lastWeapon = weapon.Value;
+                    _lastWeapon = source.Weapon;
                     AttackStatsLookup.TryGetComponent(_lastWeapon, out _attack);
                 }
 
