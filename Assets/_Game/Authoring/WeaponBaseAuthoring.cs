@@ -31,6 +31,8 @@ namespace _Game.Authoring
                     // Other values are set at spawn time
                 });
                 
+                AddComponent<AttackRules>(entity);
+
                 // Basic weapon stats
                 AddComponent(entity, new WeaponStats
                 {

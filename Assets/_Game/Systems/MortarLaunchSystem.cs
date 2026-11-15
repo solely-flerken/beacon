@@ -42,8 +42,8 @@ namespace _Game.Systems
             in ProjectileStats projStats,
             in WeaponTargeting targeting,
             in LocalToWorld transform,
-            in Classification classification,
-            in WeaponOwner owner)
+            in WeaponOwner owner,
+            in AttackRules rules)
         {
             if (!targeting.HasTarget) return;
 
@@ -64,7 +64,7 @@ namespace _Game.Systems
             Entity shell = ECB.Instantiate(sortKey, mortarData.ShellPrefab);
             ECB.SetComponent(sortKey, shell, shellTransform);
             ECB.SetComponent(sortKey, shell, new LocalToWorld { Value = shellTransform.ToMatrix() });
-            ECB.SetComponent(sortKey, shell, new ProjectileSource { Weapon = entity, Owner = owner.Value });
+            ECB.SetComponent(sortKey, shell, new ProjectileSource { Weapon = entity, Owner = owner.Value, Rules = rules });
             ECB.SetComponent(sortKey, shell, new MortarTrajectory
             {
                 StartPos = weaponPos,
@@ -80,16 +80,6 @@ namespace _Game.Systems
             ECB.SetComponent(sortKey, shadow, new LocalToWorld { Value = shadowTransform.ToMatrix() });
             ECB.AddComponent(sortKey, shadow, new MortarShadow { Shell = shell });
             
-            bool isPlayer = (classification.Faction & FactionMask.Player) != 0;
-            if (isPlayer)
-            {
-                ECB.AddComponent<PlayerProjectileTag>(sortKey, shell);
-            }
-            else
-            {
-                ECB.AddComponent<EnemyProjectileTag>(sortKey, shell);
-            }
-
             ECB.SetComponentEnabled<ReadyToFire>(sortKey, entity, false);
         }
     }

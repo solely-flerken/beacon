@@ -12,21 +12,18 @@ namespace _Game.Systems
     public partial struct ShootProjectileSystem : ISystem
     {
         private ComponentLookup<LocalTransform> _transformLookup;
-        private ComponentLookup<PlayerTag> _playerTagLookup;
 
         public void OnCreate(ref SystemState state)
         {
             state.RequireForUpdate<EndSimulationEntityCommandBufferSystem.Singleton>();
 
             _transformLookup = state.GetComponentLookup<LocalTransform>(isReadOnly: true);
-            _playerTagLookup = state.GetComponentLookup<PlayerTag>(isReadOnly: true);
         }
 
         [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
             _transformLookup.Update(ref state);
-            _playerTagLookup.Update(ref state);
 
             EndSimulationEntityCommandBufferSystem.Singleton ecbSingleton = SystemAPI.GetSingleton<EndSimulationEntityCommandBufferSystem.Singleton>();
             EntityCommandBuffer.ParallelWriter ecb = ecbSingleton.CreateCommandBuffer(state.WorldUnmanaged).AsParallelWriter();
@@ -35,7 +32,6 @@ namespace _Game.Systems
             {
                 ECB = ecb,
                 TransformLookup = _transformLookup,
-                PlayerTagLookup = _playerTagLookup,
                 ElapsedTime = SystemAPI.Time.ElapsedTime,
             }.ScheduleParallel(state.Dependency);
         }
@@ -47,7 +43,6 @@ namespace _Game.Systems
     {
         public EntityCommandBuffer.ParallelWriter ECB;
         [ReadOnly] public ComponentLookup<LocalTransform> TransformLookup;
-        [ReadOnly] public ComponentLookup<PlayerTag> PlayerTagLookup;
         public double ElapsedTime;
 
         private void Execute(
@@ -58,7 +53,8 @@ namespace _Game.Systems
             in ProjectileStats projStats,
             in WeaponTargeting targeting,
             in LocalToWorld transform,
-            in WeaponOwner owner)
+            in WeaponOwner owner,
+            in AttackRules rules)
         {
             if (!targeting.HasTarget) return;
 
@@ -85,27 +81,18 @@ namespace _Game.Systems
             ECB.SetComponent(sortKey, projectile, new ProjectileDamage { Value = stats.Damage });
             ECB.SetComponent(sortKey, projectile, new ProjectilePierce { Remaining = projStats.Pierce });
             ECB.SetComponent(sortKey, projectile, new ProjectileBounce { Remaining = projStats.BounceCount, Range = projStats.BounceRange, Falloff = projStats.BounceFalloff, MinDamage = stats.Damage * projStats.BounceDamageFloor });
-            ECB.SetComponent(sortKey, projectile, new ProjectileSource { Weapon = entity, Owner = owner.Value });
+            ECB.SetComponent(sortKey, projectile, new ProjectileSource { Weapon = entity, Owner = owner.Value, Rules = rules });
 
-            // Who owns this weapon?
-            if (PlayerTagLookup.HasComponent(owner.Value))
+            // Reserve the damage on the target for overkill prevention. Ignored for targets that don't track incoming damage.
+            if (targeting.CurrentTarget != Entity.Null)
             {
-                ECB.AddComponent<PlayerProjectileTag>(sortKey, projectile);
+                float flightTime = math.length(delta) / projStats.Speed;
 
-                if (targeting.CurrentTarget != Entity.Null)
+                ECB.SetComponent(sortKey, projectile, new ProjectileTarget
                 {
-                    float flightTime = math.length(delta) / projStats.Speed;
-                    
-                    ECB.SetComponent(sortKey, projectile, new ProjectileTarget
-                    {
-                        Value = targeting.CurrentTarget,
-                        ReservationExpiry = ElapsedTime + flightTime * 1.5,
-                    });
-                }
-            }
-            else
-            {
-                ECB.AddComponent<EnemyProjectileTag>(sortKey, projectile);
+                    Value = targeting.CurrentTarget,
+                    ReservationExpiry = ElapsedTime + flightTime * 1.5,
+                });
             }
 
             ECB.SetComponentEnabled<ReadyToFire>(sortKey, entity, false);

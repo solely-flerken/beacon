@@ -54,8 +54,8 @@ namespace _Game.Systems
             in ProjectileStats projStats,
             in WeaponTargeting targeting,
             in LocalToWorld transform,
-            in Classification classification,
-            in WeaponOwner owner)
+            in WeaponOwner owner,
+            in AttackRules rules)
         {
             if (!targeting.HasTarget) return;
 
@@ -69,7 +69,6 @@ namespace _Game.Systems
             
             float2 baseDir = math.normalize(delta);
             Entity prefab = scatterData.ProjectilePrefab;
-            bool isPlayer = (classification.Faction & FactionMask.Player) != 0;
 
             float scale = TransformLookup.HasComponent(prefab) ? TransformLookup[prefab].Scale : 1f;
 
@@ -95,17 +94,7 @@ namespace _Game.Systems
                 ECB.SetComponent(sortKey, projectile, new ProjectileDamage { Value = weaponStats.Damage });
                 ECB.SetComponent(sortKey, projectile, new ProjectilePierce { Remaining = projStats.Pierce });
                 ECB.SetComponent(sortKey, projectile, new ProjectileBounce { Remaining = projStats.BounceCount, Range = projStats.BounceRange, Falloff = projStats.BounceFalloff, MinDamage = weaponStats.Damage * projStats.BounceDamageFloor });
-                ECB.SetComponent(sortKey, projectile, new ProjectileSource { Weapon = entity, Owner = owner.Value });
-
-                // Who owns this weapon?
-                if (isPlayer)
-                {
-                    ECB.AddComponent<PlayerProjectileTag>(sortKey, projectile);
-                }
-                else
-                {
-                    ECB.AddComponent<EnemyProjectileTag>(sortKey, projectile);
-                }
+                ECB.SetComponent(sortKey, projectile, new ProjectileSource { Weapon = entity, Owner = owner.Value, Rules = rules });
             }
 
             ECB.SetComponentEnabled<ReadyToFire>(sortKey, entity, false);

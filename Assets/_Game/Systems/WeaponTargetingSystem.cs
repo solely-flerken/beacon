@@ -13,7 +13,6 @@ namespace _Game.Systems
     [UpdateAfter(typeof(SpatialGridSystem))]
     public partial struct WeaponTargetingSystem : ISystem
     {
-        private ComponentLookup<EnemyTag> _enemyTagLookup;
         private ComponentLookup<LocalToWorld> _transformLookup;
         private ComponentLookup<Health> _healthLookup;
         private ComponentLookup<EnemyIncomingDamage> _incomingDamageLookup;
@@ -25,7 +24,6 @@ namespace _Game.Systems
             state.RequireForUpdate<WeaponTargeting>();
             state.RequireForUpdate<SpatialGrids>();
 
-            _enemyTagLookup = state.GetComponentLookup<EnemyTag>(isReadOnly: true);
             _transformLookup = state.GetComponentLookup<LocalToWorld>(isReadOnly: true);
             _healthLookup = state.GetComponentLookup<Health>(isReadOnly: true);
             _incomingDamageLookup = state.GetComponentLookup<EnemyIncomingDamage>(isReadOnly: true);
@@ -37,7 +35,6 @@ namespace _Game.Systems
             SpatialGrids grids = SystemAPI.GetSingleton<SpatialGrids>();
             if (!grids.EnemiesValid && !grids.AlliesValid) return;
 
-            _enemyTagLookup.Update(ref state);
             _transformLookup.Update(ref state);
             _healthLookup.Update(ref state);
             _incomingDamageLookup.Update(ref state);
@@ -45,13 +42,11 @@ namespace _Game.Systems
 
             state.Dependency = new WeaponTargetingJob
             {
-                EnemyTagLookup = _enemyTagLookup,
                 TransformLookup = _transformLookup,
                 HealthLookup = _healthLookup,
                 IncomingDamageLookup = _incomingDamageLookup,
                 SteeringLookup = _steeringLookup,
-                EnemyGrid = grids.Enemies,
-                AllyGrid = grids.Allies,
+                Grids = grids,
                 DeltaTime = SystemAPI.Time.DeltaTime,
             }.ScheduleParallel(state.Dependency);
         }
@@ -62,39 +57,43 @@ namespace _Game.Systems
     {
         private const int RandomSampleAttempts = 8;
 
-        [ReadOnly] public ComponentLookup<EnemyTag> EnemyTagLookup;
         [ReadOnly] public ComponentLookup<LocalToWorld> TransformLookup;
 
         [ReadOnly] public ComponentLookup<Health> HealthLookup;
         [ReadOnly] public ComponentLookup<EnemyIncomingDamage> IncomingDamageLookup;
         [ReadOnly] public ComponentLookup<Steering> SteeringLookup;
-        [ReadOnly] public SpatialGrid EnemyGrid;
-        [ReadOnly] public SpatialGrid AllyGrid;
+        [ReadOnly] public SpatialGrids Grids;
         public float DeltaTime;
 
-        private void Execute(Entity entity, ref WeaponTargeting targeting, in WeaponStats weaponStats, in LocalToWorld transform, in WeaponOwner owner)
+        private void Execute(Entity entity, ref WeaponTargeting targeting, in WeaponStats weaponStats, in LocalToWorld transform, in WeaponOwner owner, in AttackRules rules)
         {
             float2 weaponPos = transform.Position.xy;
 
             if (targeting.RandomSeed == 0)
                 targeting.RandomSeed = (uint)entity.Index * 2654435761u + 1u;
             
-            bool isEnemyWeapon = EnemyTagLookup.HasComponent(owner.Value);
-            SpatialGrid grid = isEnemyWeapon ? AllyGrid : EnemyGrid;
+            // The weapon picks its target from the units of every faction it can target, with no faction preferred
+            FactionMask factions = rules.TargetFactions;
+            if (factions == FactionMask.None)
+            {
+                targeting.CurrentTarget = Entity.Null;
+                targeting.HasTarget = false;
+                return;
+            }
 
             if (targeting.StickyLock)
             {
                 // Check if we still have a target
                 if (targeting.CurrentTarget != Entity.Null)
                 {
-                    if (TransformLookup.TryGetComponent(targeting.CurrentTarget, out LocalToWorld enemyTransform))
+                    if (TransformLookup.TryGetComponent(targeting.CurrentTarget, out LocalToWorld targetTransform))
                     {
-                        float2 targetPos = enemyTransform.Position.xy;
+                        float2 targetPos = targetTransform.Position.xy;
                         
                         if (math.distancesq(weaponPos, targetPos) <= weaponStats.TargetRange * weaponStats.TargetRange)
                         {
                             // Drop sticky lock if enough damage is already inbound to kill the target
-                            if (!isEnemyWeapon && IsOverCommitted(targeting.CurrentTarget, HealthLookup, IncomingDamageLookup))
+                            if (IsOverCommitted(targeting.CurrentTarget, HealthLookup, IncomingDamageLookup))
                             {
                                 targeting.CurrentTarget = Entity.Null;
                                 targeting.HasTarget = false;
@@ -130,19 +129,18 @@ namespace _Game.Systems
             targeting.HasTarget = false;
             targeting.CurrentTarget = Entity.Null;
 
-            bool checkIncoming = !isEnemyWeapon;
-            bool foundTarget = TryFindTarget(targeting.Strategy, weaponPos, grid, weaponStats.TargetRange, HealthLookup, IncomingDamageLookup, checkIncoming, owner.Value, ref targeting.RandomSeed, out int foundIndex);
+            bool foundTarget = TryFindTarget(targeting.Strategy, weaponPos, Grids, factions, weaponStats.TargetRange, HealthLookup, IncomingDamageLookup, true, owner.Value, ref targeting.RandomSeed, out GridUnit found);
 
-            // Fallback: if all enemies are over-committed, fire anyway to avoid wasting fire rate
-            if (!foundTarget && checkIncoming)
+            // Fallback: if all units are over-committed, fire anyway to avoid wasting fire rate
+            if (!foundTarget)
             {
-                foundTarget = TryFindTarget(targeting.Strategy, weaponPos, grid, weaponStats.TargetRange, HealthLookup, IncomingDamageLookup, false, owner.Value, ref targeting.RandomSeed, out foundIndex);
+                foundTarget = TryFindTarget(targeting.Strategy, weaponPos, Grids, factions, weaponStats.TargetRange, HealthLookup, IncomingDamageLookup, false, owner.Value, ref targeting.RandomSeed, out found);
             }
 
             if (!foundTarget) return;
 
-            float2 foundTargetPos = grid.Positions[foundIndex];
-            Entity foundTargetEntity = grid.Entities[foundIndex];
+            float2 foundTargetPos = Grids.PositionOf(found);
+            Entity foundTargetEntity = Grids.EntityOf(found);
             targeting.TargetVelocity = EstimateVelocity(foundTargetEntity, foundTargetPos, prevTarget, prevTargetPos);
             targeting.HasTarget = true;
             targeting.TargetPosition = foundTargetPos;
@@ -162,82 +160,129 @@ namespace _Game.Systems
         private static bool TryFindTarget(
             TargetStrategy strategy,
             float2 origin,
-            SpatialGrid grid,
+            in SpatialGrids grids,
+            FactionMask factions,
             float range,
             ComponentLookup<Health> healthLookup,
             ComponentLookup<EnemyIncomingDamage> incomingDamageLookup,
             bool checkIncoming,
             Entity exclude,
             ref uint seed,
-            out int foundIndex)
+            out GridUnit found)
         {
-            switch (strategy)
+            if (strategy == TargetStrategy.Random)
             {
-                case TargetStrategy.Random:
-                    return FindRandom(origin, grid, range, healthLookup, incomingDamageLookup, checkIncoming, exclude, ref seed, out foundIndex);
-                case TargetStrategy.Furthest:
-                    return FindFurthest(origin, grid, range, healthLookup, incomingDamageLookup, checkIncoming, exclude, out foundIndex);
-                case TargetStrategy.Nearest:
-                default:
-                    return FindNearest(origin, grid, range, healthLookup, incomingDamageLookup, checkIncoming, exclude, out foundIndex);
+                return FindRandom(origin, grids, factions, range, healthLookup, incomingDamageLookup, checkIncoming, exclude, ref seed, out found);
             }
+
+            // Nearest and furthest
+            bool furthest = strategy == TargetStrategy.Furthest;
+            float bestSq = furthest ? 0f : range * range;
+            bool foundAny = false;
+            found = default;
+
+            for (int faction = 0; faction < SpatialGrids.FactionCount; faction++)
+            {
+                if (!grids.Has(factions, faction)) continue;
+
+                bool better = furthest
+                    ? FindFurthest(origin, grids[faction], range, healthLookup, incomingDamageLookup, checkIncoming, exclude, ref bestSq, out int index)
+                    : FindNearest(origin, grids[faction], range, healthLookup, incomingDamageLookup, checkIncoming, exclude, ref bestSq, out index);
+                if (!better) continue;
+
+                found = new GridUnit(faction, index);
+                foundAny = true;
+            }
+
+            return foundAny;
         }
 
         /// <summary>
-        /// Picks a uniformly random valid unit in range: a few random draws first, then a full scan if none of them is valid.
+        /// Picks a uniformly random valid unit in range among all <paramref name="factions"/>: a few random draws first, then a full scan if none of them is valid.
         /// </summary>
         private static bool FindRandom(
             float2 origin,
-            SpatialGrid grid,
+            in SpatialGrids grids,
+            FactionMask factions,
             float maxRange,
             ComponentLookup<Health> healthLookup,
             ComponentLookup<EnemyIncomingDamage> incomingDamageLookup,
             bool checkIncoming,
             Entity exclude,
             ref uint seed,
-            out int randomIndex)
+            out GridUnit found)
         {
-            randomIndex = -1;
+            found = default;
 
             float maxRangeSq = maxRange * maxRange;
             Random rng = new(seed);
 
-            grid.GetCellBounds(origin - maxRange, origin + maxRange, out int2 minCell, out int2 maxCell);
-            bool flat = UseFlatScan(grid, minCell, maxCell);
-            int candidateCount = flat ? grid.Count : grid.CountInBox(minCell, maxCell);
+            // All grids share one layout.
+            grids[0].GetCellBounds(origin - maxRange, origin + maxRange, out int2 minCell, out int2 maxCell);
+
+            // Candidates per faction.
+            FixedList64Bytes<int> candidateCounts = default;
+            int candidateCount = 0;
+            for (int faction = 0; faction < SpatialGrids.FactionCount; faction++)
+            {
+                int count = 0;
+                if (grids.Has(factions, faction))
+                {
+                    SpatialGrid grid = grids[faction];
+                    count = UseFlatScan(grid, minCell, maxCell) ? grid.Count : grid.CountInBox(minCell, maxCell);
+                }
+
+                candidateCounts.Add(count);
+                candidateCount += count;
+            }
+
             if (candidateCount == 0) return false;
 
             // Rejection sampling: draw random candidates until one is valid.
             for (int attempt = 0; attempt < RandomSampleAttempts; attempt++)
             {
                 int n = rng.NextInt(0, candidateCount);
-                int i = flat ? n : grid.NthInBox(minCell, maxCell, n);
+                int faction = 0;
+                while (n >= candidateCounts[faction])
+                {
+                    n -= candidateCounts[faction];
+                    faction++;
+                }
+
+                SpatialGrid grid = grids[faction];
+                int i = UseFlatScan(grid, minCell, maxCell) ? n : grid.NthInBox(minCell, maxCell, n);
                 if (math.distancesq(origin, grid.Positions[i]) > maxRangeSq) continue;
                 if (grid.Entities[i] == exclude) continue;
                 if (checkIncoming && IsOverCommitted(grid.Entities[i], healthLookup, incomingDamageLookup)) continue;
 
-                randomIndex = i;
+                found = new GridUnit(faction, i);
                 seed = rng.state;
                 return true;
             }
 
             // Few or no valid targets: scan all candidates and pick one uniformly (reservoir sampling)
-            int count = 0;
-            
-            GridQuery candidates = flat ? grid.All() : grid.Query(minCell, maxCell);
-            foreach (int i in candidates)
-            {
-                if (math.distancesq(origin, grid.Positions[i]) > maxRangeSq) continue;
-                if (grid.Entities[i] == exclude) continue;
-                if (checkIncoming && IsOverCommitted(grid.Entities[i], healthLookup, incomingDamageLookup)) continue;
+            int validCount = 0;
 
-                count++;
-                if (rng.NextInt(0, count) != 0) continue;
-                randomIndex = i;
+            for (int faction = 0; faction < SpatialGrids.FactionCount; faction++)
+            {
+                if (candidateCounts[faction] == 0) continue;
+
+                SpatialGrid grid = grids[faction];
+                GridQuery candidates = UseFlatScan(grid, minCell, maxCell) ? grid.All() : grid.Query(minCell, maxCell);
+                foreach (int i in candidates)
+                {
+                    if (math.distancesq(origin, grid.Positions[i]) > maxRangeSq) continue;
+                    if (grid.Entities[i] == exclude) continue;
+                    if (checkIncoming && IsOverCommitted(grid.Entities[i], healthLookup, incomingDamageLookup)) continue;
+
+                    validCount++;
+                    if (rng.NextInt(0, validCount) != 0) continue;
+                    found = new GridUnit(faction, i);
+                }
             }
 
             seed = rng.state;
-            return randomIndex != -1;
+            return validCount > 0;
         }
 
         /// <summary>
@@ -251,12 +296,12 @@ namespace _Game.Systems
             ComponentLookup<EnemyIncomingDamage> incomingDamageLookup,
             bool checkIncoming,
             Entity exclude,
+            ref float bestSq,
             out int resultIndex)
         {
             resultIndex = -1;
 
             float maxRangeSq = maxRange * maxRange;
-            float bestSq = maxRangeSq;
 
             grid.GetCellBounds(origin - maxRange, origin + maxRange, out int2 minCell, out int2 maxCell);
             if (UseFlatScan(grid, minCell, maxCell))
@@ -304,12 +349,12 @@ namespace _Game.Systems
             ComponentLookup<EnemyIncomingDamage> incomingDamageLookup,
             bool checkIncoming,
             Entity exclude,
+            ref float bestSq,
             out int resultIndex)
         {
             resultIndex = -1;
 
             float maxRangeSq = maxRange * maxRange;
-            float bestSq = 0f;
 
             grid.GetCellBounds(origin - maxRange, origin + maxRange, out int2 minCell, out int2 maxCell);
             if (UseFlatScan(grid, minCell, maxCell))
@@ -338,7 +383,7 @@ namespace _Game.Systems
                     resultIndex = i;
                 }
 
-                if (resultIndex != -1 && MaxDistanceSqWithin(grid, origin, center, radius - 1) <= bestSq) break;
+                if (bestSq > 0f && MaxDistanceSqWithin(grid, origin, center, radius - 1) <= bestSq) break;
             }
 
             return resultIndex != -1;

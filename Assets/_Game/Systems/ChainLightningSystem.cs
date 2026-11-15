@@ -13,7 +13,7 @@ namespace _Game.Systems
 {
     /// <summary>
     /// Resolves the chain lightnings started this frame.
-    /// Each jumps to the nearest enemy the chain hasn't hit yet.
+    /// Each jumps to the nearest unit the chain hasn't hit yet.
     /// Chains are independent, so they are resolved in parallel.
     /// </summary>
     [UpdateInGroup(typeof(SimulationSystemGroup))]
@@ -23,7 +23,7 @@ namespace _Game.Systems
     public partial struct ChainLightningSystem : ISystem
     {
         /// <summary>
-        /// Upper bound on jumps per chain, so the visited list (MaxJumps + 1 grid indices) fits in a FixedList512Bytes (127 ints).
+        /// Upper bound on jumps per chain, so the visited list (MaxJumps + 1 unit keys) fits in a FixedList512Bytes (127 ints).
         /// </summary>
         private const int MaxJumps = 126;
 
@@ -59,7 +59,7 @@ namespace _Game.Systems
             SystemAPI.GetSingletonRW<ChainRequests>();
 
             SpatialGrids grids = SystemAPI.GetSingleton<SpatialGrids>();
-            if (!grids.EnemiesValid)
+            if (!grids.EnemiesValid && !grids.AlliesValid)
             {
                 state.Dependency = new ClearChainRequestsJob { Queue = _queue }.Schedule(state.Dependency);
                 return;
@@ -78,7 +78,7 @@ namespace _Game.Systems
             state.Dependency = new ChainLightningJob
             {
                 Requests = _requests.AsDeferredJobArray(),
-                SpatialGrid = grids.Enemies,
+                Grids = grids,
                 TransformLookup = SystemAPI.GetComponentLookup<LocalTransform>(true),
                 SteeringLookup = SystemAPI.GetComponentLookup<Steering>(true),
                 DamageQueue = damageQueue.AsParallelWriter(),
@@ -121,7 +121,7 @@ namespace _Game.Systems
         private struct ChainLightningJob : IJobParallelForDefer
         {
             [ReadOnly] public NativeArray<ChainRequest> Requests;
-            [ReadOnly] public SpatialGrid SpatialGrid;
+            [ReadOnly] public SpatialGrids Grids;
             [ReadOnly] public ComponentLookup<LocalTransform> TransformLookup;
             [ReadOnly] public ComponentLookup<Steering> SteeringLookup;
             [WriteOnly] public NativeQueue<DamageEvent>.ParallelWriter DamageQueue;
@@ -136,20 +136,21 @@ namespace _Game.Systems
 
                 ChainFilter filter = default;
                 filter.Owner = request.Owner;
-                filter.Visited.Add(request.InitialIndex);
+                filter.Visited.Add(request.InitialUnit.Key);
 
-                float2 from = PositionOf(request.InitialTarget, request.Position);
-                float2 fromVelocity = VelocityOf(request.InitialTarget);
+                Entity initialTarget = Grids.EntityOf(request.InitialUnit);
+                float2 from = PositionOf(initialTarget, Grids.PositionOf(request.InitialUnit));
+                float2 fromVelocity = VelocityOf(initialTarget);
                 float damage = request.Damage;
 
                 for (int jump = 0; jump < request.Count; jump++)
                 {
-                    if (!HopTargeting.FindNearest(from, SpatialGrid, request.Range, ref filter, out int next)) break;
+                    if (!HopTargeting.FindNearest(from, Grids, request.TargetFactions, request.Range, ref filter, out GridUnit next)) break;
 
-                    Entity target = SpatialGrid.Entities[next];
-                    float2 to = PositionOf(target, SpatialGrid.Positions[next]);
+                    Entity target = Grids.EntityOf(next);
+                    float2 to = PositionOf(target, Grids.PositionOf(next));
                     float2 toVelocity = VelocityOf(target);
-                    filter.Visited.Add(next);
+                    filter.Visited.Add(next.Key);
 
                     damage = math.max(damage * request.Falloff, request.MinDamage);
 
@@ -158,7 +159,7 @@ namespace _Game.Systems
                         Target = target,
                         Value = damage,
                         Source = request.Weapon,
-                        ReportHit = true,
+                        ReportHit = request.ReportHits,
                         Position = new float3(to, 0f),
                     });
 
@@ -214,13 +215,13 @@ namespace _Game.Systems
         public FixedList512Bytes<int> Visited;
         public Entity Owner;
 
-        public bool IsExcluded(int index, Entity entity)
+        public bool IsExcluded(GridUnit unit, Entity entity)
         {
             if (entity == Owner) return true;
 
             for (int i = 0; i < Visited.Length; i++)
             {
-                if (Visited[i] == index) return true;
+                if (Visited[i] == unit.Key) return true;
             }
 
             return false;

@@ -14,25 +14,12 @@ namespace _Game.Systems
     [UpdateAfter(typeof(SpatialGridSystem))]
     public partial struct ProjectileSystem : ISystem
     {
-        private EntityQuery _playerProjectiles;
-        private EntityQuery _enemyProjectiles;
-        
         public void OnCreate(ref SystemState state)
         {
             state.RequireForUpdate<ProjectileTag>();
             state.RequireForUpdate<EndSimulationEntityCommandBufferSystem.Singleton>();
             state.RequireForUpdate<SpatialGrids>();
             state.RequireForUpdate<DamageEvents>();
-
-            _playerProjectiles = SystemAPI.QueryBuilder()
-                .WithAll<PlayerProjectileTag, LocalTransform, ProjectileVelocity, ProjectileDamage, ProjectilePierce, ProjectileBounce, ProjectileTarget>()
-                .WithAll<ProjectileSource>()
-                .Build();
-
-            _enemyProjectiles = SystemAPI.QueryBuilder()
-                .WithAll<EnemyProjectileTag, LocalTransform, ProjectileVelocity, ProjectileDamage, ProjectilePierce, ProjectileBounce, ProjectileTarget>()
-                .WithAll<ProjectileSource>()
-                .Build();
         }
 
         public void OnUpdate(ref SystemState state)
@@ -43,49 +30,23 @@ namespace _Game.Systems
                 DeltaTime = SystemAPI.Time.DeltaTime
             }.ScheduleParallel(state.Dependency);
 
-            EndSimulationEntityCommandBufferSystem.Singleton ecbSingleton = SystemAPI.GetSingleton<EndSimulationEntityCommandBufferSystem.Singleton>();
-            SpatialGrids grids = SystemAPI.GetSingleton<SpatialGrids>();
-
             // Check collisions
+            SpatialGrids grids = SystemAPI.GetSingleton<SpatialGrids>();
+            if (!grids.EnemiesValid && !grids.AlliesValid) return;
+
+            EndSimulationEntityCommandBufferSystem.Singleton ecbSingleton = SystemAPI.GetSingleton<EndSimulationEntityCommandBufferSystem.Singleton>();
+            EntityCommandBuffer ecb = ecbSingleton.CreateCommandBuffer(state.WorldUnmanaged);
             NativeQueue<DamageEvent> damageQueue = SystemAPI.GetSingletonRW<DamageEvents>().ValueRO.Queue;
-            NativeQueue<DamageEvent>.ParallelWriter damageQueueWriter = damageQueue.AsParallelWriter();
-            BufferLookup<HitCooldown> hitCooldownLookup = SystemAPI.GetBufferLookup<HitCooldown>(true);
 
-            double elapsedTime = SystemAPI.Time.ElapsedTime;
-
-            // PLAYER PROJECTILES vs ENEMIES
-            if (grids.EnemiesValid && !_playerProjectiles.IsEmpty)
+            state.Dependency = new CollisionJob
             {
-                EntityCommandBuffer.ParallelWriter ecb = ecbSingleton.CreateCommandBuffer(state.WorldUnmanaged).AsParallelWriter();
-
-                state.Dependency = new CollisionJob
-                {
-                    SpatialGrid = grids.Enemies,
-                    HitRadius = 0.5f,
-                    ECB = ecb,
-                    ReportHits = true,
-                    DamageQueue = damageQueueWriter,
-                    HitCooldowns = hitCooldownLookup,
-                    ElapsedTime = elapsedTime,
-                }.ScheduleParallel(_playerProjectiles, state.Dependency);
-            }
-
-            // ENEMY PROJECTILES vs PLAYER
-            if (grids.AlliesValid && !_enemyProjectiles.IsEmpty)
-            {
-                EntityCommandBuffer.ParallelWriter ecb = ecbSingleton.CreateCommandBuffer(state.WorldUnmanaged).AsParallelWriter();
-
-                state.Dependency = new CollisionJob
-                {
-                    SpatialGrid = grids.Allies,
-                    HitRadius = 0.5f,
-                    ECB = ecb,
-                    ReportHits = false, // TODO: enemy -> beacon hits don't count as player weapon stats. Need a dedicated stat for them
-                    DamageQueue = damageQueueWriter,
-                    HitCooldowns = hitCooldownLookup,
-                    ElapsedTime = elapsedTime,
-                }.ScheduleParallel(_enemyProjectiles, state.Dependency);
-            }
+                Grids = grids,
+                HitRadius = 0.5f,
+                ECB = ecb.AsParallelWriter(),
+                DamageQueue = damageQueue.AsParallelWriter(),
+                HitCooldowns = SystemAPI.GetBufferLookup<HitCooldown>(true),
+                ElapsedTime = SystemAPI.Time.ElapsedTime,
+            }.ScheduleParallel(state.Dependency);
         }
     }
 
@@ -104,15 +65,10 @@ namespace _Game.Systems
     [BurstCompile]
     internal partial struct CollisionJob : IJobEntity
     {
-        [ReadOnly] public SpatialGrid SpatialGrid;
+        [ReadOnly] public SpatialGrids Grids;
         [ReadOnly] public float HitRadius;
         
         public EntityCommandBuffer.ParallelWriter ECB;
-        
-        /// <summary>
-        /// Credit hits to the firing weapon.
-        /// </summary>
-        public bool ReportHits;
 
         [WriteOnly] public NativeQueue<DamageEvent>.ParallelWriter DamageQueue;
         [ReadOnly] public BufferLookup<HitCooldown> HitCooldowns;
@@ -122,78 +78,91 @@ namespace _Game.Systems
         private void Execute(Entity projectile, [EntityIndexInQuery] int sortKey, in LocalTransform transform, ref ProjectileVelocity velocity, ref ProjectileDamage damage, ref ProjectilePierce pierce, ref ProjectileBounce bounce, ref ProjectileTarget reservation, in ProjectileSource source)
         {
             float2 pos = new(transform.Position.x, transform.Position.y);
-            float hitRadiusSq = HitRadius * HitRadius;
+            float bestSq = HitRadius * HitRadius;
+            Entity target = Entity.Null;
 
-            foreach (int i in SpatialGrid.QueryNeighbors(pos, 1))
+            for (int faction = 0; faction < SpatialGrids.FactionCount; faction++)
             {
-                if (math.distancesq(pos, SpatialGrid.Positions[i]) > hitRadiusSq) continue;
+                if (!Grids.Has(source.Rules.TargetFactions, faction)) continue;
 
-                Entity target = SpatialGrid.Entities[i];
-                if (target == source.Owner) continue;
-
-                // Check if projectile can damage the current entity
-                if (HitCooldowns.HasBuffer(target))
+                SpatialGrid grid = Grids[faction];
+                foreach (int i in grid.QueryNeighbors(pos, 1))
                 {
-                    bool onCooldown = false;
-                    DynamicBuffer<HitCooldown> cds = HitCooldowns[target];
+                    float distSq = math.distancesq(pos, grid.Positions[i]);
+                    if (distSq > bestSq) continue;
 
-                    for (int c = 0; c < cds.Length; c++)
-                    {
-                        if (cds[c].Source != projectile) continue;
+                    Entity candidate = grid.Entities[i];
+                    if (candidate == source.Owner || HasHit(projectile, candidate)) continue;
 
-                        onCooldown = true;
-                        break;
-                    }
-
-                    // Projectile can't hit the entity - continue with next
-                    if (onCooldown) continue;
-
-                    ECB.AppendToBuffer(sortKey, target, new HitCooldown { Source = projectile, Expiry = float.PositiveInfinity });
+                    bestSq = distSq;
+                    target = candidate;
                 }
-                else
-                {
-#if UNITY_EDITOR
-                    Debug.Log($"[ProjectileSystem] Entity {target.Index} is missing HitCooldown! Skipping hit.");
-#endif
-                }
-
-                DamageQueue.Enqueue(new DamageEvent
-                {
-                    Target = target,
-                    Value = damage.Value,
-                    Source = source.Weapon,
-                    ReportHit = ReportHits,
-                    Position = transform.Position,
-                });
-
-                // Handle pierce, then ricochet
-                pierce.Remaining--;
-                if (pierce.Remaining >= 0) return;
-
-                if (bounce.Remaining > 0 && TryBounce(projectile, target, source.Owner, pos, ref velocity, ref damage, ref bounce, ref reservation)) return;
-
-                ECB.DestroyEntity(sortKey, projectile);
-                return;
             }
+
+            if (target == Entity.Null) return;
+
+            // Remember the hit, so the projectile can't damage this unit again
+            if (HitCooldowns.HasBuffer(target))
+            {
+                ECB.AppendToBuffer(sortKey, target, new HitCooldown { Source = projectile, Expiry = float.PositiveInfinity });
+            }
+            else
+            {
+#if UNITY_EDITOR
+                Debug.Log($"[ProjectileSystem] Entity {target.Index} is missing HitCooldown! It can be hit again.");
+#endif
+            }
+
+            DamageQueue.Enqueue(new DamageEvent
+            {
+                Target = target,
+                Value = damage.Value,
+                Source = source.Weapon,
+                ReportHit = source.Rules.ReportHits,
+                Position = transform.Position,
+            });
+
+            // Handle pierce, then ricochet
+            pierce.Remaining--;
+            if (pierce.Remaining >= 0) return;
+
+            if (bounce.Remaining > 0 && TryBounce(projectile, target, pos, ref velocity, ref damage, ref bounce, ref reservation, source)) return;
+
+            ECB.DestroyEntity(sortKey, projectile);
         }
 
         /// <summary>
-        /// Redirects the projectile to the nearest enemy in bounce range it hasn't hit yet, and moves its overkill reservation there.
+        /// True if the projectile already hit <paramref name="target"/>.
+        /// </summary>
+        private bool HasHit(Entity projectile, Entity target)
+        {
+            if (!HitCooldowns.TryGetBuffer(target, out DynamicBuffer<HitCooldown> cds)) return false;
+
+            for (int c = 0; c < cds.Length; c++)
+            {
+                if (cds[c].Source == projectile) return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Redirects the projectile to the nearest unit in bounce range it hasn't hit yet, and moves its overkill reservation there.
         /// False if there is none.
         /// </summary>
-        private bool TryBounce(Entity projectile, Entity lastTarget, Entity owner, float2 pos, ref ProjectileVelocity velocity, ref ProjectileDamage damage, ref ProjectileBounce bounce, ref ProjectileTarget reservation)
+        private bool TryBounce(Entity projectile, Entity lastTarget, float2 pos, ref ProjectileVelocity velocity, ref ProjectileDamage damage, ref ProjectileBounce bounce, ref ProjectileTarget reservation, in ProjectileSource source)
         {
-            RicochetFilter filter = new() { Projectile = projectile, LastTarget = lastTarget, Owner = owner, HitCooldowns = HitCooldowns };
-            if (!HopTargeting.FindNearest(pos, SpatialGrid, bounce.Range, ref filter, out int next)) return false;
+            RicochetFilter filter = new() { Projectile = projectile, LastTarget = lastTarget, Owner = source.Owner, HitCooldowns = HitCooldowns };
+            if (!HopTargeting.FindNearest(pos, Grids, source.Rules.TargetFactions, bounce.Range, ref filter, out GridUnit next)) return false;
 
-            float2 toNext = SpatialGrid.Positions[next] - pos;
+            float2 toNext = Grids.PositionOf(next) - pos;
             float speed = math.length(velocity.Value);
 
             velocity.Value = math.normalizesafe(toNext) * speed;
             damage.Value = math.max(damage.Value * bounce.Falloff, bounce.MinDamage);
             bounce.Remaining--;
 
-            reservation.Value = SpatialGrid.Entities[next];
+            reservation.Value = Grids.EntityOf(next);
             reservation.ReservationExpiry = ElapsedTime + math.length(toNext) / math.max(speed, 0.01f) * 1.5;
 
             return true;
@@ -207,7 +176,7 @@ namespace _Game.Systems
         public Entity Owner;
         [ReadOnly] public BufferLookup<HitCooldown> HitCooldowns;
 
-        public bool IsExcluded(int index, Entity entity)
+        public bool IsExcluded(GridUnit unit, Entity entity)
         {
             if (entity == LastTarget || entity == Owner) return true;
             if (!HitCooldowns.TryGetBuffer(entity, out DynamicBuffer<HitCooldown> cds)) return false;

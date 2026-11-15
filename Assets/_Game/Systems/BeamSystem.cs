@@ -60,12 +60,12 @@ namespace _Game.Systems
             SpatialGrids grids = SystemAPI.GetSingleton<SpatialGrids>();
             NativeQueue<DamageEvent> damageQueue = SystemAPI.GetSingletonRW<DamageEvents>().ValueRO.Queue;
             NativeQueue<ChainRequest> chainQueue = SystemAPI.GetSingletonRW<ChainRequests>().ValueRO.Queue;
-            if (!grids.EnemiesValid) return;
+            if (!grids.EnemiesValid && !grids.AlliesValid) return;
 
             state.Dependency = new BeamDamageJob
             {
-                SpatialGrid = grids.Enemies,
-                EnemyHitRadius = 0.5f,
+                Grids = grids,
+                UnitHitRadius = 0.5f,
                 DamageQueue = damageQueue.AsParallelWriter(),
                 ChainQueue = chainQueue.AsParallelWriter(),
             }.ScheduleParallel(state.Dependency);
@@ -90,8 +90,8 @@ namespace _Game.Systems
         private const float MaxWindowSeconds = 0.08f;
         private const int MaxArcSegments = 8;
 
-        [ReadOnly] public SpatialGrid SpatialGrid;
-        [ReadOnly] public float EnemyHitRadius;
+        [ReadOnly] public SpatialGrids Grids;
+        [ReadOnly] public float UnitHitRadius;
 
         [WriteOnly] public NativeQueue<DamageEvent>.ParallelWriter DamageQueue;
         [WriteOnly] public NativeQueue<ChainRequest>.ParallelWriter ChainQueue;
@@ -105,7 +105,8 @@ namespace _Game.Systems
             in BeamStats beamStats,
             in ChainStats chain,
             in LocalToWorld transform,
-            in WeaponOwner owner)
+            in WeaponOwner owner,
+            in AttackRules rules)
         {
             float2 toDir = facing.Direction;
             if (math.lengthsq(toDir) < 0.001f) return;
@@ -133,9 +134,11 @@ namespace _Game.Systems
             facing.WindowOpen = weaponState.Timer >= armTime;
             facing.WindowStartDirection = toDir;
 
+            if (!Grids.AnyUnits(rules.TargetFactions)) return;
+
             float2 origin = transform.Position.xy;
             float range = stats.TargetRange;
-            float hitRadius = beamStats.Width * 0.5f + EnemyHitRadius;
+            float hitRadius = beamStats.Width * 0.5f + UnitHitRadius;
             float sweep = math.atan2(Cross(fromDir, toDir), math.dot(fromDir, toDir));
             float pulseDamage = stats.Damage;
             float hitDiameter = 2f * hitRadius;
@@ -162,54 +165,63 @@ namespace _Game.Systems
                 boundsMin = math.min(boundsMin, outline[k]);
                 boundsMax = math.max(boundsMax, outline[k]);
             }
-            SpatialGrid.GetCellBounds(boundsMin - hitRadius, boundsMax + hitRadius, out int2 minCell, out int2 maxCell);
 
-            int nearestHitIndex = -1;
+            bool hitAny = false;
+            GridUnit nearestHit = default;
             float nearestHitDistSq = float.MaxValue;
 
-            for (int row = minCell.y; row <= maxCell.y; row++)
+            for (int faction = 0; faction < SpatialGrids.FactionCount; faction++)
             {
-                // Edge rows also hold units clamped in from outside the grid, so their band reaches to infinity
-                float bandMin = row == 0 ? float.NegativeInfinity : SpatialGrid.Origin.y + row * SpatialGrid.CellSize - hitRadius;
-                float bandMax = row == SpatialGrid.Height - 1 ? float.PositiveInfinity : SpatialGrid.Origin.y + (row + 1) * SpatialGrid.CellSize + hitRadius;
-                if (!RowSpan(outline, bandMin, bandMax, out float xMin, out float xMax)) continue;
+                if (!Grids.Has(rules.TargetFactions, faction)) continue;
 
-                int x0 = math.clamp((int)math.floor((xMin - hitRadius - SpatialGrid.Origin.x) * SpatialGrid.InvCellSize), 0, SpatialGrid.Width - 1);
-                int x1 = math.clamp((int)math.floor((xMax + hitRadius - SpatialGrid.Origin.x) * SpatialGrid.InvCellSize), 0, SpatialGrid.Width - 1);
+                SpatialGrid grid = Grids[faction];
+                grid.GetCellBounds(boundsMin - hitRadius, boundsMax + hitRadius, out int2 minCell, out int2 maxCell);
 
-                foreach (int i in SpatialGrid.Query(new int2(x0, row), new int2(x1, row)))
+                for (int row = minCell.y; row <= maxCell.y; row++)
                 {
-                    float2 pos = SpatialGrid.Positions[i];
-                    if (!slice.Contains(pos)) continue;
-                    if (SpatialGrid.Entities[i] == owner.Value) continue;
+                    // Edge rows also hold units clamped in from outside the grid, so their band reaches to infinity
+                    float bandMin = row == 0 ? float.NegativeInfinity : grid.Origin.y + row * grid.CellSize - hitRadius;
+                    float bandMax = row == grid.Height - 1 ? float.PositiveInfinity : grid.Origin.y + (row + 1) * grid.CellSize + hitRadius;
+                    if (!RowSpan(outline, bandMin, bandMax, out float xMin, out float xMax)) continue;
 
-                    // Fraction of the window the beam covered this enemy: full while the beam rests on it, less when swept past.
-                    float sweptArc = math.distance(pos, origin) * absSweep;
-                    float coverage = math.min(1f, hitDiameter / math.max(sweptArc, 1e-4f));
+                    int x0 = math.clamp((int)math.floor((xMin - hitRadius - grid.Origin.x) * grid.InvCellSize), 0, grid.Width - 1);
+                    int x1 = math.clamp((int)math.floor((xMax + hitRadius - grid.Origin.x) * grid.InvCellSize), 0, grid.Width - 1);
 
-                    DamageQueue.Enqueue(new DamageEvent
+                    foreach (int i in grid.Query(new int2(x0, row), new int2(x1, row)))
                     {
-                        Target = SpatialGrid.Entities[i],
-                        Value = pulseDamage * coverage,
-                        Source = beamEntity,
-                        ReportHit = true,
-                        Position = new float3(pos, 0f),
-                    });
+                        float2 pos = grid.Positions[i];
+                        if (!slice.Contains(pos)) continue;
+                        if (grid.Entities[i] == owner.Value) continue;
 
-                    float distSq = math.distancesq(pos, origin);
-                    if (distSq >= nearestHitDistSq) continue;
-                    nearestHitDistSq = distSq;
-                    nearestHitIndex = i;
+                        // Fraction of the window the beam covered this unit: full while the beam rests on it, less when swept past.
+                        float sweptArc = math.distance(pos, origin) * absSweep;
+                        float coverage = math.min(1f, hitDiameter / math.max(sweptArc, 1e-4f));
+
+                        DamageQueue.Enqueue(new DamageEvent
+                        {
+                            Target = grid.Entities[i],
+                            Value = pulseDamage * coverage,
+                            Source = beamEntity,
+                            ReportHit = rules.ReportHits,
+                            Position = new float3(pos, 0f),
+                        });
+
+                        float distSq = math.distancesq(pos, origin);
+                        if (distSq >= nearestHitDistSq) continue;
+                        nearestHitDistSq = distSq;
+                        nearestHit = new GridUnit(faction, i);
+                        hitAny = true;
+                    }
                 }
             }
 
-            if (chain.Count <= 0 || nearestHitIndex < 0) return;
+            if (chain.Count <= 0 || !hitAny) return;
 
             ChainQueue.Enqueue(new ChainRequest
             {
-                InitialIndex = nearestHitIndex,
-                InitialTarget = SpatialGrid.Entities[nearestHitIndex],
-                Position = SpatialGrid.Positions[nearestHitIndex],
+                InitialUnit = nearestHit,
+                TargetFactions = rules.TargetFactions,
+                ReportHits = rules.ReportHits,
                 Damage = stats.Damage,
                 Count = chain.Count,
                 Range = chain.Range,

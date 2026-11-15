@@ -10,6 +10,22 @@ namespace _Game.Components
     }
     
     /// <summary>
+    /// Which factions a weapon's attacks hit, and whether its hits count for the run. Set by WeaponStatUpdateSystem.
+    /// </summary>
+    public struct AttackRules : IComponentData
+    {
+        /// <summary>
+        /// Factions the attacks hit.
+        /// </summary>
+        public FactionMask TargetFactions;
+
+        /// <summary>
+        /// Whether hits are reported for the weapon (run stats, hit sparks).
+        /// </summary>
+        public bool ReportHits;
+    }
+
+    /// <summary>
     /// Enabled by the Cooldown system when the weapon is ready to fire.
     /// </summary>
     public struct ReadyToFire : IComponentData, IEnableableComponent { }

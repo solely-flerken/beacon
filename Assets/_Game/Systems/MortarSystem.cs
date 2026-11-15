@@ -55,8 +55,7 @@ namespace _Game.Systems
                 PayloadLookup = _mortarStatsLookup,
                 WeaponStatsLookup = _weaponStatsLookup,
                 
-                EnemyGridValid = grids.EnemiesValid,
-                EnemyGrid = grids.Enemies,
+                Grids = grids,
 
                 DamageQueue = damageQueue.AsParallelWriter(),
             }.ScheduleParallel(state.Dependency);
@@ -94,8 +93,7 @@ namespace _Game.Systems
             [ReadOnly] public ComponentLookup<MortarStats> PayloadLookup;
             [ReadOnly] public ComponentLookup<WeaponStats> WeaponStatsLookup;
 
-            [ReadOnly] public bool EnemyGridValid;
-            [ReadOnly] public SpatialGrid EnemyGrid;
+            [ReadOnly] public SpatialGrids Grids;
 
             [WriteOnly] public NativeQueue<DamageEvent>.ParallelWriter DamageQueue;
 
@@ -120,10 +118,12 @@ namespace _Game.Systems
                 if (!WeaponStatsLookup.TryGetComponent(source.Weapon,out WeaponStats baseStats)) return;
 
                 SpawnExplosion(sortKey, impactPos, mortarStats.ExplosionRadius, flight.ExplosionPrefab);
-
-                if (EnemyGridValid)
+                
+                for (int faction = 0; faction < SpatialGrids.FactionCount; faction++)
                 {
-                    ApplyRadiusDamage(impactPos, baseStats.Damage, mortarStats.ExplosionRadius, source);
+                    if (!Grids.Has(source.Rules.TargetFactions, faction)) continue;
+
+                    ApplyRadiusDamage(Grids[faction], impactPos, baseStats.Damage, mortarStats.ExplosionRadius, source);
                 }
             }
 
@@ -143,21 +143,21 @@ namespace _Game.Systems
                 });
             }
 
-            private void ApplyRadiusDamage(float2 center, float damage, float radius, in ProjectileSource source)
+            private void ApplyRadiusDamage(in SpatialGrid grid, float2 center, float damage, float radius, in ProjectileSource source)
             {
                 float radiusSq = radius * radius;
                 
-                foreach (int i in EnemyGrid.Query(center - radius, center + radius))
+                foreach (int i in grid.Query(center - radius, center + radius))
                 {
-                    if (math.distancesq(EnemyGrid.Positions[i], center) > radiusSq) continue;
-                    if (EnemyGrid.Entities[i] == source.Owner) continue;
+                    if (math.distancesq(grid.Positions[i], center) > radiusSq) continue;
+                    if (grid.Entities[i] == source.Owner) continue;
 
                     DamageQueue.Enqueue(new DamageEvent
                     {
-                        Target = EnemyGrid.Entities[i],
+                        Target = grid.Entities[i],
                         Value = damage,
                         Source = source.Weapon,
-                        ReportHit = true,
+                        ReportHit = source.Rules.ReportHits,
                         Position = new float3(center, 0f),
                     });
                 }

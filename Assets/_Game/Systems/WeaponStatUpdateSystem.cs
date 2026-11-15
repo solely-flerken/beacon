@@ -17,8 +17,8 @@ namespace _Game.Systems
             if (!SystemAPI.TryGetSingletonBuffer(out DynamicBuffer<WaveStatModifier> waveBuffer, isReadOnly: true))
                 return;
 
-            foreach ((RefRW<WeaponStats> stats, RefRW<AttackStats> attack, RefRW<Classification> mask, DynamicBuffer<StatModifier> localMods, Entity entity) in
-                     SystemAPI.Query<RefRW<WeaponStats>, RefRW<AttackStats>, RefRW<Classification>, DynamicBuffer<StatModifier>>().WithAll<WeaponStatUpdateRequired>().WithEntityAccess())
+            foreach ((RefRW<WeaponStats> stats, RefRW<AttackStats> attack, RefRW<AttackRules> rules, RefRW<Classification> mask, DynamicBuffer<StatModifier> localMods, Entity entity) in
+                     SystemAPI.Query<RefRW<WeaponStats>, RefRW<AttackStats>, RefRW<AttackRules>, RefRW<Classification>, DynamicBuffer<StatModifier>>().WithAll<WeaponStatUpdateRequired>().WithEntityAccess())
             {
                 DynamicBuffer<StatModifier> ownerMods = default;
                 BlobAssetReference<EnemyTypeBlob> ownerBlobRef = default;
@@ -52,6 +52,25 @@ namespace _Game.Systems
                         }
                     }
                 }
+
+                // ATTACK RULES: a weapon targets every faction it isn't on
+                FactionMask faction = mask.ValueRO.Faction;
+                FactionMask targetFactions = faction == FactionMask.None ? FactionMask.None : (FactionMask.Player | FactionMask.Enemy) & ~faction;
+
+                if (rules.ValueRO.TargetFactions != targetFactions)
+                {
+                    rules.ValueRW.TargetFactions = targetFactions;
+
+                    // A locked target may be on a faction the weapon no longer targets
+                    if (SystemAPI.HasComponent<WeaponTargeting>(entity))
+                    {
+                        RefRW<WeaponTargeting> targeting = SystemAPI.GetComponentRW<WeaponTargeting>(entity);
+                        targeting.ValueRW.CurrentTarget = Entity.Null;
+                        targeting.ValueRW.HasTarget = false;
+                    }
+                }
+
+                rules.ValueRW.ReportHits = (faction & FactionMask.Player) != 0;
 
                 stats.ValueRW.Damage = StatResolver.ResolveWeapon(StatType.Damage, stats.ValueRO.BaseDamage, mask.ValueRO, globalBuffer, waveBuffer, localMods, ownerMods, ownerBlobRef);
                 stats.ValueRW.FireRate = StatResolver.ResolveWeapon(StatType.FireRate, stats.ValueRO.BaseFireRate, mask.ValueRO, globalBuffer, waveBuffer, localMods, ownerMods, ownerBlobRef);

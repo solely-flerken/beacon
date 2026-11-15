@@ -1,6 +1,6 @@
+using _Game.Components;
 using Unity.Collections;
 using Unity.Entities;
-using Unity.Mathematics;
 
 namespace _Game.Shared
 {
@@ -10,11 +10,16 @@ namespace _Game.Shared
     public struct ChainRequest
     {
         /// <summary>
-        /// Index of <see cref="InitialTarget"/> in this frame's enemy spatial grid.
+        /// The unit the chain starts from.
         /// </summary>
-        public int InitialIndex;
-        public Entity InitialTarget;
-        public float2 Position;
+        public GridUnit InitialUnit;
+
+        /// <summary>
+        /// Factions the chain can jump to, copied from the weapon.
+        /// </summary>
+        public FactionMask TargetFactions;
+
+        public bool ReportHits;
 
         public float Damage;
         
@@ -24,7 +29,7 @@ namespace _Game.Shared
         public float Falloff;
 
         /// <summary>
-        /// Weapon that started the chain: the source of its hits, and credited with them in run stats.
+        /// Weapon that started the chain: the source of its hits.
         /// </summary>
         public Entity Weapon;
 

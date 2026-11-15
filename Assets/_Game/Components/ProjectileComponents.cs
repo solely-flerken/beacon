@@ -26,7 +26,7 @@ namespace _Game.Components
     }
 
     /// <summary>
-    /// How many enemies this projectile can pass through before being destroyed.
+    /// How many units this projectile can pass through before being destroyed.
     /// </summary>
     public struct ProjectilePierce : IComponentData
     {
@@ -34,7 +34,7 @@ namespace _Game.Components
     }
 
     /// <summary>
-    /// Ricochet: once pierce is used up, the projectile redirects to the nearest enemy it hasn't hit yet.
+    /// Ricochet: once pierce is used up, the projectile redirects to the nearest unit it hasn't hit yet.
     /// </summary>
     public struct ProjectileBounce : IComponentData
     {
@@ -66,6 +66,11 @@ namespace _Game.Components
         /// Unit that owned the weapon.
         /// </summary>
         public Entity Owner;
+
+        /// <summary>
+        /// The weapon's attack rules when it fired.
+        /// </summary>
+        public AttackRules Rules;
     }
 
     /// <summary>

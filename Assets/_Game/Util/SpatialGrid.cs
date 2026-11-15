@@ -34,9 +34,9 @@ namespace _Game.Util
         public int Height;
         public int Count;
 
-        public bool IsCreated => CellFirstIndex.IsCreated;
+        public readonly bool IsCreated => CellFirstIndex.IsCreated;
 
-        public int2 WorldToCell(float2 worldPos)
+        public readonly int2 WorldToCell(float2 worldPos)
         {
             int2 cell = (int2)math.floor((worldPos - Origin) * InvCellSize);
             return math.clamp(cell, int2.zero, new int2(Width - 1, Height - 1));
@@ -49,7 +49,7 @@ namespace _Game.Util
         /// <param name="worldMax">Top-right corner of the box in world space.</param>
         /// <param name="minCell">Bottom-left cell, inclusive.</param>
         /// <param name="maxCell">Top-right cell, inclusive.</param>
-        public void GetCellBounds(float2 worldMin, float2 worldMax, out int2 minCell, out int2 maxCell)
+        public readonly void GetCellBounds(float2 worldMin, float2 worldMax, out int2 minCell, out int2 maxCell)
         {
             ClampBounds((int2)math.floor((worldMin - Origin) * InvCellSize),
                 (int2)math.floor((worldMax - Origin) * InvCellSize), out minCell, out maxCell);
@@ -58,7 +58,7 @@ namespace _Game.Util
         /// <summary>
         /// All units in the cells within <paramref name="cellRadius"/> of the cell containing <paramref name="worldPos"/>.
         /// </summary>
-        public GridQuery QueryNeighbors(float2 worldPos, int cellRadius)
+        public readonly GridQuery QueryNeighbors(float2 worldPos, int cellRadius)
         {
             int2 cell = (int2)math.floor((worldPos - Origin) * InvCellSize);
             ClampBounds(cell - cellRadius, cell + cellRadius, out int2 minCell, out int2 maxCell);
@@ -68,7 +68,7 @@ namespace _Game.Util
         /// <summary>
         /// All units in the cells overlapping the world-space box [<paramref name="worldMin"/>, <paramref name="worldMax"/>].
         /// </summary>
-        public GridQuery Query(float2 worldMin, float2 worldMax)
+        public readonly GridQuery Query(float2 worldMin, float2 worldMax)
         {
             GetCellBounds(worldMin, worldMax, out int2 minCell, out int2 maxCell);
             return Query(minCell, maxCell);
@@ -77,7 +77,7 @@ namespace _Game.Util
         /// <summary>
         /// All units in the cell box [<paramref name="minCell"/>, <paramref name="maxCell"/>].
         /// </summary>
-        public GridQuery Query(int2 minCell, int2 maxCell)
+        public readonly GridQuery Query(int2 minCell, int2 maxCell)
         {
             return new GridQuery(CellFirstIndex, Width, minCell, maxCell);
         }
@@ -85,7 +85,7 @@ namespace _Game.Util
         /// <summary>
         /// Number of units in the cell box [<paramref name="minCell"/>, <paramref name="maxCell"/>].
         /// </summary>
-        public int CountInBox(int2 minCell, int2 maxCell)
+        public readonly int CountInBox(int2 minCell, int2 maxCell)
         {
             int count = 0;
             for (int rowCell = minCell.y * Width; rowCell <= maxCell.y * Width; rowCell += Width)
@@ -100,7 +100,7 @@ namespace _Game.Util
         /// Index of the <paramref name="n"/>-th unit in the cell box [<paramref name="minCell"/>, <paramref name="maxCell"/>], in the order
         /// <see cref="Query(int2, int2)"/> yields them, or -1 if the box holds fewer units.
         /// </summary>
-        public int NthInBox(int2 minCell, int2 maxCell, int n)
+        public readonly int NthInBox(int2 minCell, int2 maxCell, int n)
         {
             for (int rowCell = minCell.y * Width; rowCell <= maxCell.y * Width; rowCell += Width)
             {
@@ -117,7 +117,7 @@ namespace _Game.Util
         /// All units in the cells exactly <paramref name="radius"/> cells from <paramref name="centerCell"/>, clipped to the grid.
         /// Radius 0 is the center cell alone.
         /// </summary>
-        public RingQuery QueryRing(int2 centerCell, int radius)
+        public readonly RingQuery QueryRing(int2 centerCell, int radius)
         {
             int2 min = centerCell - radius;
             int2 max = centerCell + radius;
@@ -137,7 +137,7 @@ namespace _Game.Util
         /// <summary>
         /// World distance from <paramref name="worldPos"/>, clamped into the grid, to the nearest edge of its cell.
         /// </summary>
-        public float DistanceToCellEdge(float2 worldPos)
+        public readonly float DistanceToCellEdge(float2 worldPos)
         {
             float2 clamped = math.clamp(worldPos, Origin, Origin + new float2(Width, Height) * CellSize);
             float2 inCell = (clamped - Origin) * InvCellSize - WorldToCell(clamped);
@@ -147,12 +147,12 @@ namespace _Game.Util
         /// <summary>
         /// All units. Cheaper than a cell query when there are only a few units.
         /// </summary>
-        public GridQuery All()
+        public readonly GridQuery All()
         {
             return GridQuery.Range(Count);
         }
 
-        private void ClampBounds(int2 min, int2 max, out int2 minCell, out int2 maxCell)
+        private readonly void ClampBounds(int2 min, int2 max, out int2 minCell, out int2 maxCell)
         {
             int2 upper = new(Width - 1, Height - 1);
             minCell = math.clamp(min, int2.zero, upper);
@@ -162,7 +162,7 @@ namespace _Game.Util
         /// <summary>
         /// Like <see cref="Query(int2, int2)"/>, but the box is cut to the grid and may end up empty.
         /// </summary>
-        private GridQuery ClippedQuery(int2 min, int2 max)
+        private readonly GridQuery ClippedQuery(int2 min, int2 max)
         {
             min = math.max(min, int2.zero);
             max = math.min(max, new int2(Width - 1, Height - 1));
@@ -236,7 +236,7 @@ namespace _Game.Util
     ///
     /// storage:  0 [1  2] 3 [4  5] 6  7  8
     ///
-    /// enemies:  y=2 | -   G   -  |
+    /// world:    y=2 | -   G   -  |
     ///           y=1 | E  [-   F ]|
     ///           y=0 | A  [BC  D ]|
     ///
