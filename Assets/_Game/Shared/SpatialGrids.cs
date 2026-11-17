@@ -9,7 +9,7 @@ namespace _Game.Shared
     public struct SpatialGrids : IComponentData
     {
         /// <summary>
-        /// Number of factions, each with its own grid. Keep in sync with the factions defined in <see cref="FactionMask"/>.
+        /// Number of factions, each with its own grid. Keep in sync with <see cref="Faction"/>.
         /// </summary>
         public const int FactionCount = 2;
 
@@ -19,14 +19,17 @@ namespace _Game.Shared
         public readonly bool EnemiesValid => Enemies.IsCreated && Enemies.Count > 0;
         public readonly bool AlliesValid => Allies.IsCreated && Allies.Count > 0;
 
+        /// <summary>
+        /// The grid of a faction, by its <see cref="Faction"/> value.
+        /// </summary>
         public readonly SpatialGrid this[int faction]
         {
             get
             {
-                return (FactionMask)(1 << faction) switch
+                return (Faction)faction switch
                 {
-                    FactionMask.Player => Allies,
-                    FactionMask.Enemy => Enemies,
+                    Faction.Player => Allies,
+                    Faction.Enemy => Enemies,
                     _ => default
                 };
             }
