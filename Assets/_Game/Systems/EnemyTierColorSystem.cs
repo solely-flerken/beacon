@@ -44,11 +44,11 @@ namespace _Game.Systems
 
         private void Execute(in Classification classification, ref URPMaterialPropertyBaseColor color)
         {
-            TierMask tier = classification.Tier;
-            if (tier == TierMask.Normal) return;
+            EnemyTier tier = classification.Tags.Tier();
+            if (tier == EnemyTier.Normal) return;
 
-            color.Value = (tier & TierMask.Boss) != 0 
-                ? BossColor 
+            color.Value = tier == EnemyTier.Boss
+                ? BossColor
                 : EliteColor;
         }
     }

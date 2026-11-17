@@ -15,10 +15,10 @@ namespace _Game.Authoring
             public ModifierType operation;
             public float value;
 
-            [Header("Who does this apply to?")] public TargetMask target;
-            public FactionMask faction;
-            public RoleMask role;
-            public TierMask tier;
+            [Header("Who does this apply to?")]
+            public Tags required;
+            public Tags any;
+            public Tags excluded;
         }
 
         public List<GlobalModEntry> globalModifiers = new();
@@ -40,12 +40,11 @@ namespace _Game.Authoring
                         Type = modifier.operation,
                         Value = modifier.value,
 
-                        Mask = new Classification
+                        Filter = new TagFilter
                         {
-                            Target = modifier.target,
-                            Faction = modifier.faction,
-                            Role = modifier.role,
-                            Tier = modifier.tier
+                            required = modifier.required,
+                            any = modifier.any,
+                            excluded = modifier.excluded
                         }
                     });
                 }

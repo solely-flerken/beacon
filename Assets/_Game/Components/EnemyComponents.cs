@@ -46,6 +46,16 @@ namespace _Game.Components
         public float Value;
     }
 
+    [Flags]
+    public enum RoleMask : byte
+    {
+        None = 0,
+        Basic = 1 << 0,
+        Fast = 1 << 1,
+        Tank = 1 << 2,
+        Range = 1 << 3
+    }
+
     public enum EnemyTier : byte { Normal, Elite, Boss }
 
     public struct TieredStatModifier
@@ -82,11 +92,6 @@ namespace _Game.Components
         public float Value;
     }
 
-    public struct BasicEnemyTag : IComponentData { }
-    public struct FastEnemyTag : IComponentData { }
-    public struct TankEnemyTag : IComponentData { }
-    public struct RangeEnemyTag : IComponentData { }
-    
     /// <summary>
     /// Buffer on the catalog entity mapping type IDs to prefab and type entities.
     /// </summary>
@@ -116,21 +121,5 @@ namespace _Game.Components
     {
         public Entity Source;
         public float Expiry;
-    }
-
-    /// <summary>
-    /// Maps EnemyType enum values to their corresponding per-type tag ComponentType.
-    /// Use for archetype-level ECS filtering instead of per-entity EnemyTypeRef comparison.
-    /// </summary>
-    public static class EnemyTypeTagMap
-    {
-        public static ComponentType Get(RoleMask type) => type switch
-        {
-            RoleMask.Basic => ComponentType.ReadOnly<BasicEnemyTag>(),
-            RoleMask.Fast => ComponentType.ReadOnly<FastEnemyTag>(),
-            RoleMask.Tank => ComponentType.ReadOnly<TankEnemyTag>(),
-            RoleMask.Range => ComponentType.ReadOnly<RangeEnemyTag>(),
-            _ => throw new ArgumentOutOfRangeException(nameof(type), type, null)
-        };
     }
 }

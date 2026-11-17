@@ -1,7 +1,16 @@
+using System;
 using Unity.Entities;
 
 namespace _Game.Components
 {
+    [Flags]
+    public enum FactionMask : byte
+    {
+        None = 0,
+        Player = 1 << 0,
+        Enemy = 1 << 1
+    }
+
     /// <summary>
     /// The side a unit is on.
     /// </summary>
@@ -25,10 +34,5 @@ namespace _Game.Components
     public struct Hostility : IComponentData
     {
         public FactionMask Targets;
-    }
-
-    public static class FactionExtensions
-    {
-        public static FactionMask ToMask(this Faction faction) => (FactionMask)(1 << (int)faction);
     }
 }

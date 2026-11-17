@@ -54,10 +54,7 @@ namespace _Game.Authoring
                 // Classification
                 AddComponent(entity, new Classification
                 {
-                    Target = TargetMask.Character,
-                    Faction = authoring.faction.ToMask(),
-                    Role = authoring.role,
-                    Tier = TierMask.Normal
+                    Tags = Tags.Unit | authoring.role.ToTags() | Tags.Normal
                 });
 
                 // Side
@@ -99,25 +96,6 @@ namespace _Game.Authoring
                 AddComponent<Uninitialized>(entity);
                 AddComponent<EnemyStatUpdateRequired>(entity);
                 SetComponentEnabled<EnemyStatUpdateRequired>(entity, false);
-
-                // Per-type enemy tag
-                switch (authoring.role)
-                {
-                    case RoleMask.Basic:
-                        AddComponent<BasicEnemyTag>(entity);
-                        break;
-                    case RoleMask.Fast:
-                        AddComponent<FastEnemyTag>(entity);
-                        break;
-                    case RoleMask.Tank:
-                        AddComponent<TankEnemyTag>(entity);
-                        break;
-                    case RoleMask.Range:
-                        AddComponent<RangeEnemyTag>(entity);
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException();
-                }
             }
         }
     }

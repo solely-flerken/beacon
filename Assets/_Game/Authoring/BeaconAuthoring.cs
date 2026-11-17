@@ -21,10 +21,7 @@ namespace _Game.Authoring
                 // Classification
                 AddComponent(entity, new Classification
                 {
-                    Target = TargetMask.Character,
-                    Faction = Faction.Player.ToMask(),
-                    Role = RoleMask.None,
-                    Tier = TierMask.None
+                    Tags = Tags.Unit | Tags.Beacon
                 });
 
                 // Side

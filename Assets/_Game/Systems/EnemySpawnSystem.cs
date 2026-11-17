@@ -134,7 +134,7 @@ namespace _Game.Systems
                     TypeRefLookup = _typeRefLookup,
                     ClassificationLookup = _classificationLookup,
                     TypeEntity = requestCatalogEntries[b].TypeEntity,
-                    Tier = TierMaskMap.Get(batch[b].Tier),
+                    Tier = batch[b].Tier,
                     Center = center,
                     ArcCenter = batch[b].ArcCenter,
                     ArcWidth = batch[b].ArcWidth,
@@ -154,7 +154,7 @@ namespace _Game.Systems
             [NativeDisableParallelForRestriction] public ComponentLookup<EnemyTypeRef> TypeRefLookup;
             [NativeDisableParallelForRestriction] public ComponentLookup<Classification> ClassificationLookup;
             [ReadOnly] public Entity TypeEntity;
-            [ReadOnly] public TierMask Tier;
+            [ReadOnly] public EnemyTier Tier;
             [ReadOnly] public float2 Center;
             [ReadOnly] public float ArcCenter;
             [ReadOnly] public float ArcWidth;
@@ -177,7 +177,7 @@ namespace _Game.Systems
                 TransformLookup[entity] = transform;
 
                 Classification classification = ClassificationLookup[entity];
-                classification.Tier = Tier;
+                classification.Tags = classification.Tags.WithTier(Tier);
                 ClassificationLookup[entity] = classification;
             }
         }

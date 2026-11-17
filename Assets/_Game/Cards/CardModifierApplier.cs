@@ -30,11 +30,11 @@ namespace _Game.Cards
                         ApplyEnemyTypeModifier(effect, em);
                         break;
                     case CardTargetType.WaveEnemies:
-                        ApplyWaveModifier(effect, em, TargetMask.None, FactionMask.Enemy);
+                        ApplyWaveModifier(effect, em, Tags.Enemy);
                         break;
                     case CardTargetType.WaveWeapons:
                         // TODO: Only applies to player right now
-                        ApplyWaveModifier(effect, em, TargetMask.Weapon, FactionMask.Player);
+                        ApplyWaveModifier(effect, em, Tags.Weapon | Tags.Player);
                         break;
                 }
             }
@@ -99,7 +99,7 @@ namespace _Game.Cards
             }
         }
         
-        private static void ApplyWaveModifier(CardEffect effect, EntityManager em, TargetMask target, FactionMask faction)
+        private static void ApplyWaveModifier(CardEffect effect, EntityManager em, Tags required)
         {
             using EntityQuery globalQuery = em.CreateEntityQuery(typeof(GlobalModSingleton));
             if (globalQuery.IsEmpty)
@@ -114,7 +114,7 @@ namespace _Game.Cards
             em.GetBuffer<WaveStatModifier>(singleton).Add(new WaveStatModifier
             {
                 Stat = effect.Stat,
-                Mask = new Classification { Target = target, Faction = faction, Role = effect.EnemyType },
+                Filter = new TagFilter { required = required, any = effect.EnemyType.ToTags() },
                 Type = effect.ModifierType,
                 Value = effect.Value,
                 ExpiryTime = WaveManager.Instance.WaveElapsed + duration,
@@ -135,7 +135,7 @@ namespace _Game.Cards
             globalBuffer.Add(new GlobalStatModifier
             {
                 Stat = effect.Stat,
-                Mask = new Classification { Faction = FactionMask.Enemy, Role = effect.EnemyType },
+                Filter = new TagFilter { required = Tags.Enemy, any = effect.EnemyType.ToTags() },
                 Type = effect.ModifierType,
                 Value = effect.Value,
                 RunScoped = true

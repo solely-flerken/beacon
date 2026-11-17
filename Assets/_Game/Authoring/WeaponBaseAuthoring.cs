@@ -24,11 +24,10 @@ namespace _Game.Authoring
 
                 AddComponent<WeaponTag>(entity);
                 
-                // Classification
+                // Classification. The owner's tags are added when the stats are resolved.
                 AddComponent(entity, new Classification
                 {
-                    Target = TargetMask.Weapon
-                    // Other values are set at spawn time
+                    Tags = Tags.Weapon | authoring.weaponType.ToTag()
                 });
                 
                 AddComponent<AttackRules>(entity);

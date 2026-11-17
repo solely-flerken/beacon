@@ -51,7 +51,7 @@ namespace _Game.Util
         public static float Resolve(
             StatType statType,
             float baseValue,
-            Classification mask,
+            Tags tags,
             DynamicBuffer<GlobalStatModifier> globalMods,
             DynamicBuffer<WaveStatModifier> waveMods,
             DynamicBuffer<StatModifier> localMods1,
@@ -60,10 +60,10 @@ namespace _Game.Util
             ModAccumulator acc = default;
 
             if (globalMods.IsCreated)
-                Accumulate(statType, mask, globalMods, ref acc);
+                Accumulate(statType, tags, globalMods, ref acc);
 
             if (waveMods.IsCreated)
-                Accumulate(statType, mask, waveMods, ref acc);
+                Accumulate(statType, tags, waveMods, ref acc);
 
             if (localMods1.IsCreated)
                 Accumulate(statType, localMods1, ref acc);
@@ -82,7 +82,7 @@ namespace _Game.Util
         public static float ResolveWeapon(
             StatType statType,
             float baseValue,
-            Classification mask,
+            Tags tags,
             DynamicBuffer<GlobalStatModifier> globalMods,
             DynamicBuffer<WaveStatModifier> waveMods,
             DynamicBuffer<StatModifier> localMods1,
@@ -92,10 +92,10 @@ namespace _Game.Util
             ModAccumulator acc = default;
 
             if (globalMods.IsCreated)
-                Accumulate(statType, mask, globalMods, ref acc);
+                Accumulate(statType, tags, globalMods, ref acc);
 
             if (waveMods.IsCreated)
-                Accumulate(statType, mask, waveMods, ref acc);
+                Accumulate(statType, tags, waveMods, ref acc);
 
             if (localMods1.IsCreated)
                 Accumulate(statType, localMods1, ref acc);
@@ -105,7 +105,7 @@ namespace _Game.Util
 
             if (blobRef.IsCreated)
             {
-                EnemyTier tier = mask.Tier != TierMask.None ? TierMaskMap.Get(mask.Tier) : EnemyTier.Normal;
+                EnemyTier tier = tags.Tier();
                 ref BlobArray<TieredStatModifier> blobMods = ref blobRef.Value.ConfigModifiers;
                 if (blobMods.Length != 0)
                 {
@@ -117,15 +117,14 @@ namespace _Game.Util
         }
 
         /// <summary>
-        /// Resolves a stat for an enemy entity. Applies global mods (classification-filtered),
-        /// local instance mods, and blob-asset tier mods
+        /// Resolves a stat for an enemy entity. Applies global mods (filtered by tags),
+        /// local instance mods, and blob-asset tier mods for the tier in <paramref name="tags"/>
         /// (Normal tier entries always apply; tier-specific entries only apply when the enemy's tier matches).
         /// </summary>
         public static float ResolveEnemy(
-            EnemyTier tier,
             StatType statType,
             float baseValue,
-            Classification mask,
+            Tags tags,
             DynamicBuffer<GlobalStatModifier> globalMods,
             DynamicBuffer<WaveStatModifier> waveMods,
             DynamicBuffer<StatModifier> localMods,
@@ -134,26 +133,26 @@ namespace _Game.Util
             ModAccumulator acc = default;
 
             if (globalMods.IsCreated)
-                Accumulate(statType, mask, globalMods, ref acc);
+                Accumulate(statType, tags, globalMods, ref acc);
 
             if (waveMods.IsCreated)
-                Accumulate(statType, mask, waveMods, ref acc);
+                Accumulate(statType, tags, waveMods, ref acc);
 
             if (localMods.IsCreated)
                 Accumulate(statType, localMods, ref acc);
 
             if (blobMods.Length != 0)
-                Accumulate(statType, tier, ref blobMods, ref acc);
+                Accumulate(statType, tags.Tier(), ref blobMods, ref acc);
 
             return acc.Resolve(baseValue);
         }
 
         /// <summary>
-        /// Accumulates global mods, skipping any whose classification mask does not match the entity.
+        /// Accumulates global mods, skipping any whose filter does not match the entity's tags.
         /// </summary>
         private static void Accumulate(
             StatType statType,
-            Classification entityMask,
+            Tags tags,
             DynamicBuffer<GlobalStatModifier> mods,
             ref ModAccumulator acc)
         {
@@ -162,7 +161,7 @@ namespace _Game.Util
                 GlobalStatModifier mod = mods[i];
                 
                 if (mod.Stat != statType) continue;
-                if (!IsMatch(entityMask, mod.Mask)) continue;
+                if (!mod.Filter.Matches(tags)) continue;
 
                 acc.Add(mod.Type, mod.Value);
             }
@@ -170,7 +169,7 @@ namespace _Game.Util
 
         private static void Accumulate(
             StatType statType,
-            Classification entityMask,
+            Tags tags,
             DynamicBuffer<WaveStatModifier> mods,
             ref ModAccumulator acc)
         {
@@ -179,7 +178,7 @@ namespace _Game.Util
                 WaveStatModifier mod = mods[i];
                 
                 if (mod.Stat != statType) continue;
-                if (!IsMatch(entityMask, mod.Mask)) continue;
+                if (!mod.Filter.Matches(tags)) continue;
                 
                 acc.Add(mod.Type, mod.Value);
             }
@@ -222,32 +221,6 @@ namespace _Game.Util
                 
                 acc.Add(mod.Type, mod.Value);
             }
-        }
-
-        /// <summary>
-        /// Returns true if the entity's classification satisfies all non-zero criteria fields.
-        /// Each field is a bitmask: the entity must share at least one bit with the criteria.
-        /// A zero criteria field is treated as "any" (no restriction).
-        /// </summary>
-        private static bool IsMatch(Classification entity, Classification criteria)
-        {
-            // 1. If criteria requires a specific Target (e.g. Weapon),
-            // the entity must have that bit set.
-            if (criteria.Target != 0 && (entity.Target & criteria.Target) == 0) return false;
-
-            // 2. If criteria requires a specific Faction (e.g. Player),
-            // the entity must have that bit set.
-            if (criteria.Faction != 0 && (entity.Faction & criteria.Faction) == 0) return false;
-
-            // 3. If criteria requires a Role (e.g. Fast OR Tank),
-            // the entity must match at least one of those roles.
-            if (criteria.Role != 0 && (entity.Role & criteria.Role) == 0) return false;
-
-            // 4. If criteria requires a Tier (e.g. Elite),
-            // the entity must match.
-            if (criteria.Tier != 0 && (entity.Tier & criteria.Tier) == 0) return false;
-
-            return true;
         }
     }
 }
