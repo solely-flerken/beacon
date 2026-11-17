@@ -22,6 +22,8 @@ namespace _Game.Systems
             {
                 DynamicBuffer<StatModifier> ownerMods = default;
                 BlobAssetReference<EnemyTypeBlob> ownerBlobRef = default;
+                FactionMask targetFactions = FactionMask.None;
+                bool reportHits = false;
 
                 // IDENTITY SYNC: If the weapon has an owner, inherit their Faction/Role/Tier
                 if (SystemAPI.HasComponent<WeaponOwner>(entity))
@@ -36,6 +38,13 @@ namespace _Game.Systems
                         mask.ValueRW.Faction = ownerMask.Faction;
                         mask.ValueRW.Role = ownerMask.Role;
                         mask.ValueRW.Tier = ownerMask.Tier;
+                    }
+
+                    // ATTACK RULES: a weapon attacks the factions its owner is hostile to
+                    if (SystemAPI.HasComponent<Hostility>(ownerEntity))
+                    {
+                        targetFactions = SystemAPI.GetComponent<Hostility>(ownerEntity).Targets;
+                        reportHits = state.EntityManager.GetSharedComponent<UnitFaction>(ownerEntity).Value == Faction.Player; // TODO: Refactor?
                     }
 
                     if (SystemAPI.HasBuffer<StatModifier>(ownerEntity))
@@ -53,10 +62,6 @@ namespace _Game.Systems
                     }
                 }
 
-                // ATTACK RULES: a weapon targets every faction it isn't on
-                FactionMask faction = mask.ValueRO.Faction;
-                FactionMask targetFactions = faction == FactionMask.None ? FactionMask.None : (FactionMask.Player | FactionMask.Enemy) & ~faction;
-
                 if (rules.ValueRO.TargetFactions != targetFactions)
                 {
                     rules.ValueRW.TargetFactions = targetFactions;
@@ -70,7 +75,7 @@ namespace _Game.Systems
                     }
                 }
 
-                rules.ValueRW.ReportHits = (faction & FactionMask.Player) != 0;
+                rules.ValueRW.ReportHits = reportHits;
 
                 stats.ValueRW.Damage = StatResolver.ResolveWeapon(StatType.Damage, stats.ValueRO.BaseDamage, mask.ValueRO, globalBuffer, waveBuffer, localMods, ownerMods, ownerBlobRef);
                 stats.ValueRW.FireRate = StatResolver.ResolveWeapon(StatType.FireRate, stats.ValueRO.BaseFireRate, mask.ValueRO, globalBuffer, waveBuffer, localMods, ownerMods, ownerBlobRef);

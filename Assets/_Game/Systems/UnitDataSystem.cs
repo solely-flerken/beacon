@@ -23,8 +23,7 @@ namespace _Game.Systems
         private NativeArray<float2> _allyPositions;
         private NativeArray<Entity> _allyEntities;
 
-        private EntityQuery _enemyQuery;
-        private EntityQuery _allyQuery;
+        private EntityQuery _unitQuery;
 
         public void OnCreate(ref SystemState state)
         {
@@ -34,8 +33,7 @@ namespace _Game.Systems
             _allyPositions = new NativeArray<float2>(InitialAllyCapacity, Allocator.Persistent);
             _allyEntities = new NativeArray<Entity>(InitialAllyCapacity, Allocator.Persistent);
 
-            _enemyQuery = SystemAPI.QueryBuilder().WithAll<EnemyTag, LocalTransform>().Build();
-            _allyQuery = SystemAPI.QueryBuilder().WithAll<PlayerTag, LocalTransform>().Build();
+            _unitQuery = SystemAPI.QueryBuilder().WithAll<UnitFaction, LocalTransform>().Build();
 
             state.EntityManager.CreateSingleton(new UnitData());
         }
@@ -50,31 +48,37 @@ namespace _Game.Systems
 
         public void OnUpdate(ref SystemState state)
         {
-            int enemyCount = _enemyQuery.CalculateEntityCount();
-            int allyCount = _allyQuery.CalculateEntityCount();
+            JobHandle dependency = state.Dependency;
 
+            _unitQuery.SetSharedComponentFilter(new UnitFaction { Value = Faction.Enemy });
+            int enemyCount = _unitQuery.CalculateEntityCount();
             EnsureCapacity(ref state, ref _enemyPositions, ref _enemyEntities, enemyCount);
-            EnsureCapacity(ref state, ref _allyPositions, ref _allyEntities, allyCount);
 
-            JobHandle enemyHandle = state.Dependency;
+            JobHandle enemyHandle = dependency;
             if (enemyCount > 0)
             {
                 enemyHandle = new CopyUnitDataJob
                 {
                     Positions = _enemyPositions,
                     Entities = _enemyEntities
-                }.ScheduleParallel(_enemyQuery, state.Dependency);
+                }.ScheduleParallel(_unitQuery, dependency);
             }
 
-            JobHandle allyHandle = state.Dependency;
+            _unitQuery.SetSharedComponentFilter(new UnitFaction { Value = Faction.Player });
+            int allyCount = _unitQuery.CalculateEntityCount();
+            EnsureCapacity(ref state, ref _allyPositions, ref _allyEntities, allyCount);
+
+            JobHandle allyHandle = dependency;
             if (allyCount > 0)
             {
                 allyHandle = new CopyUnitDataJob
                 {
                     Positions = _allyPositions,
                     Entities = _allyEntities
-                }.ScheduleParallel(_allyQuery, state.Dependency);
+                }.ScheduleParallel(_unitQuery, dependency);
             }
+
+            _unitQuery.ResetFilter();
 
             state.Dependency = JobHandle.CombineDependencies(enemyHandle, allyHandle);
 

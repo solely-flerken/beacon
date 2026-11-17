@@ -9,7 +9,8 @@ namespace _Game.Authoring
     public class EnemyAuthoring : MonoBehaviour
     {
         [Header("Entity Classification")]
-        public FactionMask faction = FactionMask.Enemy;
+        public Faction faction = Faction.Enemy;
+        public FactionMask targetFactions = FactionMask.Player;
         public RoleMask role = RoleMask.Basic;
         
         [Header("Stats")] 
@@ -54,11 +55,15 @@ namespace _Game.Authoring
                 AddComponent(entity, new Classification
                 {
                     Target = TargetMask.Character,
-                    Faction = authoring.faction,
+                    Faction = authoring.faction.ToMask(),
                     Role = authoring.role,
                     Tier = TierMask.Normal
                 });
-                
+
+                // Side
+                AddSharedComponent(entity, new UnitFaction { Value = authoring.faction });
+                AddComponent(entity, new Hostility { Targets = authoring.targetFactions });
+
                 // Basic enemy stats
                 AddComponent(entity, new Speed { BaseValue = authoring.speed, Value = authoring.speed });
                 AddComponent(entity, new EnemySpeedVariation { Value = authoring.speedVariation });

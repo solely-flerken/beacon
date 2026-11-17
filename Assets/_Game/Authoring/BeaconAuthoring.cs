@@ -22,11 +22,15 @@ namespace _Game.Authoring
                 AddComponent(entity, new Classification
                 {
                     Target = TargetMask.Character,
-                    Faction = FactionMask.Player,
+                    Faction = Faction.Player.ToMask(),
                     Role = RoleMask.None,
                     Tier = TierMask.None
                 });
-                
+
+                // Side
+                AddSharedComponent(entity, new UnitFaction { Value = Faction.Player });
+                AddComponent(entity, new Hostility { Targets = FactionMask.Enemy });
+
                 // Basic beacon stats
                 AddComponent(entity, new BeaconStats
                 {

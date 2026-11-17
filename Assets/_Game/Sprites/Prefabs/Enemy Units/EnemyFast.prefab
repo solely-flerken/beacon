@@ -47,13 +47,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cdbe47da6a5b4252bebb3ea0bbefdb64, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::_Game.Authoring.EnemyAuthoring
-  faction: 2
+  faction: 1
+  targetFactions: 1
   role: 2
   speed: 10
   speedVariation: 0.5
   steeringResponsiveness: 8
   maxHealth: 5
+  armor: 0
   contactDamage: 1
+  armorPenetration: 0
+  critChance: 0
+  critDamage: 150
   exp: 1
   tierModifiers:
   - tier: 1
