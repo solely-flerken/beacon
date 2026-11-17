@@ -123,18 +123,14 @@ namespace _Game.Components
             _ => throw new ArgumentOutOfRangeException(nameof(type), type, null)
         };
 
-        /// <summary>
-        /// Maps each enemy type in <paramref name="types"/> to its unit type tag. None for RoleMask.None.
-        /// </summary>
-        public static Tags ToTags(this RoleMask types)
+        public static Tags ToTag(this EnemyType type) => type switch
         {
-            Tags tags = Tags.None;
-            if ((types & RoleMask.Basic) != 0) tags |= Tags.EnemyBasic;
-            if ((types & RoleMask.Fast) != 0) tags |= Tags.EnemyFast;
-            if ((types & RoleMask.Tank) != 0) tags |= Tags.EnemyTank;
-            if ((types & RoleMask.Range) != 0) tags |= Tags.EnemyRange;
-            return tags;
-        }
+            EnemyType.Basic => Tags.EnemyBasic,
+            EnemyType.Fast => Tags.EnemyFast,
+            EnemyType.Tank => Tags.EnemyTank,
+            EnemyType.Range => Tags.EnemyRange,
+            _ => throw new ArgumentOutOfRangeException(nameof(type), type, null)
+        };
 
         /// <summary>
         /// Extracts the tier in <paramref name="tags"/> and maps it to an EnemyTier. Normal if they hold no tier tag.

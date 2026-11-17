@@ -1,5 +1,4 @@
-﻿using System;
-using Unity.Entities;
+﻿using Unity.Entities;
 
 namespace _Game.Components
 {
@@ -46,14 +45,12 @@ namespace _Game.Components
         public float Value;
     }
 
-    [Flags]
-    public enum RoleMask : byte
+    public enum EnemyType : byte
     {
-        None = 0,
-        Basic = 1 << 0,
-        Fast = 1 << 1,
-        Tank = 1 << 2,
-        Range = 1 << 3
+        Basic,
+        Fast,
+        Tank,
+        Range
     }
 
     public enum EnemyTier : byte { Normal, Elite, Boss }
@@ -97,7 +94,7 @@ namespace _Game.Components
     /// </summary>
     public struct EnemyTypeCatalogEntry : IBufferElementData
     {
-        public RoleMask TypeId;
+        public EnemyType TypeId;
         public Entity Prefab;
         public Entity TypeEntity;
     }
@@ -109,7 +106,7 @@ namespace _Game.Components
     [InternalBufferCapacity(0)]
     public struct EnemySpawnRequest : IBufferElementData
     {
-        public RoleMask Type;
+        public EnemyType Type;
         public EnemyTier Tier;
         public int Count;
         public float ArcCenter; // Radians

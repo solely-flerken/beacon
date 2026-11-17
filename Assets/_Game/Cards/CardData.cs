@@ -16,7 +16,7 @@ namespace _Game.Cards
     public struct CardEffect
     {
         public CardTargetType TargetType;
-        public RoleMask EnemyType; // relevant for EnemiesOfType and WaveEnemies
+        public Tags EnemyTypes; // relevant for EnemiesOfType and WaveEnemies
         public WeaponType WeaponType; // relevant for WeaponsOfType
         public StatType Stat;
         public ModifierType ModifierType;

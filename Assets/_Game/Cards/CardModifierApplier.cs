@@ -114,7 +114,7 @@ namespace _Game.Cards
             em.GetBuffer<WaveStatModifier>(singleton).Add(new WaveStatModifier
             {
                 Stat = effect.Stat,
-                Filter = new TagFilter { required = required, any = effect.EnemyType.ToTags() },
+                Filter = new TagFilter { required = required, any = effect.EnemyTypes },
                 Type = effect.ModifierType,
                 Value = effect.Value,
                 ExpiryTime = WaveManager.Instance.WaveElapsed + duration,
@@ -135,7 +135,7 @@ namespace _Game.Cards
             globalBuffer.Add(new GlobalStatModifier
             {
                 Stat = effect.Stat,
-                Filter = new TagFilter { required = Tags.Enemy, any = effect.EnemyType.ToTags() },
+                Filter = new TagFilter { required = Tags.Enemy, any = effect.EnemyTypes },
                 Type = effect.ModifierType,
                 Value = effect.Value,
                 RunScoped = true

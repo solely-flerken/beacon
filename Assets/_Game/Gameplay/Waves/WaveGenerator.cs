@@ -10,7 +10,7 @@ namespace _Game.Gameplay.Waves
         public static WaveDefinition Generate(int waveNumber, WaveGeneratorConfig config)
         {
             int budget = config.BudgetBase + waveNumber * config.BudgetPerWave;
-            List<(RoleMask, EnemyTier)> picks = FillBudget(budget, config, waveNumber);
+            List<(EnemyType, EnemyTier)> picks = FillBudget(budget, config, waveNumber);
             Shuffle(picks);
 
             float duration = config.SpawnDurationBase + (waveNumber - 1) * config.SpawnDurationPerWave;
@@ -28,9 +28,9 @@ namespace _Game.Gameplay.Waves
         /// <summary>
         /// Spends the budget by repeatedly picking enemy types until nothing affordable remains.
         /// </summary>
-        private static List<(RoleMask, EnemyTier)> FillBudget(int budget, WaveGeneratorConfig config, int waveNumber)
+        private static List<(EnemyType, EnemyTier)> FillBudget(int budget, WaveGeneratorConfig config, int waveNumber)
         {
-            List<(RoleMask, EnemyTier)> picks = new();
+            List<(EnemyType, EnemyTier)> picks = new();
             List<EnemyTypeEntry> eligible = EligibleEntries(config.EnemyTypes, waveNumber);
 
             int remaining = budget;
@@ -54,7 +54,7 @@ namespace _Game.Gameplay.Waves
         /// Splits the picked enemies into pulses spread over the spawn duration.
         /// Pulses grow linearly so the last is IntensityRamp times the size of the first.
         /// </summary>//
-        private static List<SpawnPulse> BuildPulses(List<(RoleMask, EnemyTier)> picks, float duration, WaveGeneratorConfig config)
+        private static List<SpawnPulse> BuildPulses(List<(EnemyType, EnemyTier)> picks, float duration, WaveGeneratorConfig config)
         {
             int pulseCount = Mathf.Max(1, Mathf.FloorToInt(duration / config.PulseInterval));
             int[] sizes = DistributeByRamp(picks.Count, pulseCount, config.IntensityRamp);
@@ -65,7 +65,7 @@ namespace _Game.Gameplay.Waves
             {
                 if (sizes[i] == 0) continue;
 
-                Dictionary<(RoleMask, EnemyTier), int> counts = new();
+                Dictionary<(EnemyType, EnemyTier), int> counts = new();
                 for (int j = 0; j < sizes[i]; j++, next++)
                 {
                     counts[picks[next]] = counts.TryGetValue(picks[next], out int existing) ? existing + 1 : 1;

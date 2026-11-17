@@ -11,7 +11,7 @@ namespace _Game.Gameplay.Waves.Editor
     [CustomEditor(typeof(WaveManager))]
     public class WaveManagerEditor : UnityEditor.Editor
     {
-        private static readonly RoleMask[] AllTypes = (RoleMask[])Enum.GetValues(typeof(RoleMask));
+        private static readonly EnemyType[] AllTypes = (EnemyType[])Enum.GetValues(typeof(EnemyType));
         private static readonly EnemyTier[] AllTiers = (EnemyTier[])Enum.GetValues(typeof(EnemyTier));
 
         private SerializedProperty _budgetBase;
@@ -67,7 +67,7 @@ namespace _Game.Gameplay.Waves.Editor
                     SerializedProperty def = _definitions.GetArrayElementAtIndex(i);
                     if (def.FindPropertyRelative("tiers").arraySize == 0)
                     {
-                        emptyTypes.Add(((RoleMask)def.FindPropertyRelative("type").intValue).ToString());
+                        emptyTypes.Add(((EnemyType)def.FindPropertyRelative("type").intValue).ToString());
                     }
                 }
 
@@ -86,8 +86,8 @@ namespace _Game.Gameplay.Waves.Editor
             SerializedProperty def = _definitions.GetArrayElementAtIndex(index);
             SerializedProperty typeProp = def.FindPropertyRelative("type");
 
-            RoleMask current = (RoleMask)typeProp.intValue;
-            RoleMask[] available = AllTypes.Where(t => t == current || !TypeUsedElsewhere(t, index)).ToArray();
+            EnemyType current = (EnemyType)typeProp.intValue;
+            EnemyType[] available = AllTypes.Where(t => t == current || !TypeUsedElsewhere(t, index)).ToArray();
             int sel = EditorGUI.Popup(new Rect(rect.x, rect.y, rect.width, lh), "Type", Array.IndexOf(available, current), available.Select(t => t.ToString()).ToArray());
             typeProp.intValue = (int)available[Mathf.Clamp(sel, 0, available.Length - 1)];
 
@@ -110,7 +110,7 @@ namespace _Game.Gameplay.Waves.Editor
             list.index = _definitions.arraySize - 1;
 
             SerializedProperty def = _definitions.GetArrayElementAtIndex(list.index);
-            RoleMask unused = AllTypes.First(t => !TypeUsedElsewhere(t, list.index));
+            EnemyType unused = AllTypes.First(t => !TypeUsedElsewhere(t, list.index));
             def.FindPropertyRelative("type").intValue = (int)unused;
             def.FindPropertyRelative("tiers").ClearArray();
 
@@ -118,13 +118,13 @@ namespace _Game.Gameplay.Waves.Editor
             _tierListCache.Clear();
         }
 
-        private bool TypeUsedElsewhere(RoleMask type, int excludeIndex)
+        private bool TypeUsedElsewhere(EnemyType type, int excludeIndex)
         {
             for (int i = 0; i < _definitions.arraySize; i++)
             {
                 if (i == excludeIndex) continue;
 
-                if ((RoleMask)_definitions.GetArrayElementAtIndex(i).FindPropertyRelative("type").intValue == type)
+                if ((EnemyType)_definitions.GetArrayElementAtIndex(i).FindPropertyRelative("type").intValue == type)
                 {
                     return true;
                 }

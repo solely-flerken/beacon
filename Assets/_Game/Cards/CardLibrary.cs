@@ -37,19 +37,19 @@ namespace _Game.Cards
             Value = value
         };
 
-        private static CardEffect EnemyFx(RoleMask type, StatType stat, ModifierType mod, float value) => new()
+        private static CardEffect EnemyFx(Tags types, StatType stat, ModifierType mod, float value) => new()
         {
             TargetType = CardTargetType.EnemiesOfType,
-            EnemyType = type,
+            EnemyTypes = types,
             Stat = stat,
             ModifierType = mod,
             Value = value
         };
 
-        private static CardEffect WaveEnemyFx(RoleMask role, StatType stat, ModifierType mod, float value, float duration = 0f) => new()
+        private static CardEffect WaveEnemyFx(Tags types, StatType stat, ModifierType mod, float value, float duration = 0f) => new()
         {
             TargetType = CardTargetType.WaveEnemies,
-            EnemyType = role,
+            EnemyTypes = types,
             Stat = stat,
             ModifierType = mod,
             Value = value,
@@ -156,7 +156,7 @@ namespace _Game.Cards
             cardId: 301,
             title: "Tar Traps",
             description: "Basic enemies move 30% slower.",
-            effects: new[] { EnemyFx(RoleMask.Basic, StatType.Speed, ModifierType.Multiplicative, -30f) }
+            effects: new[] { EnemyFx(Tags.EnemyBasic, StatType.Speed, ModifierType.Multiplicative, -30f) }
         );
 
         // Wave-scoped cards
@@ -173,8 +173,8 @@ namespace _Game.Cards
             description: "All enemies move 40% slower for this wave, but deal 50% more contact damage.",
             effects: new[]
             {
-                WaveEnemyFx(RoleMask.None, StatType.Speed, ModifierType.Multiplicative, -40f),
-                WaveEnemyFx(RoleMask.None, StatType.ContactDamage, ModifierType.Multiplicative, 50f),
+                WaveEnemyFx(Tags.None, StatType.Speed, ModifierType.Multiplicative, -40f),
+                WaveEnemyFx(Tags.None, StatType.ContactDamage, ModifierType.Multiplicative, 50f),
             }
         );
 

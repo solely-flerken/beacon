@@ -11,7 +11,7 @@ namespace _Game.Authoring
         [Header("Entity Classification")]
         public Faction faction = Faction.Enemy;
         public FactionMask targetFactions = FactionMask.Player;
-        public RoleMask role = RoleMask.Basic;
+        public EnemyType type = EnemyType.Basic;
         
         [Header("Stats")] 
         public float speed = 4f;
@@ -31,9 +31,6 @@ namespace _Game.Authoring
         [Header("Tier Overrides")]
         public List<TieredModifierEntry> tierModifiers = new();
         
-        // [Header("Type")]
-        // public EnemyType typeId;
-    
         [Serializable]
         public struct TieredModifierEntry {
             public EnemyTier tier;
@@ -54,7 +51,7 @@ namespace _Game.Authoring
                 // Classification
                 AddComponent(entity, new Classification
                 {
-                    Tags = Tags.Unit | authoring.role.ToTags() | Tags.Normal
+                    Tags = Tags.Unit | authoring.type.ToTag() | Tags.Normal
                 });
 
                 // Side

@@ -50,7 +50,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::_Game.Authoring.EnemyAuthoring
   faction: 1
   targetFactions: 1
-  role: 8
+  type: 3
   speed: 4
   speedVariation: 0.5
   steeringResponsiveness: 8
