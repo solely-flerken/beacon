@@ -1,4 +1,5 @@
-﻿using Unity.Entities;
+﻿using System;
+using Unity.Entities;
 
 namespace _Game.Components
 {
@@ -58,28 +59,55 @@ namespace _Game.Components
         public float Value;
     }
 
+    public interface IFilteredModifier
+    {
+        TagFilter TagFilter { get; }
+    }
+
     /// <summary>
     /// Modifier for every entity whose tags match <see cref="Filter"/>.
     /// </summary>
-    public struct GlobalStatModifier : IBufferElementData
+    public struct GlobalStatModifier : IBufferElementData, IFilteredModifier, IEquatable<GlobalStatModifier>
     {
         public StatType Stat;
         public TagFilter Filter;
         public ModifierType Type;
         public float Value;
         public bool RunScoped;
+
+        public readonly TagFilter TagFilter => Filter;
+
+        public readonly bool Equals(GlobalStatModifier other)
+        {
+            return Stat == other.Stat
+                   && Filter.Equals(other.Filter)
+                   && Type == other.Type
+                   && Value.Equals(other.Value)
+                   && RunScoped == other.RunScoped;
+        }
     }
 
     /// <summary>
     /// Like <see cref="GlobalStatModifier"/>, but removed once the wave time passes <see cref="ExpiryTime"/>.
     /// </summary>
-    public struct WaveStatModifier : IBufferElementData
+    public struct WaveStatModifier : IBufferElementData, IFilteredModifier, IEquatable<WaveStatModifier>
     {
         public StatType Stat;
         public TagFilter Filter;
         public ModifierType Type;
         public float Value;
         public float ExpiryTime;
+
+        public readonly TagFilter TagFilter => Filter;
+
+        public readonly bool Equals(WaveStatModifier other)
+        {
+            return Stat == other.Stat
+                   && Filter.Equals(other.Filter)
+                   && Type == other.Type
+                   && Value.Equals(other.Value)
+                   && ExpiryTime.Equals(other.ExpiryTime);
+        }
     }
 
     public struct GlobalModSingleton : IComponentData { }

@@ -64,15 +64,16 @@ namespace _Game.Components
 
         /// <summary>
         /// Full tags of a weapon: its own plus side, unit type and tier of its owner.
+        /// Replaces any owner tags stored before, so a changed owner doesn't leave stale ones behind.
         /// </summary>
-        public readonly Tags ForWeapon(Tags ownerTags) => Tags | (ownerTags & TagGroups.FromWeaponOwner);
+        public readonly Tags ForWeapon(Tags ownerTags) => (Tags & ~TagGroups.FromWeaponOwner) | (ownerTags & TagGroups.FromWeaponOwner);
     }
 
     /// <summary>
     /// Picks entities by their tags. An empty filter matches everything.
     /// </summary>
     [Serializable]
-    public struct TagFilter
+    public struct TagFilter : IEquatable<TagFilter>
     {
         /// <summary>
         /// The entity has all of these.
@@ -94,6 +95,13 @@ namespace _Game.Components
             return (tags & required) == required
                    && (any == Tags.None || (tags & any) != 0)
                    && (tags & excluded) == 0;
+        }
+
+        public readonly bool Equals(TagFilter other)
+        {
+            return required == other.required
+                   && any == other.any 
+                   && excluded == other.excluded;
         }
     }
 

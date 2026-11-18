@@ -22,7 +22,7 @@ namespace _Game.Gameplay.Abilities
             waveMods.Add(new WaveStatModifier
             {
                 Stat = StatType.Speed,
-                Filter = new TagFilter { required = Tags.Enemy },
+                Filter = new TagFilter { required = Tags.Unit | Tags.Enemy },
                 Type = ModifierType.Overwrite,
                 Value = 0f,
                 ExpiryTime = WaveManager.Instance.WaveElapsed + EffectiveDuration,

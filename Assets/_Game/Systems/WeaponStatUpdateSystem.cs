@@ -17,8 +17,8 @@ namespace _Game.Systems
             if (!SystemAPI.TryGetSingletonBuffer(out DynamicBuffer<WaveStatModifier> waveBuffer, isReadOnly: true))
                 return;
 
-            foreach ((RefRW<WeaponStats> stats, RefRW<AttackStats> attack, RefRW<AttackRules> rules, RefRO<Classification> classification, DynamicBuffer<StatModifier> localMods, Entity entity) in
-                     SystemAPI.Query<RefRW<WeaponStats>, RefRW<AttackStats>, RefRW<AttackRules>, RefRO<Classification>, DynamicBuffer<StatModifier>>().WithAll<WeaponStatUpdateRequired>().WithEntityAccess())
+            foreach ((RefRW<WeaponStats> stats, RefRW<AttackStats> attack, RefRW<AttackRules> rules, RefRW<Classification> classification, DynamicBuffer<StatModifier> localMods, Entity entity) in
+                     SystemAPI.Query<RefRW<WeaponStats>, RefRW<AttackStats>, RefRW<AttackRules>, RefRW<Classification>, DynamicBuffer<StatModifier>>().WithAll<WeaponStatUpdateRequired>().WithEntityAccess())
             {
                 DynamicBuffer<StatModifier> ownerMods = default;
                 BlobAssetReference<EnemyTypeBlob> ownerBlobRef = default;
@@ -71,6 +71,7 @@ namespace _Game.Systems
                 rules.ValueRW.ReportHits = reportHits;
 
                 Tags tags = classification.ValueRO.ForWeapon(ownerTags);
+                classification.ValueRW.Tags = tags;
 
                 stats.ValueRW.Damage = StatResolver.ResolveWeapon(StatType.Damage, stats.ValueRO.BaseDamage, tags, globalBuffer, waveBuffer, localMods, ownerMods, ownerBlobRef);
                 stats.ValueRW.FireRate = StatResolver.ResolveWeapon(StatType.FireRate, stats.ValueRO.BaseFireRate, tags, globalBuffer, waveBuffer, localMods, ownerMods, ownerBlobRef);
