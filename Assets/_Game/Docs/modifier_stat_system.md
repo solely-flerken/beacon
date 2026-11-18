@@ -31,6 +31,7 @@ Enemy reward: Exp
 Beacon exp: ExpGain
 Projectile ricochet: BounceCount, BounceRange, BounceFalloff, BounceDamageFloor
 Chain lightning: ChainCount, ChainRange, ChainFalloff, ChainDamageFloor
+Tier bonus: BonusDamageElite, BonusDamageBoss
 ```
 
 ### ModifierType Enum

@@ -14,6 +14,7 @@ namespace _Game.Systems
         private ComponentLookup<EnemyIncomingDamage> _incomingDamageLookup;
         private ComponentLookup<Armor> _armorLookup;
         private ComponentLookup<AttackStats> _attackStatsLookup;
+        private ComponentLookup<Classification> _classificationLookup;
 
         [BurstCompile]
         public void OnCreate(ref SystemState state)
@@ -21,6 +22,7 @@ namespace _Game.Systems
             _incomingDamageLookup = state.GetComponentLookup<EnemyIncomingDamage>(isReadOnly: false);
             _armorLookup = state.GetComponentLookup<Armor>(isReadOnly: true);
             _attackStatsLookup = state.GetComponentLookup<AttackStats>(isReadOnly: true);
+            _classificationLookup = state.GetComponentLookup<Classification>(isReadOnly: true);
         }
 
         [BurstCompile]
@@ -29,6 +31,7 @@ namespace _Game.Systems
             _incomingDamageLookup.Update(ref state);
             _armorLookup.Update(ref state);
             _attackStatsLookup.Update(ref state);
+            _classificationLookup.Update(ref state);
 
             state.Dependency = new ZeroIncomingDamageJob().ScheduleParallel(state.Dependency);
 
@@ -37,6 +40,7 @@ namespace _Game.Systems
                 IncomingDamageLookup = _incomingDamageLookup,
                 ArmorLookup = _armorLookup,
                 AttackStatsLookup = _attackStatsLookup,
+                ClassificationLookup = _classificationLookup,
                 ElapsedTime = SystemAPI.Time.ElapsedTime,
             }.Schedule(state.Dependency);
         }
@@ -57,6 +61,7 @@ namespace _Game.Systems
         [NativeDisableParallelForRestriction] public ComponentLookup<EnemyIncomingDamage> IncomingDamageLookup;
         [ReadOnly] public ComponentLookup<Armor> ArmorLookup;
         [ReadOnly] public ComponentLookup<AttackStats> AttackStatsLookup;
+        [ReadOnly] public ComponentLookup<Classification> ClassificationLookup;
         public double ElapsedTime;
 
         private Entity _lastWeapon;
@@ -67,16 +72,21 @@ namespace _Game.Systems
             if (target.ReservationExpiry < ElapsedTime) return;
             if (!IncomingDamageLookup.HasComponent(target.Value)) return;
 
-            // Reserve what will actually land: armor minus the firing weapon's penetration. Everything else is ignored.
+            if (source.Weapon != _lastWeapon)
+            {
+                _lastWeapon = source.Weapon;
+                AttackStatsLookup.TryGetComponent(_lastWeapon, out _attack);
+            }
+
+            // Reserve what will actually land: tier bonus, then armor minus the firing weapon's penetration. Everything else is ignored.
             float value = damage.Value;
+            if (ClassificationLookup.TryGetComponent(target.Value, out Classification targetClass))
+            {
+                value = DamageMath.ApplyTierBonus(value, targetClass.Tags.Tier(), _attack);
+            }
+
             if (ArmorLookup.TryGetComponent(target.Value, out Armor armor))
             {
-                if (source.Weapon != _lastWeapon)
-                {
-                    _lastWeapon = source.Weapon;
-                    AttackStatsLookup.TryGetComponent(_lastWeapon, out _attack);
-                }
-
                 value = DamageMath.Mitigate(value, armor.Value, _attack);
             }
 

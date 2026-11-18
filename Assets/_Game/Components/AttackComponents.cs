@@ -13,5 +13,9 @@ namespace _Game.Components
         public int ArmorPenetration;
         public int CritChance;
         public int CritDamage;
+
+        // Extra damage in percent vs. elite / boss targets. Base is 0, only modifiers raise it.
+        public int BonusDamageElite;
+        public int BonusDamageBoss;
     }
 }

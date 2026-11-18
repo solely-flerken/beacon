@@ -23,6 +23,7 @@ namespace _Game.Systems
         private ComponentLookup<Health> _healthLookup;
         private ComponentLookup<Armor> _armorLookup;
         private ComponentLookup<AttackStats> _attackStatsLookup;
+        private ComponentLookup<Classification> _classificationLookup;
         private ComponentLookup<Despawn> _despawnLookup;
         private ComponentLookup<HitFlashTime> _hitFlashLookup;
         private ComponentLookup<LocalTransform> _transformLookup;
@@ -39,6 +40,7 @@ namespace _Game.Systems
             _healthLookup = state.GetComponentLookup<Health>(isReadOnly: false);
             _armorLookup = state.GetComponentLookup<Armor>(isReadOnly: true);
             _attackStatsLookup = state.GetComponentLookup<AttackStats>(isReadOnly: true);
+            _classificationLookup = state.GetComponentLookup<Classification>(isReadOnly: true);
             _despawnLookup = state.GetComponentLookup<Despawn>(isReadOnly: false);
             _hitFlashLookup = state.GetComponentLookup<HitFlashTime>(isReadOnly: false);
             _transformLookup = state.GetComponentLookup<LocalTransform>(isReadOnly: true);
@@ -58,6 +60,7 @@ namespace _Game.Systems
             _healthLookup.Update(ref state);
             _armorLookup.Update(ref state);
             _attackStatsLookup.Update(ref state);
+            _classificationLookup.Update(ref state);
             _despawnLookup.Update(ref state);
             _hitFlashLookup.Update(ref state);
             _transformLookup.Update(ref state);
@@ -76,6 +79,7 @@ namespace _Game.Systems
                 HealthLookup = _healthLookup,
                 ArmorLookup = _armorLookup,
                 AttackStatsLookup = _attackStatsLookup,
+                ClassificationLookup = _classificationLookup,
                 DespawnLookup = _despawnLookup,
                 HitFlashLookup = _hitFlashLookup,
                 TransformLookup = _transformLookup,
@@ -99,6 +103,7 @@ namespace _Game.Systems
             public ComponentLookup<Health> HealthLookup;
             [ReadOnly] public ComponentLookup<Armor> ArmorLookup;
             [ReadOnly] public ComponentLookup<AttackStats> AttackStatsLookup;
+            [ReadOnly] public ComponentLookup<Classification> ClassificationLookup;
             public ComponentLookup<Despawn> DespawnLookup;
             public ComponentLookup<HitFlashTime> HitFlashLookup;
             [ReadOnly] public ComponentLookup<LocalTransform> TransformLookup;
@@ -139,6 +144,12 @@ namespace _Game.Systems
                     {
                         lastSource = damage.Source;
                         AttackStatsLookup.TryGetComponent(lastSource, out attackStats);
+                    }
+
+                    // Bonus damage vs. the target's tier
+                    if (ClassificationLookup.TryGetComponent(damage.Target, out Classification targetClassification))
+                    {
+                        damage.Value = DamageMath.ApplyTierBonus(damage.Value, targetClassification.Tags.Tier(), attackStats);
                     }
 
                     // Apply crit damage

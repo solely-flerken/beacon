@@ -79,6 +79,8 @@ namespace _Game.Systems
                 attack.ValueRW.ArmorPenetration = (int)StatResolver.ResolveWeapon(StatType.ArmorPenetration, attack.ValueRO.BaseArmorPenetration, tags, globalBuffer, waveBuffer, localMods, ownerMods, ownerBlobRef);
                 attack.ValueRW.CritChance = (int)StatResolver.ResolveWeapon(StatType.CritChance, attack.ValueRO.BaseCritChance, tags, globalBuffer, waveBuffer, localMods, ownerMods, ownerBlobRef);
                 attack.ValueRW.CritDamage = (int)StatResolver.ResolveWeapon(StatType.CritDamage, attack.ValueRO.BaseCritDamage, tags, globalBuffer, waveBuffer, localMods, ownerMods, ownerBlobRef);
+                attack.ValueRW.BonusDamageElite = (int)StatResolver.ResolveWeapon(StatType.BonusDamageElite, 0f, tags, globalBuffer, waveBuffer, localMods, ownerMods, ownerBlobRef);
+                attack.ValueRW.BonusDamageBoss = (int)StatResolver.ResolveWeapon(StatType.BonusDamageBoss, 0f, tags, globalBuffer, waveBuffer, localMods, ownerMods, ownerBlobRef);
 
                 if (SystemAPI.HasComponent<ProjectileStats>(entity))
                 {

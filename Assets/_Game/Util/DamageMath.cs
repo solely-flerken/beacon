@@ -20,6 +20,21 @@ namespace _Game.Util
         }
 
         /// <summary>
+        /// Adds the attacker's bonus damage against the target's tier.
+        /// </summary>
+        public static float ApplyTierBonus(float rawDamage, EnemyTier targetTier, in AttackStats attacker)
+        {
+            int bonus = targetTier switch
+            {
+                EnemyTier.Elite => attacker.BonusDamageElite,
+                EnemyTier.Boss => attacker.BonusDamageBoss,
+                _ => 0,
+            };
+
+            return bonus == 0 ? rawDamage : rawDamage * math.max(0f, 1f + bonus * 0.01f);
+        }
+
+        /// <summary>
         /// Damage that gets through the target's armor, after the attacker's armor penetration.
         /// </summary>
         public static float Mitigate(float rawDamage, float targetArmor, in AttackStats attacker)

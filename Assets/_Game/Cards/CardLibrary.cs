@@ -111,6 +111,20 @@ namespace _Game.Cards
             constraints: new[] { HasWeaponOfType(WeaponType.Beam) }
         );
 
+        public static readonly CardData EliteHunter = new(
+            cardId: 206,
+            title: "Elite Hunter",
+            description: "All weapons deal 50% more damage to elite enemies.",
+            effects: new[] { WeaponFx(StatType.BonusDamageElite, ModifierType.Additive, 50f) }
+        );
+
+        public static readonly CardData Bossbreaker = new(
+            cardId: 207,
+            title: "Bossbreaker",
+            description: "All weapons deal 100% more damage to bosses.",
+            effects: new[] { WeaponFx(StatType.BonusDamageBoss, ModifierType.Additive, 100f) }
+        );
+
         // Per-type weapon cards
         public static readonly CardData ArmorPiercing = new(
             cardId: 251,
@@ -176,7 +190,9 @@ namespace _Game.Cards
             Overclocked,
             DangerousGame,
             OverloadLens,
-            LaserShow
+            LaserShow,
+            EliteHunter,
+            Bossbreaker
         };
 
         #region Utility functions

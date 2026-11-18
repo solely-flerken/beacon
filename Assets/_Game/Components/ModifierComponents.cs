@@ -37,6 +37,9 @@ namespace _Game.Components
         ChainRange,
         ChainFalloff,
         ChainDamageFloor,
+        // Bonus damage vs. target tier (percent)
+        BonusDamageElite,
+        BonusDamageBoss,
     }
 
     public enum ModifierType : byte
