@@ -10,60 +10,44 @@ namespace _Game.Cards
     /// </summary>
     public static class CardLibrary
     {
+        #region Filter presets
+
+        private static TagFilter BeaconFilter => new() { required = Tags.Unit | Tags.Beacon };
+        private static TagFilter PlayerWeapons => new() { required = Tags.Weapon | Tags.Player };
+        private static TagFilter PlayerWeaponsOfType(params WeaponType[] types) => new() { required = Tags.Weapon | Tags.Player | types.ToTags() };
+        private static TagFilter Enemies(params EnemyType[] types) => new() { required = Tags.Unit | Tags.Enemy, any = types.ToTags() };
+
+        #endregion
+
         #region Effect factories
 
-        private static CardEffect BeaconFx(StatType stat, ModifierType mod, float value) => new()
+        private static CardEffect RunFx(TagFilter filter, StatType stat, ModifierType mod, float value) => new()
         {
-            TargetType = CardTargetType.Beacon,
+            Filter = filter,
+            Lifetime = CardEffectLifetime.Run,
             Stat = stat,
             ModifierType = mod,
             Value = value
         };
 
-        private static CardEffect WeaponFx(StatType stat, ModifierType mod, float value) => new()
+        private static CardEffect WaveFx(TagFilter filter, StatType stat, ModifierType mod, float value, float duration = 0f) => new()
         {
-            TargetType = CardTargetType.BeaconWeapons,
-            Stat = stat,
-            ModifierType = mod,
-            Value = value
-        };
-
-        private static CardEffect WeaponTypeFx(WeaponType type, StatType stat, ModifierType mod, float value) => new()
-        {
-            TargetType = CardTargetType.WeaponsOfType,
-            WeaponType = type,
-            Stat = stat,
-            ModifierType = mod,
-            Value = value
-        };
-
-        private static CardEffect EnemyFx(Tags types, StatType stat, ModifierType mod, float value) => new()
-        {
-            TargetType = CardTargetType.EnemiesOfType,
-            EnemyTypes = types,
-            Stat = stat,
-            ModifierType = mod,
-            Value = value
-        };
-
-        private static CardEffect WaveEnemyFx(Tags types, StatType stat, ModifierType mod, float value, float duration = 0f) => new()
-        {
-            TargetType = CardTargetType.WaveEnemies,
-            EnemyTypes = types,
+            Filter = filter,
+            Lifetime = CardEffectLifetime.Wave,
             Stat = stat,
             ModifierType = mod,
             Value = value,
             Duration = duration,
         };
 
-        private static CardEffect WaveWeaponFx(StatType stat, ModifierType mod, float value, float duration = 0f) => new()
-        {
-            TargetType = CardTargetType.WaveWeapons,
-            Stat = stat,
-            ModifierType = mod,
-            Value = value,
-            Duration = duration,
-        };
+        private static CardEffect BeaconFx(StatType stat, ModifierType mod, float value) => RunFx(BeaconFilter, stat, mod, value);
+        private static CardEffect WeaponFx(StatType stat, ModifierType mod, float value) => RunFx(PlayerWeapons, stat, mod, value);
+        private static CardEffect WeaponTypeFx(WeaponType type, StatType stat, ModifierType mod, float value) => RunFx(PlayerWeaponsOfType(type), stat, mod, value);
+        private static CardEffect EnemyFx(StatType stat, ModifierType mod, float value) => RunFx(Enemies(), stat, mod, value);
+        private static CardEffect EnemyFx(EnemyType type, StatType stat, ModifierType mod, float value) => RunFx(Enemies(type), stat, mod, value);
+        private static CardEffect WaveEnemyFx(StatType stat, ModifierType mod, float value, float duration = 0f) => WaveFx(Enemies(), stat, mod, value, duration);
+        private static CardEffect WaveEnemyFx(EnemyType type, StatType stat, ModifierType mod, float value, float duration = 0f) => WaveFx(Enemies(type), stat, mod, value, duration);
+        private static CardEffect WaveWeaponFx(StatType stat, ModifierType mod, float value, float duration = 0f) => WaveFx(PlayerWeapons, stat, mod, value, duration);
 
         #endregion
 
@@ -156,7 +140,7 @@ namespace _Game.Cards
             cardId: 301,
             title: "Tar Traps",
             description: "Basic enemies move 30% slower.",
-            effects: new[] { EnemyFx(Tags.EnemyBasic, StatType.Speed, ModifierType.Multiplicative, -30f) }
+            effects: new[] { EnemyFx(EnemyType.Basic, StatType.Speed, ModifierType.Multiplicative, -30f) }
         );
 
         // Wave-scoped cards
@@ -173,8 +157,8 @@ namespace _Game.Cards
             description: "All enemies move 40% slower for this wave, but deal 50% more contact damage.",
             effects: new[]
             {
-                WaveEnemyFx(Tags.None, StatType.Speed, ModifierType.Multiplicative, -40f),
-                WaveEnemyFx(Tags.None, StatType.ContactDamage, ModifierType.Multiplicative, 50f),
+                WaveEnemyFx(StatType.Speed, ModifierType.Multiplicative, -40f),
+                WaveEnemyFx(StatType.ContactDamage, ModifierType.Multiplicative, 50f),
             }
         );
 

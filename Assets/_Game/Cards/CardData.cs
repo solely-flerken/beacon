@@ -3,21 +3,26 @@ using _Game.Components;
 
 namespace _Game.Cards
 {
-    public enum CardTargetType : byte
+    /// <summary>
+    /// How long a card effect lasts.
+    /// </summary>
+    public enum CardEffectLifetime : byte
     {
-        Beacon,
-        BeaconWeapons,
-        WeaponsOfType,
-        EnemiesOfType,
-        WaveEnemies,
-        WaveWeapons,
+        /// <summary>
+        /// Until the run ends (global buffer, run-scoped).
+        /// </summary>
+        Run,
+
+        /// <summary>
+        /// Until the wave ends, or for <see cref="CardEffect.Duration"/> seconds (wave buffer).
+        /// </summary>
+        Wave,
     }
 
     public struct CardEffect
     {
-        public CardTargetType TargetType;
-        public Tags EnemyTypes; // relevant for EnemiesOfType and WaveEnemies
-        public WeaponType WeaponType; // relevant for WeaponsOfType
+        public TagFilter Filter;
+        public CardEffectLifetime Lifetime;
         public StatType Stat;
         public ModifierType ModifierType;
         public float Value;

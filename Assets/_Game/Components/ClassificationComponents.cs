@@ -132,6 +132,25 @@ namespace _Game.Components
             _ => throw new ArgumentOutOfRangeException(nameof(type), type, null)
         };
 
+        public static Tags ToTags(this Faction[] values) => Combine(values, v => v.ToTag());
+        public static Tags ToTags(this EnemyTier[] values) => Combine(values, v => v.ToTag());
+        public static Tags ToTags(this WeaponType[] values) => Combine(values, v => v.ToTag());
+        public static Tags ToTags(this EnemyType[] values) => Combine(values, v => v.ToTag());
+
+        /// <summary>
+        /// ORs the tags of all <paramref name="values"/>.
+        /// </summary>
+        private static Tags Combine<T>(T[] values, Func<T, Tags> toTag) where T : struct, Enum
+        {
+            Tags tags = Tags.None;
+            foreach (T value in values)
+            {
+                tags |= toTag(value);
+            }
+            
+            return tags;
+        }
+        
         /// <summary>
         /// Extracts the tier in <paramref name="tags"/> and maps it to an EnemyTier. Normal if they hold no tier tag.
         /// </summary>
