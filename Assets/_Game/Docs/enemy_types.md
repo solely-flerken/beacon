@@ -1,51 +1,52 @@
 # Adding a new enemy type
 
-This guide walks through every step needed to add a new enemy type (e.g. `Ranged`) to the game.
+This guide walks through every step needed to add a new enemy type (e.g. `Sniper`) to the game.
 
 ---
 
-## 1. Register the type and its tag - `EnemyComponents.cs`
+## 1. Register the type - `EnemyComponents.cs`
 
-a) Add the new value to the `EnemyType` enum:
+Add the new value at the end of the `EnemyType` enum:
+
 ```csharp
 public enum EnemyType : byte
 {
     Basic,
     Fast,
     Tank,
-    Ranged,   // <-- add here
+    Range,
+    Sniper,   // <-- add here
 }
-```
-
-b) Add a marker tag struct (used for ECS archetype filtering):
-```csharp
-public struct RangedEnemyTag : IComponentData { }
-```
-
-c) Add a case to `EnemyTypeTagMap.Get()`:
-```csharp
-EnemyType.Ranged => ComponentType.ReadOnly<RangedEnemyTag>(),
 ```
 
 ---
 
-## 2. Update the Baker - `EnemyAuthoring.cs`
+## 2. Add its tag - `ClassificationComponents.cs`
 
-Add a case to the `switch (authoring.typeId)` block:
+Modifiers (cards, wave modifiers, global modifiers) pick enemies by their tags.
+
+a) Add a unit type tag to `Tags`:
+
 ```csharp
-case EnemyType.Ranged:
-    AddComponent<RangedEnemyTag>(entity);
-    break;
+EnemySniper = 1 << 9,
+```
+
+b) Add it to `TagGroups.UnitType`.
+
+c) Add a case to `ToTag(this EnemyType type)`:
+
+```csharp
+EnemyType.Sniper => Tags.EnemySniper,
 ```
 
 ---
 
 ## 3. Create the prefab
 
-1. Duplicate an existing enemy prefab (e.g. `Enemy.prefab` → `EnemyRanged.prefab`).
+1. Duplicate an existing enemy prefab (e.g. `Enemy.prefab` → `EnemySniper.prefab`).
 2. On the `EnemyAuthoring` component set:
-   - `typeId` → `Ranged`
-   - `speed`, `maxHealth`, `contactDamage`, `exp` to the desired base values
+    - `type` → `Sniper`
+    - `speed`, `maxHealth`, `contactDamage`, `exp`, etc. to the desired base values
 3. Optionally add `TieredModifierEntry` rows for stat overrides based on different tiers.
 
 ---
@@ -54,7 +55,7 @@ case EnemyType.Ranged:
 
 Search for the GameObject with `EnemyTypeCatalogAuthoring` in the main scene.
 
-Add the new prefab (`EnemyRanged`) to its `prefabs` list. The catalog is looked up by `EnemyType` at runtime.
+Add the new prefab (`EnemySniper`) to its `prefabs` list. The catalog is looked up by `EnemyType` at runtime.
 
 ---
 
@@ -65,9 +66,9 @@ Select the `WaveManager` GameObject in the scene. In the **Enemy Type Definition
 1. Click `+`, a new entry is created automatically with the next unused type.
 2. Add tier rows (`+` inside the definition) for Normal, Elite, etc.
 3. For each tier set:
-   - **Cost** - budget units this enemy costs to spawn (min 1)
-   - **Weight** - relative spawn frequency (higher = more common)
-   - **Start Wave** - the first wave this tier can appear on (min 1)
+    - **Cost** - budget units this enemy costs to spawn (min 1)
+    - **Weight** - relative spawn frequency (higher = more common)
+    - **Start Wave** - the first wave this tier can appear on (min 1)
 
 ---
 
@@ -75,9 +76,9 @@ Select the `WaveManager` GameObject in the scene. In the **Enemy Type Definition
 
 ```
 EnemyType enum
-    └─ EnemyTypeTagMap           (ECS archetype filtering, e.g. card effects)
-    └─ EnemyAuthoring.Baker      (bakes tag onto prefab entity)
-    └─ EnemyTypeCatalogAuthoring (scene catalog, looked up by EnemySpawner)
+    └─ EnemyType.ToTag()         (type tag in Classification, for modifier filters)
+    └─ EnemyAuthoring.Baker      (bakes Classification, UnitFaction, Hostility onto the prefab entity)
+    └─ EnemyTypeCatalogAuthoring (scene catalog, looked up by EnemySpawnSystem)
     └─ WaveManager definitions   (budget cost / weight / start wave - per tier)
 ```
 

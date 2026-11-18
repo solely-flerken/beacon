@@ -12,11 +12,11 @@ buffers automatically marks all affected entities dirty.
 
 ### Modifier Buffer Types
 
-| Buffer               | Entity               | Lifetime             | Filtered by         |
-|----------------------|----------------------|----------------------|---------------------|
-| `GlobalStatModifier` | `GlobalModSingleton` | Permanent            | Classification mask |
-| `WaveStatModifier`   | `GlobalModSingleton` | Timed (`ExpiryTime`) | Classification mask |
-| `StatModifier`       | Individual entity    | Permanent            | — (local only)      |
+| Buffer               | Entity               | Lifetime             | Filtered by    |
+|----------------------|----------------------|----------------------|----------------|
+| `GlobalStatModifier` | `GlobalModSingleton` | Permanent            | `TagFilter`    |
+| `WaveStatModifier`   | `GlobalModSingleton` | Timed (`ExpiryTime`) | `TagFilter`    |
+| `StatModifier`       | Individual entity    | Permanent            | — (local only) |
 
 **Blob tier mods** (`TieredStatModifier`) live in `EnemyTypeBlob` asset data and are read-only at runtime — used for
 enemy-type and enemy-weapon scaling.
@@ -24,10 +24,13 @@ enemy-type and enemy-weapon scaling.
 ### StatType Enum
 
 ```
-Weapon: Damage, FireRate, TargetRange, ProjectileSpeed, Pierce
-Beacon/Enemy: MaxHp, ArrivalRadius, Speed, ContactDamage
+Weapon: Damage, FireRate, TargetRange, ProjectileSpeed, Pierce, ArmorPenetration, CritChance, CritDamage
+Beacon/Enemy: MaxHp, Armor, ArrivalRadius, Speed, ContactDamage
 Beam: BeamRotationSpeed, BeamWidth
 Enemy reward: Exp
+Beacon exp: ExpGain
+Projectile ricochet: BounceCount, BounceRange, BounceFalloff, BounceDamageFloor
+Chain lightning: ChainCount, ChainRange, ChainFalloff, ChainDamageFloor
 ```
 
 ### ModifierType Enum
@@ -36,20 +39,33 @@ Enemy reward: Exp
 |------------------|--------------------|---------------------------------|
 | `Additive`       | Raw value          | Flat bonus                      |
 | `Multiplicative` | Percentage (0–100) | Percentage change of base value |
+| `Overwrite`      | Raw value          | Replaces the result (last wins) |
 
-### Classification (Bitmask)
+### Classification (Tags)
 
-Every entity has a `Classification` component. Modifiers on the global/wave singletons carry their own `Classification`
-mask. An entity only receives the modifier if all non-zero mask fields match at least one bit. 
+Every unit and weapon has a `Classification` component holding a `Tags` flag set (`ClassificationComponents.cs`).
+An entity carries only the tags that apply to it:
 
-| Field         | Options                  |
-|---------------|--------------------------|
-| `TargetMask`  | Character, Weapon        |
-| `FactionMask` | Player, Enemy            |
-| `RoleMask`    | Basic, Fast, Tank, Range |
-| `TierMask`    | Normal, Elite, Boss      |
+| Group       | Tags                                                 |
+|-------------|------------------------------------------------------|
+| Kind        | Unit, Weapon                                         |
+| Side        | Player, Enemy                                        |
+| Unit type   | Beacon, EnemyBasic, EnemyFast, EnemyTank, EnemyRange |
+| Tier        | Normal, Elite, Boss                                  |
+| Weapon type | WeaponBasic, Beam, Scatter, Mortar                   |
 
-A zero field ("none"), applies to every entity.
+The side is not stored in `Classification`: `Classification.ForUnit` adds it from `UnitFaction` when stats are resolved.
+A weapon stores only `Weapon` and its type; `Classification.ForWeapon` adds the owner's side, unit type and tier.
+
+Modifiers on the global/wave singletons carry a `TagFilter`:
+
+| Mask       | The entity must have…                   |
+|------------|-----------------------------------------|
+| `required` | all of these                            |
+| `any`      | at least one of these (ignored if None) |
+| `excluded` | none of these                           |
+
+An empty filter applies to every entity.
 
 ---
 
@@ -59,14 +75,14 @@ A zero field ("none"), applies to every entity.
 (Base + ΣAdditive) * max(0, 1 + ΣMultiplicative)
 ```
 
-Both accumulators start at 0. All modifier sources are iterated and classified before the final formula is applied. The
-minimum effective value is 0.
+Both accumulators start at 0. All modifier sources are iterated and classified before the final formula is applied.
+The minimum effective value is 0. If an `Overwrite` modifier applies, its value is used instead.
 
 ### Resolution Stack (in order)
 
-1. `GlobalStatModifier` — filtered by Classification
-2. `WaveStatModifier` — filtered by Classification
-3. `StatModifier` — local, on entity
+1. `GlobalStatModifier` — filtered by its `TagFilter`
+2. `WaveStatModifier` — filtered by its `TagFilter`
+3. `StatModifier` — local, on entity (weapons: also the owner's)
 4. Blob `TieredStatModifier` — Normal-tier entries apply universally; non-Normal only when the entity's tier matches
    exactly
 
@@ -104,8 +120,10 @@ Bridges the managed `WaveManager` MonoBehaviour and the unmanaged ECS world. Eac
 
 - Uses ECS **change version filters** on `WaveStatModifier` and `GlobalStatModifier`.
 - Only fires if either buffer was written to since the last frame.
-- On change: schedules three parallel jobs (`MarkBeaconDirtyJob`, `MarkEnemiesDirtyJob`, `MarkWeaponsDirtyJob`) that
-  enable the `*StatUpdateRequired` flag on every entity of that type.
+- On change: diffs both buffers against a copy from the last change and collects the filters of added and removed
+  entries.
+  Three parallel jobs (`MarkBeaconDirtyJob`, `MarkEnemiesDirtyJob`, `MarkWeaponsDirtyJob`) then enable the
+  `*StatUpdateRequired` flag on every entity whose tags match one of those filters.
 
 ### BeaconStatUpdateSystem
 
@@ -120,15 +138,16 @@ Two jobs:
 | Job              | Filter                                                        | Purpose                                                                                           |
 |------------------|---------------------------------------------------------------|---------------------------------------------------------------------------------------------------|
 | `SpawnInitJob`   | `WithAll<Uninitialized>`                                      | First-time stat init for newly spawned enemies; sets `current = max`; removes `Uninitialized` tag |
-| `UpdateStatsJob` | `WithNone<Uninitialized>` + `EnemyStatUpdateRequired` enabled | Re-resolves Speed, MaxHp, ContactDamage, Exp; disables dirty flag                                     |
+| `UpdateStatsJob` | `WithNone<Uninitialized>` + `EnemyStatUpdateRequired` enabled | Re-resolves all enemy stats; disables dirty flag                                                  |
 
 Both jobs use the blob `TieredStatModifier` from `EnemyTypeBlobRef`.
 
 ### WeaponStatUpdateSystem
 
 - Queries entities with `WeaponStatUpdateRequired` **enabled**.
-- **Identity sync**: inherits `Faction`, `Role`, `Tier` from owner's `Classification` (enemy-owned weapons scale
-  correctly).
+- **Owner tags**: resolves with the weapon's own tags plus the owner's, so enemy-owned weapons scale correctly. The
+  result is written back into the weapon's `Classification`.
+- **Attack rules**: `AttackRules.TargetFactions` comes from the owner's `Hostility`.
 - Also reads owner's `StatModifier` buffer and blob ref for `ResolveWeapon`.
 - Disables `WeaponStatUpdateRequired` after processing.
 
@@ -136,33 +155,31 @@ Both jobs use the blob `TieredStatModifier` from `EnemyTypeBlobRef`.
 
 ## Card Effect Application
 
-| `CardTargetType` | Written to                                                         | Lifetime   |
-|------------------|--------------------------------------------------------------------|------------|
-| `Beacon`         | Beacon entity's `StatModifier` buffer                              | Permanent  |
-| `BeaconWeapons`  | Beacon's entity's `StatModifier` buffer                            | Permanent  |
-| `WeaponsOfType`  | Matching weapon entity's `StatModifier` buffer                     | Permanent  |
-| `EnemiesOfType`  | `GlobalStatModifier` on singleton (Enemy faction, RoleMask filter) | Permanent  |
-| `WaveEnemies`    | `WaveStatModifier` on singleton                                    | ExpiryTime |
-| `WaveWeapons`    | `WaveStatModifier` on singleton                                    | ExpiryTime |
+Each `CardEffect` carries its own `TagFilter` and a `Lifetime`:
+
+| `Lifetime` | Written to                                      | Lifetime   |
+|------------|-------------------------------------------------|------------|
+| `Run`      | `GlobalStatModifier` on singleton (`RunScoped`) | Permanent  |
+| `Wave`     | `WaveStatModifier` on singleton                 | ExpiryTime |
 
 `Duration <= 0` on a wave-scoped effect means it lasts for the remainder of the current wave (`float.MaxValue`).
 
-After writing, the applier immediately sets the relevant `*StatUpdateRequired` dirty flag so the stat systems pick up
-the change this frame.
+The change detection then marks the matching entities dirty.
 
 ---
 
 ## Files
 
-| File                                      | Role                                                              |
-|-------------------------------------------|-------------------------------------------------------------------|
-| `Components/ModifierComponents.cs`        | All modifier structs, StatType/ModifierType enums, Classification |
-| `Util/StatResolver.cs`                    | Pure stat resolution logic                                        |
-| `Systems/WaveStateSyncSystem.cs`          | MonoBehaviour → ECS bridge                                        |
-| `Systems/TimedModifierCleanupSystem.cs`   | Expires WaveStatModifiers                                         |
-| `Systems/WaveModChangeDetectionSystem.cs` | Dirty-flag propagation on buffer changes                          |
-| `Systems/BeaconStatUpdateSystem.cs`       | Beacon stat recalculation                                         |
-| `Systems/EnemyStatUpdateSystem.cs`        | Enemy stat init + recalculation                                   |
-| `Systems/WeaponStatUpdateSystem.cs`       | Weapon stat recalculation                                         |
-| `Cards/CardData.cs`                       | CardEffect data definition                                        |
-| `Cards/CardModifierApplier.cs`            | Applies card effects to ECS buffers                               |
+| File                                      | Role                                               |
+|-------------------------------------------|----------------------------------------------------|
+| `Components/ModifierComponents.cs`        | All modifier structs, StatType/ModifierType enums  |
+| `Components/ClassificationComponents.cs`  | `Tags`, `TagGroups`, `Classification`, `TagFilter` |
+| `Util/StatResolver.cs`                    | Pure stat resolution logic                         |
+| `Systems/WaveStateSyncSystem.cs`          | MonoBehaviour → ECS bridge                         |
+| `Systems/TimedModifierCleanupSystem.cs`   | Expires WaveStatModifiers                          |
+| `Systems/WaveModChangeDetectionSystem.cs` | Dirty-flag propagation on buffer changes           |
+| `Systems/BeaconStatUpdateSystem.cs`       | Beacon stat recalculation                          |
+| `Systems/EnemyStatUpdateSystem.cs`        | Enemy stat init + recalculation                    |
+| `Systems/WeaponStatUpdateSystem.cs`       | Weapon stat recalculation                          |
+| `Cards/CardData.cs`                       | CardEffect data definition                         |
+| `Cards/CardModifierApplier.cs`            | Applies card effects to ECS buffers                |
